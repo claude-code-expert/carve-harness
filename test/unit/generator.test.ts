@@ -94,6 +94,14 @@ test('generate: Squad 8 에이전트 + 커맨드 + 라우터/체이닝 훅 vendo
   assert.ok(find(arts, '.claude/hooks/subagent-chain.sh')?.executable); // 체이닝/알림
 });
 
+test('generate: full 레벨 — 도입 스킬(tdd 등) emit + 커맨드 shim', () => {
+  const p = profile({ ci: 'github-actions', languages: ['ts', 'js'] }); // → full
+  const arts = generate(p, design(p));
+  assert.ok(find(arts, '.claude/skills/tdd/SKILL.md'), 'tdd 스킬 미생성');
+  assert.ok(find(arts, '.claude/commands/carve-tdd.md'), 'tdd shim 미생성');
+  assert.ok(find(arts, '.claude/skills/caveman/SKILL.md'), 'caveman 미생성');
+});
+
 test('generate: 핵심 스킬 커맨드 shim emit', () => {
   const p = profile({});
   const arts = generate(p, design(p));
