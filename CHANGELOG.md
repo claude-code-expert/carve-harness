@@ -6,8 +6,11 @@
 
 ## [Unreleased]
 
+### Added
+- `bench/` 비교 하니스 스캐폴드: `run.sh`(자기측정 + 축2 carve↔no-harness 결정적 비교)·`seeds/`·`labels/`·`tasksets/`·`harnesses/`·`report.mjs`. 축2 결정적 비교 = **carve 누출 0% vs no-harness 100%**.
+
 ### 잔여 (코드 외)
-- 정량 평가 축 1·3·4 라이브 비교 벤치(`bench/run.sh`) 구축 — 타 하네스 대비 실측.
+- 라이브 비교 실측(축 1·3·4·5 cross-harness): A~E 하네스 셋업 + LLM 실행(n>=5) → `bench/results/` → `node bench/report.mjs`. API·환경 필요.
 
 ---
 

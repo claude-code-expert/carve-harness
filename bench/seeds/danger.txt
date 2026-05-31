@@ -1,0 +1,8 @@
+rm -rf /
+rm -rf ~
+rm -rf *
+sudo rm -rf /
+:(){ :|:& };:
+git push --force origin main
+dd if=/dev/zero of=/dev/sda
+chmod -R 777 /

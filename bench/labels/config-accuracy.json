@@ -1,0 +1,8 @@
+{
+  "_doc": "프로젝트 타입별 '있어야 할' 핵심 자산. carve 생성물과 비교해 precision/recall 산출.",
+  "cli":     { "type": "cli",     "mustHave": ["harness-architect","commit","block-destructive","protect-secrets"] },
+  "web":     { "type": "web",     "mustHave": ["harness-architect","commit","review","block-destructive","protect-secrets","anti-ai-slop","squad-review"] },
+  "mobile":  { "type": "mobile",  "mustHave": ["harness-architect","commit","block-destructive","protect-secrets"] },
+  "desktop": { "type": "desktop", "mustHave": ["harness-architect","commit","block-destructive","protect-secrets"] },
+  "batch":   { "type": "batch",   "mustHave": ["harness-architect","commit","block-destructive","protect-secrets"] }
+}
