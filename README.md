@@ -2,7 +2,7 @@
 
 > 프로젝트를 분석해 그 프로젝트에 맞는 하네스(스킬·훅·서브에이전트)를 대화형으로 선택해 설치하는 CLI.
 
-**v1.2.0** · TypeScript(ESM, 빌드 단계 없음) · Node >=22.18 · 테스트 97 / 커버리지 약 95%
+**v1.3.0** · TypeScript(ESM, 빌드 단계 없음) · Node >=22.18 · 테스트 104 / 커버리지 약 95%
 
 `carve`는 코드베이스를 읽어 프로젝트 타입과 도구를 탐지하고, 적합한 구성요소를 추천한다.
 사용자가 고른 것만 `.claude/`에 설치한다. carve = 범용 자산을 프로젝트에 맞게 깎아냄.
@@ -52,10 +52,10 @@ carve uninstall    # 클린 제거(.bak 복원)
 - 진입 스킬: harness-architect (자연어 트리거)
 - 7 필수 훅: 파괴적 명령 차단 · 비밀파일 보호 · 커밋 전 린트 · 푸시 전 테스트 · 자동 포맷 · Slack 알림 · PreCompact 핸드오프
 - 1 선택 훅: 자동 커밋
-- Squad 서브에이전트 8종: review · plan · refactor · qa · debug · docs · gitops · audit
+- Squad 서브에이전트 9종: review · plan · refactor · qa · debug · docs · gitops · audit · evaluator(완료 기준 독립 평가)
 - anti-ai-slop 팩 + 추가 스킬(점수 75↑): verify·security-scan·test-gen, 그리고 tdd·caveman·write-a-skill·zoom-out (mattpocock/skills, MIT 출처)
 
-설치 시 `flight-rules.md`·`evaluation-criteria.md`·`CLAUDE.md`·`HARNESS-GUIDE.md`를 프로젝트에 생성한다.
+설치 시 `flight-rules.md`·`evaluation-criteria.md`·`sprint-contract.md`·`CLAUDE.md`·`HARNESS-GUIDE.md`를 프로젝트에 생성한다.
 지원 프로젝트: CLI · 웹 · 모바일 · 반응형 · 데스크탑 · 배치.
 
 ## anti-slop 시각·문서 생성

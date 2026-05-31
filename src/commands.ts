@@ -2,7 +2,7 @@
 import { analyze } from './analyzer.ts';
 import { design } from './designer.ts';
 import { generate, hookRegsFor } from './generator.ts';
-import { audit, errorsOf } from './auditor.ts';
+import { audit, auditShellSyntax, errorsOf } from './auditor.ts';
 import { install, uninstall } from './installer.ts';
 import { readManifest } from './manifest.ts';
 import { CATALOG } from './catalog.ts';
@@ -28,8 +28,8 @@ export function cmdInstall(root: string, io: IO, selected?: string[]): number {
   }
   const artifacts = generate(profile, d);
 
-  // 설치 전 자기 검증 (PoC: secret·과도권한·훅 주입 0건)
-  const errs = errorsOf(audit(artifacts));
+  // 설치 전 자기 검증 (PoC: secret·과도권한·훅 주입 0건 + 셸 문법)
+  const errs = errorsOf([...audit(artifacts), ...auditShellSyntax(artifacts)]);
   if (errs.length > 0) {
     io.error(`auditor 차단: ERROR ${errs.length}건 — 설치 중단`);
     for (const f of errs) io.error(`  ${f.path}:${f.line} [${f.rule}] ${f.message}`);
