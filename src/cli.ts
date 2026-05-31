@@ -46,13 +46,20 @@ export function parseOnly(args: string[]): string[] | undefined {
   return undefined;
 }
 
+/** `--flag value` 또는 `--flag=value` → value. 없으면 undefined. */
+function flagValue(args: string[], name: string): string | undefined {
+  const eq = args.find((a) => a.startsWith(`${name}=`));
+  if (eq) return eq.slice(name.length + 1);
+  const i = args.indexOf(name);
+  return i >= 0 ? args[i + 1] : undefined;
+}
+
 /** `--level <minimal|standard|full>` → 레벨. 잘못된 값은 'invalid', 없으면 undefined. */
 export function parseLevel(args: string[]): HarnessLevel | 'invalid' | undefined {
-  const eq = args.find((a) => a.startsWith('--level='));
-  const i = args.indexOf('--level');
-  const raw = eq ? eq.slice('--level='.length) : i >= 0 ? args[i + 1] : undefined;
+  const raw = flagValue(args, '--level');
   if (raw === undefined) return undefined;
-  return (['minimal', 'standard', 'full'] as const).includes(raw as HarnessLevel) ? (raw as HarnessLevel) : 'invalid';
+  const levels: HarnessLevel[] = ['minimal', 'standard', 'full'];
+  return levels.includes(raw as HarnessLevel) ? (raw as HarnessLevel) : 'invalid';
 }
 
 /**

@@ -7,7 +7,7 @@ import {
 import { join, dirname } from 'node:path';
 import type { Artifact } from './generator.ts';
 import {
-  readManifest, writeManifest, removeManifest, type Manifest,
+  readManifest, writeManifest, removeManifest, CARVE_VERSION, type Manifest,
 } from './manifest.ts';
 
 const SETTINGS_REL = '.claude/settings.json';
@@ -57,8 +57,7 @@ function writeSettings(root: string, s: Settings): void {
   writeFileSync(p, JSON.stringify(s, null, 2) + '\n');
 }
 
-function mergeHooks(root: string, regs: HookReg[]): void {
-  const s = readSettings(root);
+function applyHooks(s: Settings, regs: HookReg[]): void {
   const hooks = (s.hooks ??= {});
   for (const r of regs) {
     const arr = (hooks[r.event] ??= []);
@@ -67,16 +66,42 @@ function mergeHooks(root: string, regs: HookReg[]): void {
       arr.push({ matcher: r.matcher ?? '', hooks: [{ type: 'command', command: r.command, _carve: true }] });
     }
   }
-  writeSettings(root, s);
 }
 
-function mergeMcp(root: string, mcps: McpReg[]): void {
-  const s = readSettings(root);
+function applyMcp(s: Settings, mcps: McpReg[]): void {
   const servers = (s.mcpServers ??= {});
   for (const m of mcps) {
     if (!servers[m.name]) servers[m.name] = { command: m.command, args: m.args };
   }
+}
+
+/** 훅·MCP를 settings.json에 1회 read/write로 멱등 병합한다. */
+function mergeSettings(root: string, hooks: HookReg[], mcps: McpReg[]): void {
+  if (hooks.length === 0 && mcps.length === 0) return;
+  const s = readSettings(root);
+  if (hooks.length) applyHooks(s, hooks);
+  if (mcps.length) applyMcp(s, mcps);
   writeSettings(root, s);
+}
+
+/** artifacts를 쓰고, carve가 만든 적 없는 사용자 파일은 1회 .bak 보존한다. written 경로 반환. */
+function writeArtifacts(root: string, artifacts: Artifact[], prevFiles: Set<string>, backedUp: string[]): string[] {
+  const written: string[] = [];
+  for (const a of artifacts) {
+    const full = join(root, a.path);
+    mkdirSync(dirname(full), { recursive: true });
+    if (existsSync(full) && !prevFiles.has(a.path)) {
+      const bak = full + '.bak';
+      if (!existsSync(bak)) {
+        copyFileSync(full, bak);
+        backedUp.push(a.path + '.bak');
+      }
+    }
+    writeFileSync(full, a.content);
+    if (a.executable) chmodSync(full, 0o755);
+    written.push(a.path);
+  }
+  return written;
 }
 
 function stripCarveMcp(root: string, names: string[]): void {
@@ -110,30 +135,13 @@ function stripCarveHooks(root: string): void {
 export function install(root: string, artifacts: Artifact[], hooks: HookReg[] = [], mcps: McpReg[] = []): InstallResult {
   const prev = readManifest(root);
   const prevFiles = new Set(prev?.files ?? []);
-  const written: string[] = [];
   const backedUp: string[] = [...(prev?.backups ?? [])];
 
-  for (const a of artifacts) {
-    const full = join(root, a.path);
-    mkdirSync(dirname(full), { recursive: true });
-    // 사용자 파일(이전 carve 설치가 아님)이면 1회 .bak 보존
-    if (existsSync(full) && !prevFiles.has(a.path)) {
-      const bak = full + '.bak';
-      if (!existsSync(bak)) {
-        copyFileSync(full, bak);
-        backedUp.push(a.path + '.bak');
-      }
-    }
-    writeFileSync(full, a.content);
-    if (a.executable) chmodSync(full, 0o755);
-    written.push(a.path);
-  }
-
-  if (hooks.length) mergeHooks(root, hooks);
-  if (mcps.length) mergeMcp(root, mcps);
+  const written = writeArtifacts(root, artifacts, prevFiles, backedUp);
+  mergeSettings(root, hooks, mcps);
 
   const manifest: Manifest = {
-    version: '2.4.0',
+    version: CARVE_VERSION,
     files: written,
     backups: backedUp,
     hooks: hooks.map((h) => ({ event: h.event, command: h.command })),
@@ -155,34 +163,21 @@ export function installClaudeBase(
 ): InstallResult {
   const prev = readManifest(root);
   const prevFiles = new Set(prev?.files ?? []);
-  const written: string[] = [];
   const backedUp: string[] = [...(prev?.backups ?? [])];
 
-  // carve가 만든 적 없는 사용자 파일이면 1회 .bak 보존
-  const backupIfUser = (rel: string): void => {
-    const full = join(root, rel);
-    if (existsSync(full) && !prevFiles.has(rel)) {
-      const bak = full + '.bak';
-      if (!existsSync(bak)) {
-        copyFileSync(full, bak);
-        backedUp.push(rel + '.bak');
-      }
-    }
-  };
+  const written = writeArtifacts(root, artifacts, prevFiles, backedUp);
 
-  for (const a of artifacts) {
-    const full = join(root, a.path);
-    mkdirSync(dirname(full), { recursive: true });
-    backupIfUser(a.path);
-    writeFileSync(full, a.content);
-    written.push(a.path);
-  }
-
-  // 루트 CLAUDE.md에 @import 블록을 멱등 추가
+  // 루트 CLAUDE.md에 @import 블록을 멱등 추가 (전체 파일이 아닌 append라 별도 처리)
   const rootFull = join(root, ROOT_CLAUDE);
   const rootContent = existsSync(rootFull) ? readFileSync(rootFull, 'utf8') : '';
   if (!rootContent.includes(marker)) {
-    backupIfUser(ROOT_CLAUDE);
+    if (existsSync(rootFull) && !prevFiles.has(ROOT_CLAUDE)) {
+      const bak = rootFull + '.bak';
+      if (!existsSync(bak)) {
+        copyFileSync(rootFull, bak);
+        backedUp.push(ROOT_CLAUDE + '.bak');
+      }
+    }
     const next = rootContent.length
       ? rootContent.replace(/\s*$/, '\n') + importBlock
       : `# CLAUDE.md\n${importBlock}`;
@@ -191,7 +186,7 @@ export function installClaudeBase(
   if (!written.includes(ROOT_CLAUDE)) written.push(ROOT_CLAUDE);
 
   const manifest: Manifest = {
-    version: '2.4.0',
+    version: CARVE_VERSION,
     files: [...new Set([...(prev?.files ?? []), ...written])],
     backups: [...new Set(backedUp)],
     hooks: prev?.hooks ?? [],

@@ -6,7 +6,7 @@ import { analyze } from './analyzer.ts';
 import type { ProjectProfile } from './types.ts';
 import { design, type HarnessLevel } from './designer.ts';
 import { generate, hookRegsFor, mcpRegsFor } from './generator.ts';
-import { audit, auditShellSyntax, errorsOf } from './auditor.ts';
+import { audit, auditShellSyntax, errorsOf, type AuditFinding } from './auditor.ts';
 import { install, uninstall, installClaudeBase } from './installer.ts';
 import { generateClaudeBase, selectStack, ROOT_IMPORT_BLOCK, ROOT_IMPORT_MARKER } from './claudebase.ts';
 import { readManifest } from './manifest.ts';
@@ -43,6 +43,15 @@ function installLspServers(profile: ProjectProfile, io: IO): void {
   io.log(r.status === 0 ? 'LSP 언어서버 설치 완료.' : 'LSP 언어서버 설치 실패 — 수동: npm i -g ' + [...pkgs].join(' '));
 }
 
+/** 생성물 감사 — ERROR가 있으면 출력하고 true(차단)를 반환한다. */
+function auditGate(findings: AuditFinding[], io: IO, verb: string): boolean {
+  const errs = errorsOf(findings);
+  if (errs.length === 0) return false;
+  io.error(`auditor 차단: ERROR ${errs.length}건 — ${verb} 중단`);
+  for (const f of errs) io.error(`  ${f.path}:${f.line} [${f.rule}] ${f.message}`);
+  return true;
+}
+
 /** 분석 → 설계 → 생성 → 설치. selected=부분집합, lspServers=언어서버 자동설치, level=레벨 강제(--level). */
 export function cmdInstall(root: string, io: IO, selected?: string[], lspServers = false, level?: HarnessLevel): number {
   const profile = analyze(root);
@@ -54,12 +63,7 @@ export function cmdInstall(root: string, io: IO, selected?: string[], lspServers
   const artifacts = generate(profile, d);
 
   // 설치 전 자기 검증 (PoC: secret·과도권한·훅 주입 0건 + 셸 문법)
-  const errs = errorsOf([...audit(artifacts), ...auditShellSyntax(artifacts)]);
-  if (errs.length > 0) {
-    io.error(`auditor 차단: ERROR ${errs.length}건 — 설치 중단`);
-    for (const f of errs) io.error(`  ${f.path}:${f.line} [${f.rule}] ${f.message}`);
-    return 1;
-  }
+  if (auditGate([...audit(artifacts), ...auditShellSyntax(artifacts)], io, '설치')) return 1;
 
   const hooks = hookRegsFor(d);
   const mcps = mcpRegsFor(d);
@@ -79,12 +83,7 @@ export function cmdInitClaude(root: string, io: IO): number {
   const profile = analyze(root);
   const artifacts = generateClaudeBase(profile);
 
-  const errs = errorsOf(audit(artifacts));
-  if (errs.length > 0) {
-    io.error(`auditor 차단: ERROR ${errs.length}건 — 생성 중단`);
-    for (const f of errs) io.error(`  ${f.path}:${f.line} [${f.rule}] ${f.message}`);
-    return 1;
-  }
+  if (auditGate(audit(artifacts), io, '생성')) return 1;
 
   const stack = selectStack(profile);
   const r = installClaudeBase(root, artifacts, ROOT_IMPORT_BLOCK, ROOT_IMPORT_MARKER);

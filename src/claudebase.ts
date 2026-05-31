@@ -1,14 +1,11 @@
 // src/claudebase.ts — CLAUDE.md 베이스라인 + .claude/rules/* 스택별 생성 (레이어 A).
 // `carve init-claude` / harness-architect 스킬의 셋업 단계가 쓴다.
 // 스택 무관 베이스라인(.claude/CLAUDE.md) + 탐지 언어의 rules 번들을 깎아낸다.
-import { readFileSync } from 'node:fs';
 import type { ProjectProfile } from './types.ts';
-import { render, type Artifact } from './generator.ts';
+import { render, readAsset, type Artifact } from './generator.ts';
 
-const BASE = new URL('../assets/claude-base/', import.meta.url);
-function read(rel: string): string {
-  return readFileSync(new URL(rel, BASE), 'utf8');
-}
+// assets/claude-base/ 기준 자산을 generator의 readAsset(assets/ 기준)으로 읽는다.
+const read = (rel: string): string => readAsset(`claude-base/${rel}`);
 
 // .claude/rules/ 를 채우는 6개 규칙 파일
 const RULE_FILES = ['techstack', 'project-structure', 'commands', 'code-style', 'safety', 'gotchas'] as const;
@@ -66,10 +63,5 @@ ${ROOT_IMPORT_MARKER}
 ## 작업 지침 (베이스라인 + 스택 규칙)
 > carve가 연결. 베이스라인·스택 규칙은 \`.claude/\` 아래 파일을 수정해 조정한다.
 @.claude/CLAUDE.md
-@.claude/rules/techstack.md
-@.claude/rules/project-structure.md
-@.claude/rules/commands.md
-@.claude/rules/code-style.md
-@.claude/rules/safety.md
-@.claude/rules/gotchas.md
+${RULE_FILES.map((f) => `@.claude/rules/${f}.md`).join('\n')}
 `;

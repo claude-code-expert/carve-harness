@@ -4,6 +4,11 @@ import { join } from 'node:path';
 
 export const MANIFEST_NAME = 'carve-manifest.json';
 
+/** 매니페스트에 찍는 carve 버전 — package.json 단일 출처. */
+export const CARVE_VERSION: string = (
+  JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')) as { version: string }
+).version;
+
 export interface ManifestHook {
   event: string;
   command: string;
