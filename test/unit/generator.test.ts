@@ -28,6 +28,14 @@ test('generate: flight-rules + evaluation-criteria 항상 생성, 변수 치환'
   assert.match(fr.content, /any.*금지/); // typescript LANG_RULES
   assert.equal(fr.executable, false);
   assert.ok(find(arts, 'evaluation-criteria.md'));
+  assert.ok(find(arts, 'sprint-contract.md')); // v1.3 #2
+});
+
+test('generate: squad-evaluator 에이전트 + 커맨드 emit (v1.3 #1)', () => {
+  const p = profile({});
+  const arts = generate(p, design(p));
+  assert.ok(find(arts, '.claude/agents/squad-evaluator.md'));
+  assert.ok(find(arts, '.claude/commands/squad-evaluator.md'));
 });
 
 test('generate: 추천 시 결정적 차단 훅 + anti-slop 훅 생성(executable)', () => {

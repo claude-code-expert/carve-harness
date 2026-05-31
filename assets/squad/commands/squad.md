@@ -4,7 +4,7 @@ allowed-tools: Agent
 ---
 
 Parse the user's input:
-- First word = member keyword (review, plan, refactor, qa, debug, docs, gitops, audit)
+- First word = member keyword (review, plan, refactor, qa, debug, docs, gitops, audit, evaluator)
 - Remaining text = task description
 
 The actual agent name is `squad-{keyword}`. For example:
@@ -20,6 +20,7 @@ Available Squad Agents:
 - squad-docs: Documentation generation and updates
 - squad-gitops: Commit messages, PR descriptions, changelogs
 - squad-audit: Security audit and vulnerability scanning
+- squad-evaluator: Independent evaluation against evaluation-criteria.md / Sprint Contract
 
 If no match, list all members and ask to choose.
 

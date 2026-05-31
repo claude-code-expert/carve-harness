@@ -29,8 +29,9 @@ test('필수 훅 7개 + 선택 훅 1개', () => {
   assert.equal(hooks.filter((c) => c.optional).length, 1);
 });
 
-test('Squad 8종 + anti-ai-slop 팩 존재', () => {
-  assert.equal(CATALOG.filter((c) => c.kind === 'agent').length, 8);
+test('Squad 9종(+evaluator) + anti-ai-slop 팩 존재', () => {
+  assert.equal(CATALOG.filter((c) => c.kind === 'agent').length, 9);
+  assert.ok(byId('squad-evaluator'));
   assert.ok(byId('anti-ai-slop'));
 });
 

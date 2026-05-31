@@ -1,7 +1,7 @@
 // test/unit/auditor.test.ts — auditor 자기검증 (Milestone 5 게이트, PoC #4)
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { audit, errorsOf } from '../../src/auditor.ts';
+import { audit, auditShellSyntax, errorsOf } from '../../src/auditor.ts';
 import { generate } from '../../src/generator.ts';
 import { design } from '../../src/designer.ts';
 import type { Artifact } from '../../src/generator.ts';
@@ -48,4 +48,17 @@ test('훅이 settings.json에 기록 → hook-injection ERROR', () => {
 test('하드코딩 비밀번호 → WARN', () => {
   const f = audit([A('c.js', 'const password = "hunter2pass"')]);
   assert.ok(f.some((x) => x.rule === 'hardcoded-password' && x.severity === 'WARN'));
+});
+
+test('auditShellSyntax: 깨진 .sh → ERROR, 정상 → 0', () => {
+  const broken = auditShellSyntax([A('.claude/hooks/x.sh', 'if [ 1 = 1 ]; then echo hi\n')]); // fi 누락
+  assert.ok(broken.some((x) => x.rule === 'shell-syntax'));
+  const ok = auditShellSyntax([A('.claude/hooks/y.sh', '#!/usr/bin/env bash\nset -e\necho ok\n')]);
+  assert.equal(ok.length, 0);
+});
+
+test('auditShellSyntax: carve 실제 생성 훅은 문법 통과(0)', () => {
+  const arts = generate(profile, design(profile)).filter((a) => a.path.endsWith('.sh'));
+  assert.ok(arts.length > 0);
+  assert.equal(errorsOf(auditShellSyntax(arts)).length, 0);
 });

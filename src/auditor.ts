@@ -1,5 +1,6 @@
-// src/auditor.ts — 생성물 자기 검증 (레이어 A). secret 노출·과도 권한·훅 주입 스캔.
+// src/auditor.ts — 생성물 자기 검증 (레이어 A). secret 노출·과도 권한·훅 주입 + 셸 문법 스캔.
 // 설치 전 carve가 자기 산출물을 검사한다(PoC: secret·권한 0건 확인).
+import { spawnSync } from 'node:child_process';
 import type { Artifact } from './generator.ts';
 
 export type Severity = 'ERROR' | 'WARN';
@@ -49,6 +50,31 @@ export function audit(artifacts: Artifact[]): AuditFinding[] {
         at('hook-injection', 'ERROR', '훅이 settings/훅을 수정(주입)');
       }
     });
+  }
+  return findings;
+}
+
+/**
+ * 생성된 셸 훅을 실제 문법 검사한다. shellcheck 있으면 사용, 없으면 `bash -n` 폴백.
+ * (v1.3 #3·#4 — 정적 룰을 넘어 결정적 셸 검증)
+ */
+export function auditShellSyntax(artifacts: Artifact[]): AuditFinding[] {
+  const findings: AuditFinding[] = [];
+  const hasShellcheck = spawnSync('sh', ['-c', 'command -v shellcheck']).status === 0;
+  for (const a of artifacts) {
+    if (!a.path.endsWith('.sh')) continue;
+    const bn = spawnSync('bash', ['-n'], { input: a.content, encoding: 'utf8' });
+    if (bn.status !== 0) {
+      const msg = (bn.stderr || '').trim().split('\n')[0] || 'syntax error';
+      findings.push({ path: a.path, line: 0, rule: 'shell-syntax', severity: 'ERROR', message: `bash -n 실패: ${msg}` });
+      continue;
+    }
+    if (hasShellcheck) {
+      const sc = spawnSync('shellcheck', ['-S', 'error', '-'], { input: a.content, encoding: 'utf8' });
+      if (sc.status !== 0) {
+        findings.push({ path: a.path, line: 0, rule: 'shellcheck', severity: 'ERROR', message: 'shellcheck error' });
+      }
+    }
   }
   return findings;
 }

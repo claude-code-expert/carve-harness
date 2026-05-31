@@ -55,6 +55,7 @@ export const CATALOG: CatalogComponent[] = [
   { id: 'squad-docs', kind: 'agent', title: 'Squad 문서', description: '문서 생성·갱신', score: 80, core: true, optional: false, applicable: 'all' },
   { id: 'squad-gitops', kind: 'agent', title: 'Squad GitOps', description: '커밋 메시지·PR·체인지로그', score: 80, core: true, optional: false, applicable: 'all' },
   { id: 'squad-audit', kind: 'agent', title: 'Squad 감사', description: '보안 감사·취약점 스캔', score: 85, core: true, optional: false, applicable: 'all' },
+  { id: 'squad-evaluator', kind: 'agent', title: 'Squad 평가자', description: '완료 기준·Sprint Contract 대비 독립 평가 (Self-Eval Blindspot 대응)', score: 88, core: true, optional: false, applicable: 'all' },
 
   // ── 추가 컴포넌트 (≥75) ──
   { id: 'anti-ai-slop', kind: 'pack', title: 'Anti-AI-Slop 팩', description: 'HTML·SVG·문서 슬롭 제거 스킬 + check-slop 검증 훅', score: 85, core: false, optional: false, applicable: 'all' },

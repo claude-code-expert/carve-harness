@@ -113,6 +113,11 @@ export function generate(profile: ProjectProfile, design: HarnessDesign): Artifa
     executable: false,
   });
   artifacts.push({
+    path: 'sprint-contract.md',
+    content: render(readAsset('templates/sprint-contract.md'), vars),
+    executable: false,
+  });
+  artifacts.push({
     path: 'CLAUDE.md',
     content: render(readAsset('templates/target-CLAUDE.md'), vars),
     executable: false,
