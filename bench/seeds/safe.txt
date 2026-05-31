@@ -1,0 +1,6 @@
+ls -la
+rm -rf ./build
+rm file.txt
+git status
+npm test
+git push origin feature

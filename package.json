@@ -1,0 +1,31 @@
+{
+  "name": "carve-harness",
+  "version": "2.4.0",
+  "description": "범용 하네스 자산을 프로젝트에 맞게 깎아 설치하는 CLI (carve = 제약/깎아냄)",
+  "type": "module",
+  "bin": {
+    "carve": "bin/carve.ts"
+  },
+  "files": [
+    "bin",
+    "src",
+    "assets",
+    "vendor"
+  ],
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "check": "tsc --noEmit",
+    "test": "node --test 'test/**/*.test.ts'",
+    "test:cov": "node --test --experimental-test-coverage --test-coverage-lines=0.8 --test-coverage-functions=0.8 'test/**/*.test.ts'"
+  },
+  "dependencies": {
+    "@clack/prompts": "^0.7.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "@types/node": "^22.10.0"
+  },
+  "license": "MIT"
+}
