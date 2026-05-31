@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpenHarness 분석 — HKUDS Open Agent Harness</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root{
+    --amber:#F59E0B; --amber-d:#D97706; --blue:#2563EB; --cyan:#06B6D4;
+    --green:#10B981; --coral:#EF4444; --purple:#8B5CF6;
+    --ink:#0B0B0C; --text:#1A1A1C; --muted:#6B7280; --faint:#9CA3AF;
+    --border:#E5E7EB; --bg:#FFFFFF; --panel:#F8F7F4; --code-bg:#0E1116; --code-text:#E6EDF3;
+  }
+  html{scroll-behavior:smooth;}
+  body{
+    font-family:'Noto Sans KR',sans-serif; color:var(--text);
+    background:#FBFAF7;
+    line-height:1.7; -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1080px; margin:0 auto; padding:0 24px;}
+
+  /* ── Hero ── */
+  header.hero{
+    position:relative; padding:88px 0 64px; overflow:hidden;
+    border-bottom:1px solid var(--border);
+  }
+  .hero-grid{ display:none; }
+  .hero-inner{position:relative; z-index:1;}
+  .eyebrow{
+    display:inline-flex; align-items:center; gap:8px; font-family:'JetBrains Mono',monospace;
+    font-size:12px; font-weight:600; letter-spacing:.12em; text-transform:uppercase;
+    color:var(--amber-d); background:rgba(245,158,11,.10);
+    border:1px solid rgba(245,158,11,.30); padding:6px 12px; border-radius:999px;
+  }
+  h1{font-size:clamp(34px,5.5vw,58px); font-weight:900; letter-spacing:-.02em; line-height:1.08; margin:20px 0 14px; color:var(--ink);}
+  h1 .mono{font-family:'JetBrains Mono',monospace; color:var(--amber-d);}
+  .sub{font-size:clamp(16px,2vw,20px); color:var(--muted); max-width:680px;}
+  .tagline{margin-top:22px; font-family:'JetBrains Mono',monospace; font-size:13px; color:var(--faint);}
+  .tagline b{color:var(--text);}
+
+  .meta-row{display:flex; flex-wrap:wrap; gap:10px; margin-top:30px;}
+  .chip{
+    display:inline-flex; align-items:center; gap:7px; font-size:13px; font-weight:500;
+    background:var(--bg); border:1px solid var(--border); border-radius:10px; padding:8px 13px;
+  }
+  .chip .k{color:var(--faint); font-family:'JetBrains Mono',monospace; font-size:11px;}
+  .chip .v{color:var(--text); font-weight:700;}
+  .dot{width:7px;height:7px;border-radius:50%;}
+
+  /* ── Section ── */
+  section{padding:58px 0; border-bottom:1px solid var(--border);}
+  .sec-no{font-family:'JetBrains Mono',monospace; font-size:12px; font-weight:700; color:var(--amber-d); letter-spacing:.1em;}
+  h2{font-size:clamp(24px,3.4vw,34px); font-weight:900; letter-spacing:-.015em; color:var(--ink); margin:6px 0 8px;}
+  .lead{color:var(--muted); font-size:16px; max-width:760px; margin-bottom:28px;}
+  h3{font-size:19px; font-weight:700; color:var(--ink); margin:32px 0 12px;}
+
+  /* ── TL;DR card ── */
+  .tldr{
+    background:#15171C; color:#E6EDF3; border-radius:14px;
+    padding:30px 32px; position:relative;
+  }
+  .tldr h2{color:#fff; margin-top:0;}
+  .tldr ul{list-style:none; display:grid; gap:12px; position:relative; z-index:1;}
+  .tldr li{display:flex; gap:12px; align-items:flex-start; font-size:15px; color:#C9D1D9;}
+  .tldr li b{color:#fff;}
+  .tldr .ic{color:var(--amber); font-weight:700; font-family:'JetBrains Mono',monospace; flex:none;}
+
+  /* ── Stat grid ── */
+  .stats{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:14px; margin-top:24px;}
+  .stat{background:var(--bg); border:1px solid var(--border); border-radius:14px; padding:20px; text-align:center;}
+  .stat .big{font-family:'JetBrains Mono',monospace; font-size:30px; font-weight:700; color:var(--ink); line-height:1;}
+  .stat .big.accent{color:var(--amber-d);}
+  .stat .lbl{font-size:12.5px; color:var(--muted); margin-top:8px;}
+
+  /* ── Table ── */
+  .tbl-wrap{overflow-x:auto; border:1px solid var(--border); border-radius:14px; background:var(--bg);}
+  table{width:100%; border-collapse:collapse; font-size:14px; min-width:520px;}
+  th,td{text-align:left; padding:13px 16px; border-bottom:1px solid var(--border); vertical-align:top;}
+  th{background:var(--panel); font-weight:700; color:var(--ink); font-size:12.5px; letter-spacing:.02em; text-transform:uppercase;}
+  tr:last-child td{border-bottom:none;}
+  td code,th code{font-family:'JetBrains Mono',monospace; font-size:12.5px; background:var(--panel); padding:2px 6px; border-radius:5px; color:var(--amber-d);}
+  .win{color:var(--green); font-weight:700;}
+
+  /* ── Subsystem grid ── */
+  .subsys{display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:14px; margin-top:8px;}
+  .ss{
+    position:relative; background:var(--bg); border:1px solid var(--border); border-radius:14px;
+    padding:18px 18px 16px;
+  }
+  .ss .name{font-family:'JetBrains Mono',monospace; font-weight:700; font-size:14px; color:var(--ink); display:flex; align-items:center; gap:8px;}
+  .ss .emoji{font-size:16px;}
+  .ss .desc{font-size:13px; color:var(--muted); margin-top:8px;}
+  .ss .pillar{
+    display:inline-block; margin-top:11px; font-size:10.5px; font-weight:700; font-family:'JetBrains Mono',monospace;
+    padding:3px 8px; border-radius:6px; letter-spacing:.03em;
+  }
+  .p-con{background:rgba(239,68,68,.10); color:var(--coral);}
+  .p-fb{background:rgba(37,99,235,.10); color:var(--blue);}
+  .p-state{background:rgba(245,158,11,.12); color:var(--amber-d);}
+  .p-core{background:rgba(139,92,246,.12); color:var(--purple);}
+  .p-ext{background:rgba(16,185,129,.12); color:var(--green);}
+
+  .legend{display:flex; flex-wrap:wrap; gap:10px; margin:18px 0 4px; font-size:12px;}
+  .legend span{display:inline-flex; align-items:center; gap:6px; color:var(--muted);}
+  .legend i{width:11px; height:11px; border-radius:3px; display:inline-block;}
+
+  /* ── Code block ── */
+  pre{
+    background:var(--code-bg); color:var(--code-text); border-radius:14px; padding:22px 24px;
+    overflow-x:auto; font-family:'JetBrains Mono',monospace; font-size:13px; line-height:1.65;
+    border:1px solid #20262E; margin:8px 0;
+  }
+  pre .c{color:#7d8590;} pre .k{color:#ff9d3c;} pre .s{color:#7ee787;} pre .f{color:#79c0ff;}
+  .code-cap{font-family:'JetBrains Mono',monospace; font-size:11.5px; color:var(--faint); margin:14px 0 2px;}
+
+  /* ── Pillars (3 columns) ── */
+  .pillars{display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-top:8px;}
+  .pillar-card{border-radius:16px; padding:22px; border:1px solid var(--border); background:var(--bg);}
+  .pillar-card .tag{font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase;}
+  .pillar-card h4{font-size:17px; font-weight:800; margin:8px 0 8px; color:var(--ink);}
+  .pillar-card p{font-size:13.5px; color:var(--muted);}
+  .pc-1 .tag{color:var(--coral);}
+  .pc-2 .tag{color:var(--blue);}
+  .pc-3 .tag{color:var(--amber-d);}
+
+  /* ── Callout ── */
+  .note{
+    border-left:4px solid var(--amber); background:var(--panel); border-radius:0 12px 12px 0;
+    padding:16px 20px; font-size:14px; color:var(--text); margin:18px 0;
+  }
+  .note b{color:var(--ink);}
+  .note.blue{border-left-color:var(--blue);}
+  .note.warn{border-left-color:var(--coral);}
+
+  /* ── carve link box ── */
+  .carve{
+    background:var(--panel);
+    border:1px solid var(--border); border-radius:16px; padding:26px 28px; margin-top:8px;
+  }
+  .carve h3{margin-top:0;}
+  .map-row{display:grid; grid-template-columns:1fr auto 1fr; gap:12px; align-items:center; margin:10px 0; font-size:14px;}
+  .map-row .from{font-family:'JetBrains Mono',monospace; font-weight:700; color:var(--blue); text-align:right;}
+  .map-row .arrow{color:var(--faint); font-weight:700;}
+  .map-row .to{color:var(--text);}
+
+  /* ── Sources ── */
+  .src{font-size:13px; color:var(--muted); display:grid; gap:7px;}
+  .src a{color:var(--blue); text-decoration:none; font-family:'JetBrains Mono',monospace; font-size:12.5px; word-break:break-all;}
+  .src a:hover{text-decoration:underline;}
+
+  .verify{background:#0E1116; color:#C9D1D9; border-radius:14px; padding:22px 24px; font-size:13px; margin-top:18px;}
+  .verify h4{color:#fff; font-size:14px; margin-bottom:10px; font-family:'JetBrains Mono',monospace;}
+  .verify .ok{color:#7ee787;} .verify .no{color:#ff7b72;}
+  .verify ul{list-style:none; display:grid; gap:7px;}
+  .verify li{padding-left:18px; position:relative;}
+  .verify li::before{content:"▸"; position:absolute; left:0; color:var(--amber);}
+
+  footer{padding:40px 0 70px; text-align:center; color:var(--faint); font-size:13px;}
+  footer .mono{font-family:'JetBrains Mono',monospace;}
+
+  @media(max-width:720px){
+    .pillars{grid-template-columns:1fr;}
+    .map-row{grid-template-columns:1fr; text-align:left;}
+    .map-row .from{text-align:left;}
+  }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="hero-grid"></div>
+  <div class="wrap hero-inner">
+    <span class="eyebrow">● Repository 분석 · HKUDS</span>
+    <h1>OpenHarness <span class="mono">(oh)</span><br>Open Agent Harness 해부</h1>
+    <p class="sub">Claude Code의 11,733줄짜리 경량 재구현. "에이전트 하네스란 무엇인가"를 코드로 가장 명확하게 보여주는 오픈소스를, carve-harness 설계 관점에서 분석한다.</p>
+    <p class="tagline"><b>"The model is the agent. The code is the harness."</b> — OpenHarness 슬로건</p>
+
+    <div class="meta-row">
+      <span class="chip"><span class="dot" style="background:var(--amber)"></span><span class="k">repo</span><span class="v">HKUDS/OpenHarness</span></span>
+      <span class="chip"><span class="k">lang</span><span class="v">Python 3.11+</span></span>
+      <span class="chip"><span class="k">license</span><span class="v">MIT</span></span>
+      <span class="chip"><span class="k">subsystems</span><span class="v">10+</span></span>
+      <span class="chip"><span class="k">tools</span><span class="v">43</span></span>
+      <span class="chip"><span class="k">latest</span><span class="v">v0.1.x (2026)</span></span>
+    </div>
+  </div>
+</header>
+
+<!-- 0. TL;DR -->
+<section><div class="wrap">
+  <div class="tldr">
+    <span class="sec-no">SUMMARY</span>
+    <h2>3줄 요약</h2>
+    <ul>
+      <li><span class="ic">01</span><div><b>본질</b> — LLM을 감싸 "손·눈·기억·안전경계"를 부여하는 인프라 전체. <code>Harness = Tools + Knowledge + Observation + Action + Permissions</code></div></li>
+      <li><span class="ic">02</span><div><b>특징</b> — Claude Code(약 51만 줄)의 핵심 기능을 <b>11,733줄</b>로 압축. 텔레메트리·OAuth·React 더미를 걷어내고 하네스 아키텍처만 남긴 "교과서"같은 구현.</div></li>
+      <li><span class="ic">03</span><div><b>구조</b> — 10+개 서브시스템 + 단일 <b>Agent Loop</b>. 4개 확장점(Tool·Skill·Plugin·Hook)으로 확장. <code>anthropics/skills</code>·claude-code 플러그인과 호환.</div></li>
+    </ul>
+  </div>
+</div></section>
+
+<!-- 1. What is a Harness -->
+<section><div class="wrap">
+  <span class="sec-no">01 / 개념</span>
+  <h2>에이전트 하네스란 무엇인가</h2>
+  <p class="lead">모델은 <b>지능</b>을 제공하고, 하네스는 <b>실행 환경</b>을 제공한다. OpenHarness는 이 등식을 코드로 증명한다.</p>
+
+  <div class="note blue">
+    <b>Harness = Tools + Knowledge + Observation + Action + Permissions</b><br>
+    LLM 단독으로는 텍스트만 생성한다. 파일을 읽고(도구), 도메인 지식을 참조하고(스킬), 결과를 관찰하고, 행동하고, 안전 경계 안에서 움직이게 만드는 것 — 이 전체가 하네스다.
+  </div>
+
+  <div class="stats">
+    <div class="stat"><div class="big accent">11,733</div><div class="lbl">Lines of Code<br>(Claude Code 대비 44× 경량)</div></div>
+    <div class="stat"><div class="big">163</div><div class="lbl">Files<br>(vs 1,884)</div></div>
+    <div class="stat"><div class="big">43</div><div class="lbl">Tools<br>(Claude Code의 98%)</div></div>
+    <div class="stat"><div class="big">54</div><div class="lbl">Commands<br>(61%)</div></div>
+    <div class="stat"><div class="big">114+6</div><div class="lbl">Unit + E2E<br>테스트 스위트</div></div>
+  </div>
+  <p class="code-cap">출처: OpenHarness README "44x Lighter Than Claude Code" 비교표</p>
+</div></section>
+
+<!-- 2. Architecture -->
+<section><div class="wrap">
+  <span class="sec-no">02 / 아키텍처</span>
+  <h2>10+ 서브시스템</h2>
+  <p class="lead">하나의 디렉토리 = 하나의 책임. 이 분류 체계가 carve-harness의 "하네스 슬롯 설계"(P2)의 기준이 된다.</p>
+
+  <div class="legend">
+    <span><i class="p-con" style="background:var(--coral)"></i> 제약</span>
+    <span><i class="p-fb" style="background:var(--blue)"></i> 피드백 루프</span>
+    <span><i class="p-state" style="background:var(--amber)"></i> 상태 관리</span>
+    <span><i class="p-core" style="background:var(--purple)"></i> 코어</span>
+    <span><i class="p-ext" style="background:var(--green)"></i> 확장</span>
+  </div>
+
+  <div class="subsys">
+    <div class="ss"><div class="name"><span class="emoji">🧠</span> engine/</div><div class="desc">Agent Loop — query → stream → tool-call → loop. 하네스의 심장.</div><span class="pillar p-core">CORE</span></div>
+    <div class="ss"><div class="name"><span class="emoji">🔧</span> tools/</div><div class="desc">43개 도구 — 파일 I/O, 셸, 검색, 웹, MCP. Pydantic 입력 검증.</div><span class="pillar p-core">CORE</span></div>
+    <div class="ss"><div class="name"><span class="emoji">📚</span> skills/</div><div class="desc">On-demand .md 지식 로딩. anthropics/skills 호환.</div><span class="pillar p-fb">FEEDBACK</span></div>
+    <div class="ss"><div class="name"><span class="emoji">🔌</span> plugins/</div><div class="desc">확장 — commands·hooks·agents·MCP. claude-code 플러그인 호환.</div><span class="pillar p-ext">EXTEND</span></div>
+    <div class="ss"><div class="name"><span class="emoji">🛡️</span> permissions/</div><div class="desc">멀티레벨 모드 + 경로 규칙 + 커맨드 차단. 안전 경계.</div><span class="pillar p-con">CONSTRAINT</span></div>
+    <div class="ss"><div class="name"><span class="emoji">⚡</span> hooks/</div><div class="desc">PreToolUse / PostToolUse 라이프사이클 이벤트.</div><span class="pillar p-con">CONSTRAINT</span></div>
+    <div class="ss"><div class="name"><span class="emoji">💬</span> commands/</div><div class="desc">54개 커맨드 — /help, /commit, /plan, /resume …</div><span class="pillar p-ext">EXTEND</span></div>
+    <div class="ss"><div class="name"><span class="emoji">🌐</span> mcp/</div><div class="desc">Model Context Protocol 클라이언트.</div><span class="pillar p-ext">EXTEND</span></div>
+    <div class="ss"><div class="name"><span class="emoji">🧩</span> memory/</div><div class="desc">MEMORY.md 크로스세션 영속 메모리.</div><span class="pillar p-state">STATE</span></div>
+    <div class="ss"><div class="name"><span class="emoji">📋</span> tasks/</div><div class="desc">백그라운드 태스크 라이프사이클 관리.</div><span class="pillar p-state">STATE</span></div>
+    <div class="ss"><div class="name"><span class="emoji">🤝</span> coordinator/</div><div class="desc">서브에이전트 spawn·팀 조율 (멀티 에이전트).</div><span class="pillar p-fb">FEEDBACK</span></div>
+    <div class="ss"><div class="name"><span class="emoji">📝</span> prompts/</div><div class="desc">시스템 프롬프트 조립, CLAUDE.md·스킬 주입.</div><span class="pillar p-state">STATE</span></div>
+    <div class="ss"><div class="name"><span class="emoji">⚙️</span> config/</div><div class="desc">멀티레이어 설정·마이그레이션.</div><span class="pillar p-state">STATE</span></div>
+    <div class="ss"><div class="name"><span class="emoji">🖥️</span> ui/</div><div class="desc">React/Ink TUI — 백엔드 프로토콜 + 프론트엔드.</div><span class="pillar p-ext">EXTEND</span></div>
+  </div>
+
+  <div class="note warn">
+    <b>주의:</b> README 본문은 "10 subsystems"라고 명시하지만, 실제 트리에는 <code>prompts/ config/ ui/</code>가 더 있어 <b>13개</b>가 보인다. 강의에서는 "핵심 10개 + 보조 3개"로 설명하는 편이 정확하다.
+  </div>
+</div></section>
+
+<!-- 3. Agent Loop -->
+<section><div class="wrap">
+  <span class="sec-no">03 / 심장</span>
+  <h2>The Agent Loop</h2>
+  <p class="lead">하나의 루프, 무한히 조합 가능. 모델은 <b>무엇을</b> 할지 정하고, 하네스는 <b>어떻게</b>(안전하게·효율적으로·관찰 가능하게)를 처리한다.</p>
+
+  <p class="code-cap">openharness/engine — 의사 코드</p>
+<pre><span class="k">while</span> True:
+    response = <span class="k">await</span> api.stream(messages, tools)
+
+    <span class="k">if</span> response.stop_reason != <span class="s">"tool_use"</span>:
+        <span class="k">break</span>  <span class="c"># 모델이 작업 완료</span>
+
+    <span class="k">for</span> tool_call <span class="k">in</span> response.tool_uses:
+        <span class="c"># Permission check → Hook → Execute → Hook → Result</span>
+        result = <span class="k">await</span> harness.execute_tool(tool_call)
+
+    messages.append(tool_results)
+    <span class="c"># 루프 지속 — 모델이 결과를 보고 다음 행동 결정</span></pre>
+
+  <div class="note">
+    도구 실행 한 번에 <b>권한 검사 → PreToolUse 훅 → 실행 → PostToolUse 훅 → 결과</b>의 파이프라인이 끼어든다. 이 지점이 바로 carve-harness가 프로젝트별 <b>제약(flight-rules)</b>과 <b>검증 훅</b>을 주입하는 자리다.
+  </div>
+</div></section>
+
+<!-- 4. Three Pillars mapping -->
+<section><div class="wrap">
+  <span class="sec-no">04 / 매핑</span>
+  <h2>서브시스템 → 하네스 3기둥</h2>
+  <p class="lead">강의의 "하네스 3기둥" 프레임으로 OpenHarness를 재배열하면, 각 서브시스템의 역할이 선명해진다.</p>
+
+  <div class="pillars">
+    <div class="pillar-card pc-1">
+      <div class="tag">Pillar 1</div>
+      <h4>제약 (Constraints)</h4>
+      <p><code>permissions/</code> · <code>hooks/</code><br>무엇을 하면 안 되는지. 멀티레벨 권한 모드, 경로 규칙, 커맨드 차단, PreToolUse 차단 훅(exit code 2).</p>
+    </div>
+    <div class="pillar-card pc-2">
+      <div class="tag">Pillar 2</div>
+      <h4>피드백 루프 (Feedback)</h4>
+      <p><code>skills/</code> · <code>coordinator/</code> · <code>tools/</code>(검색·테스트)<br>결과를 관찰하고 다음을 결정. 스킬 로딩, 서브에이전트 검증·조율.</p>
+    </div>
+    <div class="pillar-card pc-3">
+      <div class="tag">Pillar 3</div>
+      <h4>상태 관리 (State)</h4>
+      <p><code>memory/</code> · <code>tasks/</code> · <code>prompts/</code> · <code>config/</code><br>세션을 넘어 맥락 유지. MEMORY.md, 백그라운드 태스크, 컨텍스트 압축.</p>
+    </div>
+  </div>
+</div></section>
+
+<!-- 5. Extension points -->
+<section><div class="wrap">
+  <span class="sec-no">05 / 확장</span>
+  <h2>4개 확장점 — 이게 전부다</h2>
+  <p class="lead">OpenHarness는 딱 4가지로만 확장된다. carve-harness가 "깎아 생성"하는 산출물도 정확히 이 4종이다.</p>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>확장점</th><th>형태</th><th>역할</th><th>carve 생성물</th></tr></thead>
+      <tbody>
+        <tr><td><b>Tool</b></td><td><code>BaseTool</code> 상속 (Pydantic)</td><td>새 기능 추가. 등록 즉시 JSON Schema 자동 생성으로 모델이 학습.</td><td>프로젝트 전용 도구</td></tr>
+        <tr><td><b>Skill</b></td><td><code>SKILL.md</code></td><td>on-demand 도메인 지식. 호출 시점에만 컨텍스트 로드(토큰 절약).</td><td><code>.claude/skills/</code></td></tr>
+        <tr><td><b>Plugin</b></td><td><code>plugin.json</code> + 폴더</td><td>commands·hooks·agents·MCP 패키지화. claude-code 호환.</td><td>(번들 배포)</td></tr>
+        <tr><td><b>Hook</b></td><td>command·http·prompt·agent</td><td>라이프사이클 이벤트 가로채기. blocked=True면 도구 차단.</td><td><code>.claude/hooks/</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p class="code-cap">커스텀 도구 — 약 10줄이면 끝</p>
+<pre><span class="k">class</span> <span class="f">MyToolInput</span>(BaseModel):
+    query: str = Field(description=<span class="s">"Search query"</span>)
+
+<span class="k">class</span> <span class="f">MyTool</span>(BaseTool):
+    name = <span class="s">"my_tool"</span>
+    description = <span class="s">"Does something useful"</span>
+    input_model = MyToolInput
+
+    <span class="k">async def</span> <span class="f">execute</span>(self, args, ctx):
+        <span class="k">return</span> ToolResult(output=<span class="s">f"Result for: {args.query}"</span>)</pre>
+
+  <p class="code-cap">커스텀 스킬 — ~/.openharness/skills/my-skill.md</p>
+<pre><span class="c">---</span>
+<span class="k">name</span>: my-skill
+<span class="k">description</span>: Expert guidance for my specific domain
+<span class="c">---</span>
+
+<span class="c"># My Skill</span>
+<span class="c">## When to use</span>
+Use when the user asks about [your domain].</pre>
+</div></section>
+
+<!-- 6. Governance & Permissions -->
+<section><div class="wrap">
+  <span class="sec-no">06 / 안전</span>
+  <h2>권한 모델 — 3단계</h2>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>모드</th><th>동작</th><th>용도</th></tr></thead>
+      <tbody>
+        <tr><td><b>Default</b></td><td>쓰기·실행 전 확인</td><td>일상 개발</td></tr>
+        <tr><td><b>Auto</b></td><td>전부 허용</td><td>샌드박스 환경</td></tr>
+        <tr><td><b>Plan Mode</b></td><td>모든 쓰기 차단</td><td>대규모 리팩토링 전 검토</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="code-cap">settings.json — 경로·커맨드 단위 규칙</p>
+<pre>{
+  <span class="s">"permission"</span>: {
+    <span class="s">"mode"</span>: <span class="s">"default"</span>,
+    <span class="s">"path_rules"</span>: [{<span class="s">"pattern"</span>: <span class="s">"/etc/*"</span>, <span class="s">"allow"</span>: false}],
+    <span class="s">"denied_commands"</span>: [<span class="s">"rm -rf /"</span>, <span class="s">"DROP TABLE *"</span>]
+  }
+}</pre>
+</div></section>
+
+<!-- 7. carve-harness implications -->
+<section><div class="wrap">
+  <span class="sec-no">07 / 적용</span>
+  <h2>carve-harness 관점에서</h2>
+  <p class="lead">OpenHarness는 carve-harness의 <b>베이스 레퍼런스</b>다. 무엇을 참조하고 무엇을 차용할지 정리한다.</p>
+
+  <div class="carve">
+    <h3>OpenHarness → carve-harness 매핑</h3>
+    <div class="map-row"><div class="from">10+ 서브시스템 분류</div><div class="arrow">→</div><div class="to"><code>designer</code>의 하네스 슬롯 설계 기준 (P2)</div></div>
+    <div class="map-row"><div class="from">4개 확장점</div><div class="arrow">→</div><div class="to"><code>generator</code>가 깎아 생성하는 산출물 4종 (P4)</div></div>
+    <div class="map-row"><div class="from">Permission 3단계 + path_rules</div><div class="arrow">→</div><div class="to">프로젝트별 <code>flight-rules.md</code> (P5)</div></div>
+    <div class="map-row"><div class="from">PreToolUse / PostToolUse 훅</div><div class="arrow">→</div><div class="to">결정적 검증 훅 (P5)</div></div>
+    <div class="map-row"><div class="from">Agent Loop 권한·훅 파이프라인</div><div class="arrow">→</div><div class="to">제약·검증 주입 지점</div></div>
+    <div class="map-row"><div class="from">SKILL.md / plugin.json 포맷</div><div class="arrow">→</div><div class="to">생성 자산의 호환 포맷</div></div>
+  </div>
+
+  <div class="note">
+    <b>핵심 차용 전략:</b> carve-harness는 OpenHarness를 <code>vendor/</code>에 <b>읽기 전용</b>으로 두고 분류 체계·패턴만 참조한다. OpenHarness가 활발히 변경 중(stars·forks 빠르게 증가, 최근 활동 수일 내)이므로 반드시 <b>핀 버전</b>으로 고정한다.
+  </div>
+</div></section>
+
+<!-- 8. Sources & Verify -->
+<section style="border-bottom:none;"><div class="wrap">
+  <span class="sec-no">08 / 출처</span>
+  <h2>참고 자료</h2>
+  <div class="src">
+    <a href="https://github.com/HKUDS/OpenHarness">github.com/HKUDS/OpenHarness</a>
+    <a href="https://github.com/HKUDS/OpenHarness/blob/main/README.md">README.md (아키텍처·기능·확장 — 본 분석 1차 출처)</a>
+    <a href="https://github.com/HKUDS/OpenHarness/blob/main/CONTRIBUTING.md">CONTRIBUTING.md</a>
+    <a href="https://github.com/HKUDS/OpenHarness/blob/main/CHANGELOG.md">CHANGELOG.md</a>
+    <a href="https://github.com/HKUDS/OpenHarness/blob/main/docs/SHOWCASE.md">docs/SHOWCASE.md</a>
+    <a href="https://github.com/anthropics/skills">anthropics/skills (스킬 호환 대상)</a>
+  </div>
+
+  <div class="verify">
+    <h4>// 할루시네이션 검증 노트</h4>
+    <ul>
+      <li><span class="ok">검증됨</span> — 10+서브시스템 트리, Agent Loop 의사코드, 43 tools/54 commands, 권한 3모드, settings.json 예시, 확장 코드 샘플: 모두 README.md 원문에서 직접 인용.</li>
+      <li><span class="ok">검증됨</span> — "11,733 LOC / 163 files / 44× lighter", MIT 라이선스, Python 3.11+: README 비교표.</li>
+      <li><span class="no">주의</span> — README는 "10 subsystems"라 쓰지만 실제 트리엔 <code>prompts·config·ui</code> 포함 13개. 본 문서는 "10+"로 표기.</li>
+      <li><span class="no">주의</span> — stars/forks 수치는 시점마다 다름(검색 시점 1.1k~13k 등 출처별 상이). 본 문서는 구체 수치 단정 대신 "빠르게 증가"로만 기술.</li>
+      <li><span class="no">미검증</span> — 3기둥 매핑은 강의 프레임에 따른 <b>해석</b>이며 OpenHarness 공식 분류가 아님.</li>
+    </ul>
+  </div>
+</div></section>
+
+<footer>
+  <div class="mono">OpenHarness 분석 · carve-harness 설계 자료</div>
+  <div style="margin-top:6px;">📘 github.com/claude-code-expert · ☕ brewnet.dev</div>
+</footer>
+
+</body>
+</html>

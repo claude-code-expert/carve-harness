@@ -1,0 +1,13 @@
+# flight-rules — {{PROJECT_TYPE}} 프로젝트 제약
+
+> carve가 생성. 금지/필수 규칙. 검증 훅이 결정적으로 강제한다(PreToolUse exit code 2).
+
+## 금지 (MUST NOT)
+- 파괴적 명령(`rm -rf /`·포크밤·디스크 파괴 등) — `carve-block-destructive` 훅이 exit 2로 차단.
+- 비밀 파일(`.env`·키·credentials) 접근 — `carve-protect-secrets` 훅이 차단.
+{{LANG_RULES}}
+
+## 필수 (MUST)
+- 커밋 전 린트 통과: `{{LINT_CMD}}`
+- 푸시 전 테스트 통과: `{{TEST_CMD}}`
+{{ANTI_SLOP_SECTION}}
