@@ -106,7 +106,7 @@ export function install(root: string, artifacts: Artifact[], hooks: HookReg[] = 
   if (hooks.length) mergeHooks(root, hooks);
 
   const manifest: Manifest = {
-    version: '1.3.0',
+    version: '1.4.0',
     files: written,
     backups: backedUp,
     hooks: hooks.map((h) => ({ event: h.event, command: h.command })),
