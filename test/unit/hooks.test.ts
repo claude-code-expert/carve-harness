@@ -23,6 +23,7 @@ function runHook(name: string, payload: unknown, env: Record<string, string> = {
 for (const h of [
   'block-destructive.sh', 'protect-secrets.sh', 'anti-slop.sh',
   'pre-commit-lint.sh', 'pre-push-test.sh', 'auto-format.sh', 'slack-notify.sh', 'precompact-handoff.sh',
+  'codesight-refresh.sh',
 ]) {
   test(`${h} bash 문법 OK`, () => {
     assert.equal(spawnSync('bash', ['-n', hook(h)]).status, 0);
@@ -98,6 +99,10 @@ test('auto-format: 비차단(exit 0)', () => {
 test('slack-notify: 웹훅 없으면 통과(exit 0)', () => {
   assert.equal(runHook('slack-notify.sh', {}).status, 0);
 });
+test('codesight-refresh: 비-git 명령은 즉시 통과(exit 0, npx 미실행)', () => {
+  assert.equal(runHook('codesight-refresh.sh', { tool_input: { command: 'ls -la' } }).status, 0);
+});
+
 test('precompact-handoff: 핸드오프 파일 append (exit 0)', () => {
   const root = mkdtempSync(join(tmpdir(), 'carve-hook-'));
   try {

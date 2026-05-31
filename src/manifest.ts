@@ -17,6 +17,8 @@ export interface Manifest {
   backups: string[];
   /** settings.json에 등록한 carve 훅 */
   hooks: ManifestHook[];
+  /** settings.json에 등록한 carve MCP 서버 이름 (uninstall용) */
+  mcps?: string[];
 }
 
 export function manifestPath(root: string): string {

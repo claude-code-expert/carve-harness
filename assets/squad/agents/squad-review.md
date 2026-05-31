@@ -78,3 +78,6 @@ Any write or destructive operation
 ### Summary
 [2-3 sentence overall assessment]
 ```
+
+## 토큰 효율
+코드 탐색은 LSP(`findReferences`/`getDiagnostics`)와 codesight MCP를 우선한다. grep·전체 파일 읽기는 보조로만 쓴다.

@@ -2,7 +2,7 @@
 
 > 프로젝트를 분석해 그 프로젝트에 맞는 하네스(스킬·훅·서브에이전트)를 대화형으로 선택해 설치하는 CLI.
 
-**v2.0.0** · TypeScript(ESM, 빌드 단계 없음) · Node >=22.18 · 테스트 104 / 커버리지 약 95%
+**v2.4.0** · TypeScript(ESM, 빌드 단계 없음) · Node >=22.18 · 테스트 116 / 커버리지 약 94%
 
 `carve`는 코드베이스를 읽어 프로젝트 타입과 도구를 탐지하고, 적합한 구성요소를 추천한다.
 사용자가 고른 것만 `.claude/`에 설치한다. carve = 범용 자산을 프로젝트에 맞게 깎아냄.
@@ -16,38 +16,54 @@ carve install → 스택 탐지 → (구성요소 선택) → .claude/에 자산
 
 ## 특징
 
+- 토큰 효율 기본 탑재: codesight(구조 맵 MCP)·LSP(cclsp MCP)가 설치 시 자동 등록 — 별도 설치 없이 grep 대신 정확 탐색.
 - 결정적 안전: 위험 명령(`rm -rf /`·포크밤)·비밀 파일(`.env`·키)을 exit code 2로 강제 차단한다(권고가 아님).
 - 맞춤 선택 설치: 탐지 → 추천 → 사용자 선택. 일괄 설치 없음, 멱등 재설치·클린 제거.
 - anti-slop 생성: HTML·SVG·문서의 AI 슬롭을 린터로 게이트한다.
-- Squad 서브에이전트 100% 보존: 8 전문가 + 키워드 라우팅·체이닝.
-- 자기검증: 설치 전 auditor가 생성물의 secret·과도 권한·훅 주입을 스캔한다.
+- Squad 서브에이전트 100% 보존: 9 전문가(+evaluator) + 키워드 라우팅·체이닝.
+- 자기검증: 설치 전 auditor가 생성물의 secret·과도 권한·훅 주입·셸 문법을 스캔한다.
 - 빌드 0: `.ts` 직접 실행. npx + bash 양쪽 배포.
 
 ## 설치 & 사용
 
-```bash
-# npx (Node >=22.18)
-npx carve-harness            # 대화형으로 구성요소를 선택해 설치
-npx carve-harness uninstall  # 클린 제거
+> **전체 설치 매뉴얼**: [INSTALL.md](./INSTALL.md) (한글) · [INSTALL.en.md](./INSTALL.en.md) (English)
+> — 요구사항·설치 모드·단계별 구성요소·문제 해결까지 상세.
 
-# 또는 bash
-bash install.sh              # 현재 디렉토리
-bash install.sh --uninstall  # 제거
+**풀 설치 흐름 (3단계)**
+
+```bash
+npx carve-harness              # 1. 대화형 선택 설치 (탐지 → 추천 → 선택)
+npx carve-harness init-claude  # 2. CLAUDE.md 베이스라인 + 언어 스택 규칙 생성
+npx carve-harness doctor       # 3. 설치 점검 (구성·훅 문법)
 ```
 
+bash로도 설치한다: `bash install.sh` (제거는 `bash install.sh --uninstall`).
+세션 안에서는 **"이 프로젝트에 맞는 하네스 구성해줘"** 로 harness-architect 스킬이 같은 흐름을 안내한다.
+
+**명령 레퍼런스**
+
 ```bash
-carve              # = carve install — 대화형 선택 설치
+carve              # = carve install — 대화형 선택 설치 (일괄 설치 없음)
+carve install --level full        # 레벨 강제(minimal|standard|full). full=멀티에이전트 병렬·조율 포함
 carve install --only commit,handoff,block-destructive   # 비대화형 명시 선택
-carve list         # 설치 가능 구성요소
-carve doctor       # 설치된 하네스 점검
+carve install --lsp-servers       # LSP 언어서버 자동설치
+carve init-claude  # CLAUDE.md 베이스라인 + .claude/rules/* 생성 (언어 스택 기준)
+carve list         # 설치 가능/설치된 구성요소 목록
+carve doctor       # 설치된 하네스 점검 (구성 + 훅 셸 문법)
 carve uninstall    # 클린 제거(.bak 복원)
 ```
 
-일괄 설치는 지원하지 않는다. 추천을 기본 체크로 제시하되 선택 후 설치한다.
-세션 안에서는 "이 프로젝트에 맞는 하네스 구성해줘"로 harness-architect 스킬이 같은 흐름을 안내한다.
+**설치 레벨** (프로필로 자동 결정, `--level`로 강제 가능):
+- `minimal` — 소형 CLI/배치: 코어 스킬 + 필수 훅(차단·보호·핸드오프)
+- `standard` (기본) — 일반 앱: + 7 필수 훅 + Squad 9 에이전트
+- `full` — + 추가 스킬(verify 등) + **멀티에이전트 병렬(parallel-agents)·조율(coordinator)**
+
+**제거**: `carve uninstall` (= `bash install.sh --uninstall`). `carve-manifest.json` 기준으로 carve 설치 파일만 제거하고
+`.bak`가 있으면 원본을 복원한다. `settings.json`의 carve 훅·MCP 항목만 정확히 제거(사용자 항목 보존). 자세히는 [INSTALL.md](./INSTALL.md#11-제거-uninstall).
 
 ## 무엇을 설치하나
 
+- 토큰 효율(기본 탑재): codesight(구조 맵 MCP) · lsp(cclsp MCP) — settings.json에 자동 등록 + git commit 시 `.codesight/` 갱신
 - 6 핵심 스킬: handoff · memory · commit · changelog · review · pr
 - 진입 스킬: harness-architect (자연어 트리거)
 - 7 필수 훅: 파괴적 명령 차단 · 비밀파일 보호 · 커밋 전 린트 · 푸시 전 테스트 · 자동 포맷 · Slack 알림 · PreCompact 핸드오프
@@ -58,12 +74,33 @@ carve uninstall    # 클린 제거(.bak 복원)
 설치 시 `flight-rules.md`·`evaluation-criteria.md`·`sprint-contract.md`·`CLAUDE.md`·`HARNESS-GUIDE.md`를 프로젝트에 생성한다.
 지원 프로젝트: CLI · 웹 · 모바일 · 반응형 · 데스크탑 · 배치.
 
+## CLAUDE.md 베이스라인 + 스택 규칙 (`carve init-claude`)
+
+설치 후 `carve init-claude`를 실행하면 작업 지침 베이스라인과 언어 스택별 규칙을 깎아 생성한다.
+
+- `.claude/CLAUDE.md` — 스택 무관 베이스라인: 짜기 전 사고·단순함·외과적 변경·TDD·커밋 규율·응답 제어·할루시네이션 가드·안전 가드레일.
+- `.claude/rules/*.md` — 탐지 언어의 베스트 프랙티스 6종: `techstack`·`project-structure`·`commands`·`code-style`·`safety`·`gotchas`.
+- 루트 `CLAUDE.md`가 이들을 `@import`하도록 자동 연결(멱등). 세션마다 함께 로드된다.
+
+스택은 탐지 언어로 자동 선택된다(TypeScript/JavaScript·Python·Go·Rust·Java·Dart, 그 외 `_default`). 패키지매니저·테스트/린트 명령은 프로젝트에서 탐지한 값으로 치환된다. 세션 안에서는 harness-architect 스킬이 "CLAUDE.md 셋업" 단계로 같은 흐름을 안내한다.
+
 ## anti-slop 시각·문서 생성
 
 HTML·SVG·카드뉴스·리포트·슬라이드·문서를 만들 때 AI 특유의 장식(그라데이션, 글로우/컬러 그림자,
 글래스모피즘, 모션 장식, 워터마크, 마케팅 보일러플레이트)을 제거하고 위계를 크기·여백·정렬·타이포로 만든다.
 규칙은 스킬이 생성 전에 주입하고, 생성 후 `check-slop.mjs` 린터가 결정적으로 검사한다.
 모델의 눈대중이 아니라 스크립트가 게이트한다(경고 모드, 의도적 사용은 예외경로).
+
+## 토큰 효율 (기본 탑재)
+
+codesight·LSP를 설치 시 자동 등록해, 사용자가 따로 설치하지 않아도 토큰 효율 탐색이 적용된다.
+
+- codesight MCP: 프로젝트 구조(라우트·스키마·의존성)를 미리 맵핑 → grep 재탐색 비용 제거(대형 코드베이스 실측 평균 약 11배).
+- LSP(cclsp MCP): `findReferences`/`getDiagnostics`로 정확 탐색 → grep 2,000+ 토큰 대신 약 500 토큰.
+- 모든 스킬·Squad 서브에이전트가 grep 대신 이들을 우선하도록 `flight-rules.md`·`CLAUDE.md`에 지침을 넣는다.
+- 언어서버 바이너리는 대화형 설치(또는 `carve install --lsp-servers`) 시 탐지 언어로 자동 설치한다.
+
+> 대형 fixture 벤치로 절약 수치 검증은 진행 예정. 작은 단발 태스크에선 MCP 고정 비용으로 효과가 작을 수 있다.
 
 ## 안전
 
@@ -138,6 +175,20 @@ npm run check     # 타입체크 (tsc --noEmit)
 > 정직 표기: 자기측정 가능한 축 2·3·5·6은 결정론적으로 만점. 축 1·4의 비교·라이브 지표는
 > 추정 없이 보류했다(기준 §10). 비교 우위 입증은 `bench/`를 타 하네스로 실행하는 단계가 남았다.
 > 지표별 한 줄 평가표: [carve-harness-benchmark-results.md](./docs/guide/carve-harness-benchmark-results.md).
+
+### 라이브 cross-harness 실측 (n=5, CRUD, 동일 모델, `claude -p`)
+
+| harness | $/태스크(중앙) | 토큰(중앙) | E2E 성공 | 누출률(축2) |
+|---------|:--:|:--:|:--:|:--:|
+| no-harness | $0.101 | 3,554 | 5/5 | 100% |
+| squad | $0.148 | 6,106 | 5/5 | 100% |
+| **carve** | $0.159 | 7,076 | 5/5 | **0%** |
+| ecc | $0.382 | 13,314 | 5/5 | — |
+
+- **carve vs ECC**: 비용 **58%↓** · 토큰 **47%↓** · 성공 동일(5/5) — ECC는 전역 주입(129 스킬+룰), carve는 필요한 것만 깎아 설치 → "맞춤 경량" 실측 입증.
+- **carve vs no-harness**: 단발 CRUD에선 컨텍스트 주입으로 비용↑(1.57×)이나, carve의 우위는 토큰이 아니라 **안전(누출 0% vs 100% — 결정적 훅은 carve뿐)**.
+- v2.1 codesight/LSP 토큰효율 절약은 위 실측 이후 추가분으로, 대형 fixture 재측정 예정(소형 단발은 MCP 고정비용으로 효과 작음).
+- 측정 방법·전체 28지표: [carve-harness-benchmark-results.md](./docs/guide/carve-harness-benchmark-results.md).
 
 ## 크레딧
 

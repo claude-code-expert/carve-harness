@@ -28,9 +28,9 @@ export function harnessLevel(p: ProjectProfile): HarnessLevel {
   return 'standard';
 }
 
-/** ProjectProfile → 추천 슬롯 설계. */
-export function design(p: ProjectProfile): HarnessDesign {
-  const level = harnessLevel(p);
+/** ProjectProfile → 추천 슬롯 설계. levelOverride로 자동 레벨을 덮어쓸 수 있다(--level). */
+export function design(p: ProjectProfile, levelOverride?: HarnessLevel): HarnessDesign {
+  const level = levelOverride ?? harnessLevel(p);
   const available = forType(p.type);
   const rec = new Set<string>();
   const rationale: string[] = [];

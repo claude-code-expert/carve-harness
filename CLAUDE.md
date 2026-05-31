@@ -69,6 +69,8 @@
 | `src/generator.ts` | 자산 깎기·생성 | `vendor/subagents`·`assets`에서 소스 로드 |
 | `src/auditor.ts` | 생성물 자기 검증 | 보안·권한·훅 주입 스캔 |
 | `src/installer.ts` | 대상 프로젝트 설치 | 멱등성 필수 |
+| `src/claudebase.ts` | CLAUDE.md 베이스라인 + 스택별 rules 생성 | `assets/claude-base`에서 스택 선택·렌더 (`carve init-claude`) |
+| `assets/claude-base/` | CLAUDE.md 베이스라인 + 언어별 rules 템플릿 | 스택 무관 `CLAUDE.md` + `rules/<lang>/*` (ts·py·go·rust·java·dart·_default) |
 | `assets/squad/` | Squad 자산(녹여넣음) | vendor/subagents에서 melt-in. carve는 vendor 비의존 |
 | `assets/antislop/` | anti-slop 패밀리(녹여넣음) | vendor/.claude에서 melt-in |
 | `assets/` | 베이스 템플릿 | 깎기 전 원목 |

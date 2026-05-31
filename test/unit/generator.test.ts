@@ -1,7 +1,7 @@
 // test/unit/generator.test.ts — generator 검증 (Milestone 3 게이트)
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { render, generate, hookRegsFor, type Artifact } from '../../src/generator.ts';
+import { render, generate, hookRegsFor, mcpRegsFor, type Artifact } from '../../src/generator.ts';
 import type { HarnessDesign } from '../../src/designer.ts';
 import { design } from '../../src/designer.ts';
 import type { ProjectProfile } from '../../src/types.ts';
@@ -116,6 +116,20 @@ test('generate: 핵심 스킬 커맨드 shim emit', () => {
   const arts = generate(p, design(p));
   assert.ok(find(arts, '.claude/commands/carve-commit.md'));
   assert.ok(find(arts, '.claude/commands/carve-harness-architect.md'));
+});
+
+test('토큰 효율 기본 탑재: codesight/lsp 스킬 + MCP + flight-rules 지침', () => {
+  const p = profile({});
+  const arts = generate(p, design(p));
+  assert.ok(find(arts, '.claude/skills/codesight/SKILL.md'));
+  assert.ok(find(arts, '.claude/skills/lsp/SKILL.md'));
+  assert.ok(find(arts, '.claude/hooks/carve-codesight-refresh.sh')?.executable);
+  const fr = find(arts, 'flight-rules.md');
+  assert.ok(fr && /codesight/.test(fr.content) && /LSP|findReferences/.test(fr.content));
+  // MCP 등록 목록
+  const mcps = mcpRegsFor(design(p));
+  assert.ok(mcps.some((m) => m.name === 'codesight'));
+  assert.ok(mcps.some((m) => m.name === 'cclsp'));
 });
 
 test('hookRegsFor: Squad 추천 시 라우터/체이닝 등록(UserPromptSubmit·SubagentStart/Stop)', () => {

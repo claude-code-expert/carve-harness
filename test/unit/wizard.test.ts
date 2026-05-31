@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { buildChoices } from '../../src/wizard.ts';
 import { design } from '../../src/designer.ts';
-import { parseOnly, run, type IO } from '../../src/cli.ts';
+import { parseOnly, parseLevel, run, type IO } from '../../src/cli.ts';
 import type { ProjectProfile } from '../../src/types.ts';
 
 function profile(over: Partial<ProjectProfile>): ProjectProfile {
@@ -35,6 +35,34 @@ test('parseOnly: --only a,b 및 --only=a,b 파싱', () => {
   assert.deepEqual(parseOnly(['install', 'dir', '--only', 'commit,handoff']), ['commit', 'handoff']);
   assert.deepEqual(parseOnly(['install', '--only=pr']), ['pr']);
   assert.equal(parseOnly(['install', 'dir']), undefined);
+});
+
+test('parseLevel: 유효/무효/부재', () => {
+  assert.equal(parseLevel(['install', '--level', 'full']), 'full');
+  assert.equal(parseLevel(['install', '--level=minimal']), 'minimal');
+  assert.equal(parseLevel(['install', '--level', 'huge']), 'invalid');
+  assert.equal(parseLevel(['install']), undefined);
+});
+
+test('install --level full: 단일언어 프로젝트도 병렬 에이전트 가이드 설치', () => {
+  const root = mkdtempSync(join(tmpdir(), 'carve-lvl-'));
+  try {
+    const { io } = capture();
+    // 기본(standard)에선 parallel-agents 미설치
+    run(['install', root], io);
+    assert.ok(!existsSync(join(root, '.claude/skills/parallel-agents/SKILL.md')));
+    run(['uninstall', root], capture().io);
+    // --level full → parallel-agents·coordinator 설치
+    assert.equal(run(['install', root, '--level', 'full'], capture().io), 0);
+    assert.ok(existsSync(join(root, '.claude/skills/parallel-agents/SKILL.md')));
+    assert.ok(existsSync(join(root, '.claude/skills/coordinator/SKILL.md')));
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('install --level 무효값 → exit 1', () => {
+  assert.equal(run(['install', '/tmp/nope', '--level', 'huge'], capture().io), 1);
 });
 
 test('install --only: 고른 것만 설치 (일괄 아님)', () => {

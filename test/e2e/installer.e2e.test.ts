@@ -6,7 +6,7 @@ import {
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { install, uninstall, type HookReg } from '../../src/installer.ts';
+import { install, uninstall, type HookReg, type McpReg } from '../../src/installer.ts';
 import { readManifest } from '../../src/manifest.ts';
 import type { Artifact } from '../../src/generator.ts';
 
@@ -84,6 +84,27 @@ test('uninstall: carve 파일·훅 제거, 사용자 훅 보존, manifest 삭제
     const cmds = settings.hooks.PreToolUse.flatMap((g: { hooks: { command: string }[] }) => g.hooks.map((h) => h.command));
     assert.ok(cmds.includes('user-hook'));
     assert.ok(!cmds.includes('bash .claude/hooks/carve-x.sh'));
+  });
+});
+
+test('MCP 서버 병합·멱등·uninstall 제거 (codesight/cclsp)', () => {
+  withTemp((root) => {
+    const mcps: McpReg[] = [
+      { name: 'codesight', command: 'npx', args: ['codesight', '--mcp'] },
+      { name: 'cclsp', command: 'npx', args: ['cclsp@latest'] },
+    ];
+    install(root, ARTIFACTS, HOOKS, mcps);
+    let s = JSON.parse(readFileSync(join(root, '.claude/settings.json'), 'utf8'));
+    assert.ok(s.mcpServers.codesight && s.mcpServers.cclsp);
+    assert.deepEqual(readManifest(root)!.mcps, ['codesight', 'cclsp']);
+    // 재설치 멱등
+    install(root, ARTIFACTS, HOOKS, mcps);
+    s = JSON.parse(readFileSync(join(root, '.claude/settings.json'), 'utf8'));
+    assert.equal(Object.keys(s.mcpServers).length, 2);
+    // uninstall → MCP 제거
+    uninstall(root);
+    s = JSON.parse(readFileSync(join(root, '.claude/settings.json'), 'utf8'));
+    assert.ok(!s.mcpServers?.codesight && !s.mcpServers?.cclsp);
   });
 });
 

@@ -26,6 +26,10 @@ export const CATALOG: CatalogComponent[] = [
   // ── 진입 스킬 (자연어 트리거, M7) ──
   { id: 'harness-architect', kind: 'skill', title: '하네스 아키텍트', description: '자연어 "하네스 구성해줘" 트리거 — 분석·추천·선택 설치 안내', score: 90, core: true, optional: false, applicable: 'all' },
 
+  // ── 토큰 효율 기본 탑재 (codesight + LSP, core) ──
+  { id: 'codesight', kind: 'skill', title: 'codesight 컨텍스트', description: '프로젝트 구조 맵 MCP — 탐색 토큰 ~11배 절약(grep 대체)', score: 92, core: true, optional: false, applicable: 'all' },
+  { id: 'lsp', kind: 'skill', title: 'LSP 인텔리전스', description: '정확한 코드 네비게이션 MCP — findReferences/getDiagnostics(grep 대체)', score: 90, core: true, optional: false, applicable: 'all' },
+
   // ── 6 핵심 스킬 (Skill + 커맨드 shim) ──
   { id: 'handoff', kind: 'skill', title: '핸드오프', description: '세션 인계 컨텍스트(PreCompact/SessionStart 연동)', score: 90, core: true, optional: false, applicable: 'all' },
   { id: 'memory', kind: 'skill', title: '메모리', description: '프로젝트 지속 메모리', score: 90, core: true, optional: false, applicable: 'all' },

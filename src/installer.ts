@@ -18,6 +18,12 @@ export interface HookReg {
   matcher?: string;
 }
 
+export interface McpReg {
+  name: string;
+  command: string;
+  args: string[];
+}
+
 export interface InstallResult {
   written: string[];
   backedUp: string[];
@@ -32,7 +38,8 @@ export interface UninstallResult {
 // ── settings.json 타입 (최소) ──
 interface HookEntry { type: string; command: string; _carve?: boolean }
 interface HookGroup { matcher?: string; hooks: HookEntry[] }
-interface Settings { hooks?: Record<string, HookGroup[]>; [k: string]: unknown }
+interface McpServer { command: string; args: string[] }
+interface Settings { hooks?: Record<string, HookGroup[]>; mcpServers?: Record<string, McpServer>; [k: string]: unknown }
 
 function readSettings(root: string): Settings {
   const p = join(root, SETTINGS_REL);
@@ -63,6 +70,25 @@ function mergeHooks(root: string, regs: HookReg[]): void {
   writeSettings(root, s);
 }
 
+function mergeMcp(root: string, mcps: McpReg[]): void {
+  const s = readSettings(root);
+  const servers = (s.mcpServers ??= {});
+  for (const m of mcps) {
+    if (!servers[m.name]) servers[m.name] = { command: m.command, args: m.args };
+  }
+  writeSettings(root, s);
+}
+
+function stripCarveMcp(root: string, names: string[]): void {
+  if (names.length === 0) return;
+  const p = join(root, SETTINGS_REL);
+  if (!existsSync(p)) return;
+  const s = readSettings(root);
+  if (!s.mcpServers) return;
+  for (const n of names) delete s.mcpServers[n];
+  writeSettings(root, s);
+}
+
 function stripCarveHooks(root: string): void {
   const p = join(root, SETTINGS_REL);
   if (!existsSync(p)) return;
@@ -81,7 +107,7 @@ function stripCarveHooks(root: string): void {
 }
 
 /** 자산을 멱등 설치한다. */
-export function install(root: string, artifacts: Artifact[], hooks: HookReg[] = []): InstallResult {
+export function install(root: string, artifacts: Artifact[], hooks: HookReg[] = [], mcps: McpReg[] = []): InstallResult {
   const prev = readManifest(root);
   const prevFiles = new Set(prev?.files ?? []);
   const written: string[] = [];
@@ -104,15 +130,75 @@ export function install(root: string, artifacts: Artifact[], hooks: HookReg[] = 
   }
 
   if (hooks.length) mergeHooks(root, hooks);
+  if (mcps.length) mergeMcp(root, mcps);
 
   const manifest: Manifest = {
-    version: '2.0.0',
+    version: '2.4.0',
     files: written,
     backups: backedUp,
     hooks: hooks.map((h) => ({ event: h.event, command: h.command })),
+    mcps: mcps.map((m) => m.name),
   };
   writeManifest(root, manifest);
   return { written, backedUp: backedUp.slice(prev?.backups?.length ?? 0), hooks: hooks.length };
+}
+
+const ROOT_CLAUDE = 'CLAUDE.md';
+
+/**
+ * CLAUDE.md 베이스라인 + .claude/rules/* 를 멱등 설치한다 (carve init-claude).
+ * - 기존 manifest.files를 보존하고 신규 파일을 union (클린 제거 유지).
+ * - 루트 CLAUDE.md에 import 블록을 marker 기준으로 멱등 추가한다.
+ */
+export function installClaudeBase(
+  root: string, artifacts: Artifact[], importBlock: string, marker: string,
+): InstallResult {
+  const prev = readManifest(root);
+  const prevFiles = new Set(prev?.files ?? []);
+  const written: string[] = [];
+  const backedUp: string[] = [...(prev?.backups ?? [])];
+
+  // carve가 만든 적 없는 사용자 파일이면 1회 .bak 보존
+  const backupIfUser = (rel: string): void => {
+    const full = join(root, rel);
+    if (existsSync(full) && !prevFiles.has(rel)) {
+      const bak = full + '.bak';
+      if (!existsSync(bak)) {
+        copyFileSync(full, bak);
+        backedUp.push(rel + '.bak');
+      }
+    }
+  };
+
+  for (const a of artifacts) {
+    const full = join(root, a.path);
+    mkdirSync(dirname(full), { recursive: true });
+    backupIfUser(a.path);
+    writeFileSync(full, a.content);
+    written.push(a.path);
+  }
+
+  // 루트 CLAUDE.md에 @import 블록을 멱등 추가
+  const rootFull = join(root, ROOT_CLAUDE);
+  const rootContent = existsSync(rootFull) ? readFileSync(rootFull, 'utf8') : '';
+  if (!rootContent.includes(marker)) {
+    backupIfUser(ROOT_CLAUDE);
+    const next = rootContent.length
+      ? rootContent.replace(/\s*$/, '\n') + importBlock
+      : `# CLAUDE.md\n${importBlock}`;
+    writeFileSync(rootFull, next);
+  }
+  if (!written.includes(ROOT_CLAUDE)) written.push(ROOT_CLAUDE);
+
+  const manifest: Manifest = {
+    version: '2.4.0',
+    files: [...new Set([...(prev?.files ?? []), ...written])],
+    backups: [...new Set(backedUp)],
+    hooks: prev?.hooks ?? [],
+    mcps: prev?.mcps ?? [],
+  };
+  writeManifest(root, manifest);
+  return { written, backedUp: backedUp.slice(prev?.backups?.length ?? 0), hooks: 0 };
 }
 
 /** manifest 기준으로 carve 자산을 제거하고 .bak를 복원한다. */
@@ -137,6 +223,7 @@ export function uninstall(root: string): UninstallResult {
   }
 
   stripCarveHooks(root);
+  stripCarveMcp(root, m.mcps ?? []);
   removeManifest(root);
   return { removed, restored };
 }
