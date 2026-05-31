@@ -74,6 +74,7 @@ test('install→doctor→uninstall 라운드트립 (임시 디렉토리)', () =>
     const d1 = capture();
     run(['doctor', root], d1.io);
     assert.match(d1.out.log, /설치됨/);
+    assert.match(d1.out.log, /훅 문법 OK/); // harness-audit: 설치 훅 셸 문법 점검
     // uninstall → 매니페스트 제거
     assert.equal(run(['uninstall', root], capture().io), 0);
     assert.ok(!existsSync(join(root, 'carve-manifest.json')));
