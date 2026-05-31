@@ -1,4 +1,6 @@
 // src/commands.ts — CLI 명령 핸들러 (레이어 A). 파이프라인 와이어링.
+import { readFileSync, existsSync } from 'node:fs';
+import { join } from 'node:path';
 import { analyze } from './analyzer.ts';
 import { design } from './designer.ts';
 import { generate, hookRegsFor } from './generator.ts';
@@ -64,7 +66,13 @@ export function cmdDoctor(root: string, io: IO): number {
   }
   io.log(`carve 설치됨 (v${m.version}): 파일 ${m.files.length} · 훅 ${m.hooks.length} · 백업 ${m.backups.length}`);
   for (const f of m.files) io.log(`  · ${f}`);
-  return 0;
+  // 설치된 셸 훅 문법 점검 (harness-audit)
+  const hookArts = m.files
+    .filter((f) => f.endsWith('.sh') && existsSync(join(root, f)))
+    .map((f) => ({ path: f, content: readFileSync(join(root, f), 'utf8'), executable: true }));
+  const shellErrs = errorsOf(auditShellSyntax(hookArts));
+  io.log(shellErrs.length ? `⚠ 훅 문법 이슈 ${shellErrs.length}건` : `훅 문법 OK (${hookArts.length}개)`);
+  return shellErrs.length > 0 ? 1 : 0;
 }
 
 /** 클린 제거 */
