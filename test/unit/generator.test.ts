@@ -108,6 +108,7 @@ test('generate: full 레벨 — 도입 스킬(tdd 등) emit + 커맨드 shim', (
   assert.ok(find(arts, '.claude/skills/tdd/SKILL.md'), 'tdd 스킬 미생성');
   assert.ok(find(arts, '.claude/commands/carve-tdd.md'), 'tdd shim 미생성');
   assert.ok(find(arts, '.claude/skills/caveman/SKILL.md'), 'caveman 미생성');
+  assert.ok(find(arts, '.claude/skills/model-route/SKILL.md'), 'model-route 미생성'); // v1.4
 });
 
 test('generate: 핵심 스킬 커맨드 shim emit', () => {

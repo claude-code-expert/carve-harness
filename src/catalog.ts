@@ -68,6 +68,11 @@ export const CATALOG: CatalogComponent[] = [
   { id: 'caveman', kind: 'skill', title: '초압축 모드', description: '토큰 ~75% 절감 압축 커뮤니케이션 (mattpocock/skills MIT)', score: 80, core: false, optional: false, applicable: 'all' },
   { id: 'write-a-skill', kind: 'skill', title: '스킬 작성', description: '재사용 스킬 SKILL.md 스캐폴딩 (mattpocock/skills MIT)', score: 78, core: false, optional: false, applicable: 'all' },
   { id: 'zoom-out', kind: 'skill', title: '시스템 조망', description: '시스템 수준 시야로 모듈·호출 매핑 (mattpocock/skills MIT)', score: 76, core: false, optional: false, applicable: 'all' },
+
+  // ── post-PoC v1.4 (멀티에이전트·튜닝·라우팅) ──
+  { id: 'model-route', kind: 'skill', title: '모델 라우팅', description: '작업→Haiku/Sonnet/Opus 3-Tier 라우팅(비용 최적화)', score: 85, core: false, optional: false, applicable: 'all' },
+  { id: 'parallel-agents', kind: 'skill', title: '멀티에이전트 병렬', description: '최소 병렬화 3~4 에이전트 + git worktree 격리', score: 80, core: false, optional: false, applicable: 'all' },
+  { id: 'evaluator-tuning', kind: 'skill', title: 'Evaluator 튜닝', description: '평가자 오판 수집→few-shot 보정 루프', score: 76, core: false, optional: false, applicable: 'all' },
 ];
 
 /** 컴포넌트가 주어진 프로젝트 타입에 적합한지 */
