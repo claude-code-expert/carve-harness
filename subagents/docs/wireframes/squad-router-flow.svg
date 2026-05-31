@@ -1,0 +1,212 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 1100" width="900" height="1100">
+  <style>
+    text { font-family: -apple-system, 'Segoe UI', sans-serif; }
+    .title { font-size: 18px; font-weight: bold; fill: #1a1a2e; }
+    .subtitle { font-size: 12px; fill: #666; }
+    .label { font-size: 13px; fill: #1a1a2e; }
+    .label-sm { font-size: 11px; fill: #555; }
+    .label-xs { font-size: 10px; fill: #888; }
+    .code { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 11px; fill: #2d3436; }
+    .agent-name { font-size: 12px; font-weight: bold; fill: #fff; }
+    .phase-label { font-size: 14px; font-weight: bold; fill: #1a1a2e; }
+    .keyword { font-family: 'SF Mono', monospace; font-size: 10px; fill: #6c5ce7; }
+  </style>
+
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#636e72"/>
+    </marker>
+    <marker id="arrow-green" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#00b894"/>
+    </marker>
+    <marker id="arrow-red" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#d63031"/>
+    </marker>
+  </defs>
+
+  <!-- Background -->
+  <rect width="900" height="1100" rx="8" fill="#fafafa"/>
+
+  <!-- Title -->
+  <text x="450" y="35" text-anchor="middle" class="title">Squad Router Hook - Execution Flow</text>
+  <text x="450" y="55" text-anchor="middle" class="subtitle">UserPromptSubmit hook / keyword-based subagent routing</text>
+
+  <!-- ===== ENTRY ===== -->
+  <rect x="320" y="75" width="260" height="44" rx="22" fill="#0984e3"/>
+  <text x="450" y="102" text-anchor="middle" class="agent-name">User Prompt Submitted</text>
+
+  <line x1="450" y1="119" x2="450" y2="145" stroke="#636e72" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- stdin JSON -->
+  <rect x="335" y="145" width="230" height="34" rx="6" fill="#dfe6e9" stroke="#b2bec3" stroke-width="1"/>
+  <text x="450" y="167" text-anchor="middle" class="code">stdin: {"prompt": "..."}</text>
+
+  <line x1="450" y1="179" x2="450" y2="200" stroke="#636e72" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- ===== PHASE 0: ENV CHECK ===== -->
+  <rect x="20" y="195" width="120" height="24" rx="4" fill="#fdcb6e"/>
+  <text x="80" y="212" text-anchor="middle" class="phase-label" style="font-size:11px;">PHASE 0</text>
+
+  <rect x="320" y="200" width="260" height="40" rx="8" fill="#fff3cd" stroke="#ffc107" stroke-width="1.5"/>
+  <text x="450" y="225" text-anchor="middle" class="label">SQUAD_ROUTER=off ?</text>
+
+  <!-- Yes -> exit -->
+  <line x1="580" y1="220" x2="710" y2="220" stroke="#d63031" stroke-width="1.5" marker-end="url(#arrow-red)"/>
+  <rect x="710" y="206" width="100" height="28" rx="14" fill="#ffe0e0" stroke="#d63031" stroke-width="1"/>
+  <text x="760" y="225" text-anchor="middle" class="label-sm" style="fill:#d63031;">exit 0 (skip)</text>
+
+  <line x1="450" y1="240" x2="450" y2="265" stroke="#636e72" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- jq + JSON check -->
+  <rect x="320" y="265" width="260" height="40" rx="8" fill="#fff3cd" stroke="#ffc107" stroke-width="1.5"/>
+  <text x="450" y="290" text-anchor="middle" class="label">jq installed? JSON valid?</text>
+
+  <line x1="580" y1="285" x2="710" y2="285" stroke="#d63031" stroke-width="1.5" marker-end="url(#arrow-red)"/>
+  <rect x="710" y="271" width="100" height="28" rx="14" fill="#ffe0e0" stroke="#d63031" stroke-width="1"/>
+  <text x="760" y="290" text-anchor="middle" class="label-sm" style="fill:#d63031;">exit 0 (safe)</text>
+
+  <line x1="450" y1="305" x2="450" y2="330" stroke="#636e72" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- ===== PHASE 1: SKIP ===== -->
+  <rect x="20" y="325" width="120" height="24" rx="4" fill="#74b9ff"/>
+  <text x="80" y="342" text-anchor="middle" class="phase-label" style="font-size:11px;">PHASE 1: SKIP</text>
+
+  <rect x="320" y="330" width="260" height="40" rx="8" fill="#e3f2fd" stroke="#2196f3" stroke-width="1.5"/>
+  <text x="450" y="350" text-anchor="middle" class="label">Starts with "/" ?</text>
+  <text x="450" y="364" text-anchor="middle" class="label-xs">(slash command detection)</text>
+
+  <line x1="580" y1="350" x2="710" y2="350" stroke="#d63031" stroke-width="1.5" marker-end="url(#arrow-red)"/>
+  <rect x="710" y="336" width="100" height="28" rx="14" fill="#ffe0e0" stroke="#d63031" stroke-width="1"/>
+  <text x="760" y="355" text-anchor="middle" class="label-sm" style="fill:#d63031;">exit 0 (skip)</text>
+
+  <line x1="450" y1="370" x2="450" y2="395" stroke="#636e72" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <rect x="320" y="395" width="260" height="40" rx="8" fill="#e3f2fd" stroke="#2196f3" stroke-width="1.5"/>
+  <text x="450" y="415" text-anchor="middle" class="label">Contains --no-route ?</text>
+  <text x="450" y="429" text-anchor="middle" class="label-xs">(per-prompt opt-out)</text>
+
+  <line x1="580" y1="415" x2="710" y2="415" stroke="#d63031" stroke-width="1.5" marker-end="url(#arrow-red)"/>
+  <rect x="710" y="401" width="100" height="28" rx="14" fill="#ffe0e0" stroke="#d63031" stroke-width="1"/>
+  <text x="760" y="420" text-anchor="middle" class="label-sm" style="fill:#d63031;">exit 0 (skip)</text>
+
+  <line x1="450" y1="435" x2="450" y2="465" stroke="#636e72" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- ===== PHASE 2: CONFLICT ===== -->
+  <rect x="20" y="460" width="120" height="24" rx="4" fill="#ff7675"/>
+  <text x="80" y="477" text-anchor="middle" class="phase-label" style="font-size:11px; fill:#fff;">PHASE 2: CONFLICT</text>
+
+  <rect x="270" y="465" width="360" height="110" rx="8" fill="#fff5f5" stroke="#e17055" stroke-width="1.5"/>
+  <text x="450" y="488" text-anchor="middle" class="label" style="font-weight:bold;">Multi-word Conflict Patterns</text>
+
+  <text x="290" y="508" class="keyword">"pr review"  -> squad-review</text>
+  <text x="290" y="523" class="keyword">"pr write"   -> squad-gitops</text>
+  <text x="290" y="538" class="keyword">"security review" -> squad-audit</text>
+  <text x="530" y="508" class="keyword">"build error" -> squad-debug</text>
+  <text x="530" y="523" class="keyword">"build check" -> squad-qa</text>
+  <text x="530" y="538" class="keyword">"code cleanup" -> squad-refactor</text>
+
+  <text x="450" y="568" text-anchor="middle" class="label-xs">first-match-wins: multi-word patterns checked before single-word</text>
+
+  <!-- Match? branch -->
+  <line x1="630" y1="520" x2="710" y2="520" stroke="#00b894" stroke-width="1.5" marker-end="url(#arrow-green)"/>
+  <text x="665" y="513" class="label-xs" style="fill:#00b894;">match</text>
+
+  <!-- Arrow to output -->
+  <rect x="710" y="506" width="120" height="28" rx="14" fill="#d4edda" stroke="#00b894" stroke-width="1"/>
+  <text x="770" y="525" text-anchor="middle" class="label-sm" style="fill:#00b894;">-> stdout inject</text>
+
+  <line x1="450" y1="575" x2="450" y2="605" stroke="#636e72" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="440" y="595" text-anchor="end" class="label-xs">no match</text>
+
+  <!-- ===== PHASE 3: GENERAL ===== -->
+  <rect x="20" y="600" width="120" height="24" rx="4" fill="#00b894"/>
+  <text x="80" y="617" text-anchor="middle" class="phase-label" style="font-size:11px; fill:#fff;">PHASE 3: GENERAL</text>
+
+  <rect x="170" y="605" width="560" height="310" rx="8" fill="#f0fff4" stroke="#00b894" stroke-width="1.5"/>
+  <text x="450" y="628" text-anchor="middle" class="label" style="font-weight:bold;">Single-word Keyword Matching (priority order)</text>
+
+  <!-- Agent boxes in priority order -->
+  <!-- Row 1 -->
+  <rect x="190" y="640" width="120" height="55" rx="6" fill="#d63031" opacity="0.9"/>
+  <text x="250" y="660" text-anchor="middle" class="agent-name" style="font-size:11px;">squad-audit</text>
+  <text x="250" y="675" text-anchor="middle" class="label-xs" style="fill:#fff;">security, xss</text>
+  <text x="250" y="688" text-anchor="middle" class="label-xs" style="fill:#ffe0e0;">Priority: 1</text>
+
+  <rect x="325" y="640" width="120" height="55" rx="6" fill="#e17055" opacity="0.9"/>
+  <text x="385" y="660" text-anchor="middle" class="agent-name" style="font-size:11px;">squad-debug</text>
+  <text x="385" y="675" text-anchor="middle" class="label-xs" style="fill:#fff;">error, bug</text>
+  <text x="385" y="688" text-anchor="middle" class="label-xs" style="fill:#ffe0e0;">Priority: 2</text>
+
+  <rect x="460" y="640" width="120" height="55" rx="6" fill="#0984e3"/>
+  <text x="520" y="660" text-anchor="middle" class="agent-name" style="font-size:11px;">squad-plan</text>
+  <text x="520" y="675" text-anchor="middle" class="label-xs" style="fill:#fff;">plan, spec</text>
+  <text x="520" y="688" text-anchor="middle" class="label-xs" style="fill:#bee3f8;">Priority: 3</text>
+
+  <rect x="595" y="640" width="120" height="55" rx="6" fill="#6c5ce7"/>
+  <text x="655" y="660" text-anchor="middle" class="agent-name" style="font-size:11px;">squad-refactor</text>
+  <text x="655" y="675" text-anchor="middle" class="label-xs" style="fill:#fff;">refactor, extract</text>
+  <text x="655" y="688" text-anchor="middle" class="label-xs" style="fill:#e0d4f5;">Priority: 4</text>
+
+  <!-- Row 2 -->
+  <rect x="190" y="710" width="120" height="55" rx="6" fill="#00b894"/>
+  <text x="250" y="730" text-anchor="middle" class="agent-name" style="font-size:11px;">squad-docs</text>
+  <text x="250" y="745" text-anchor="middle" class="label-xs" style="fill:#fff;">document, readme</text>
+  <text x="250" y="758" text-anchor="middle" class="label-xs" style="fill:#b8f5e0;">Priority: 5</text>
+
+  <rect x="325" y="710" width="120" height="55" rx="6" fill="#fdcb6e"/>
+  <text x="385" y="730" text-anchor="middle" class="agent-name" style="font-size:11px; fill:#2d3436;">squad-gitops</text>
+  <text x="385" y="745" text-anchor="middle" class="label-xs" style="fill:#2d3436;">commit, changelog</text>
+  <text x="385" y="758" text-anchor="middle" class="label-xs" style="fill:#6d4c00;">Priority: 6</text>
+
+  <rect x="460" y="710" width="120" height="55" rx="6" fill="#74b9ff"/>
+  <text x="520" y="730" text-anchor="middle" class="agent-name" style="font-size:11px; fill:#1a1a2e;">squad-qa</text>
+  <text x="520" y="745" text-anchor="middle" class="label-xs" style="fill:#1a1a2e;">test, lint</text>
+  <text x="520" y="758" text-anchor="middle" class="label-xs" style="fill:#1a1a2e;">Priority: 7</text>
+
+  <rect x="595" y="710" width="120" height="55" rx="6" fill="#b2bec3"/>
+  <text x="655" y="730" text-anchor="middle" class="agent-name" style="font-size:11px; fill:#1a1a2e;">squad-review</text>
+  <text x="655" y="745" text-anchor="middle" class="label-xs" style="fill:#1a1a2e;">review (broadest)</text>
+  <text x="655" y="758" text-anchor="middle" class="label-xs" style="fill:#636e72;">Priority: 8</text>
+
+  <!-- Cascade note -->
+  <text x="450" y="795" text-anchor="middle" class="label-xs">case statement: first match wins (top-left to bottom-right)</text>
+
+  <!-- Match arrow -->
+  <line x1="730" y1="700" x2="780" y2="700" stroke="#00b894" stroke-width="1.5" marker-end="url(#arrow-green)"/>
+  <text x="748" y="693" class="label-xs" style="fill:#00b894;">match</text>
+  <rect x="780" y="686" width="100" height="28" rx="14" fill="#d4edda" stroke="#00b894" stroke-width="1"/>
+  <text x="830" y="705" text-anchor="middle" class="label-sm" style="fill:#00b894;">-> stdout inject</text>
+
+  <!-- No match arrow -->
+  <text x="450" y="845" text-anchor="middle" class="label-xs">no match found</text>
+
+  <line x1="450" y1="850" x2="450" y2="880" stroke="#636e72" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <rect x="370" y="880" width="160" height="34" rx="17" fill="#dfe6e9" stroke="#b2bec3" stroke-width="1"/>
+  <text x="450" y="902" text-anchor="middle" class="label-sm">exit 0 (no output)</text>
+
+  <!-- ===== OUTPUT SECTION ===== -->
+  <line x1="830" y1="534" x2="830" y2="940" stroke="#00b894" stroke-width="1" stroke-dasharray="4,4"/>
+  <line x1="830" y1="714" x2="830" y2="940" stroke="#00b894" stroke-width="1" stroke-dasharray="4,4"/>
+
+  <rect x="180" y="940" width="540" height="90" rx="8" fill="#e8f5e9" stroke="#00b894" stroke-width="2"/>
+  <text x="450" y="965" text-anchor="middle" class="label" style="font-weight:bold;">stdout Context Injection</text>
+  <text x="200" y="985" class="code">[Squad Router] Use the squad-{name} subagent</text>
+  <text x="200" y="1000" class="code">(via Agent tool with subagent_type="squad-{name}")</text>
+  <text x="200" y="1015" class="code">to handle this request.</text>
+
+  <line x1="450" y1="1030" x2="450" y2="1055" stroke="#00b894" stroke-width="1.5" marker-end="url(#arrow-green)"/>
+
+  <rect x="300" y="1055" width="300" height="35" rx="17" fill="#00b894"/>
+  <text x="450" y="1078" text-anchor="middle" class="agent-name">Claude delegates to subagent</text>
+
+  <!-- Legend -->
+  <rect x="20" y="1000" width="140" height="85" rx="6" fill="#fff" stroke="#ddd" stroke-width="1"/>
+  <text x="30" y="1018" class="label-sm" style="font-weight:bold;">Legend</text>
+  <line x1="30" y1="1033" x2="55" y2="1033" stroke="#d63031" stroke-width="1.5" marker-end="url(#arrow-red)"/>
+  <text x="60" y="1037" class="label-xs">skip / exit</text>
+  <line x1="30" y1="1053" x2="55" y2="1053" stroke="#00b894" stroke-width="1.5" marker-end="url(#arrow-green)"/>
+  <text x="60" y="1057" class="label-xs">match / route</text>
+  <line x1="30" y1="1073" x2="55" y2="1073" stroke="#636e72" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="60" y="1077" class="label-xs">flow (next step)</text>
+</svg>

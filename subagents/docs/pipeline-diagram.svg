@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 840 560" font-family="system-ui,-apple-system,sans-serif">
+  <style>
+    .box{rx:8;stroke-width:1.2}.title{font-size:13px;font-weight:600}.sub{font-size:10.5px;opacity:.7}.label{font-size:11px;fill:#666}.arr{stroke:#888;stroke-width:1.5;fill:none;marker-end:url(#ah)}.dash{stroke:#888;stroke-width:1.2;fill:none;stroke-dasharray:5 3;marker-end:url(#ah)}.legend{font-size:12px;fill:#555}
+    @media(prefers-color-scheme:dark){.label,.legend{fill:#aaa}.arr,.dash{stroke:#777}}
+  </style>
+  <defs><marker id="ah" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M2 1.5L8 5L2 8.5" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+
+  <text x="420" y="28" text-anchor="middle" font-size="16" font-weight="600" fill="#333">Squad Agent Pipeline</text>
+
+  <!-- squad-plan -->
+  <rect x="300" y="50" width="210" height="52" class="box" fill="#EEEDFE" stroke="#7F77DD"/>
+  <text x="405" y="72" text-anchor="middle" class="title" fill="#3C3489">squad-plan</text>
+  <text x="405" y="88" text-anchor="middle" class="sub" fill="#534AB7">opus · Read+Write</text>
+  <line x1="405" y1="102" x2="405" y2="140" class="arr"/>
+  <text x="416" y="125" class="label">implement</text>
+
+  <!-- squad-review -->
+  <rect x="300" y="142" width="210" height="52" class="box" fill="#E1F5EE" stroke="#1D9E75"/>
+  <text x="405" y="164" text-anchor="middle" class="title" fill="#085041">squad-review</text>
+  <text x="405" y="180" text-anchor="middle" class="sub" fill="#0F6E56">opus · Read-only</text>
+  <line x1="370" y1="194" x2="370" y2="250" class="arr"/>
+  <text x="340" y="228" text-anchor="end" class="label">approve</text>
+  <line x1="510" y1="168" x2="575" y2="168" class="arr"/>
+  <text x="543" y="158" text-anchor="middle" class="label">changes</text>
+
+  <!-- squad-refactor -->
+  <rect x="577" y="142" width="210" height="52" class="box" fill="#FAECE7" stroke="#D85A30"/>
+  <text x="682" y="164" text-anchor="middle" class="title" fill="#712B13">squad-refactor</text>
+  <text x="682" y="180" text-anchor="middle" class="sub" fill="#993C1D">opus · Read+Write</text>
+  <path d="M682 194 L682 218 L540 218 L540 168 L510 168" class="dash"/>
+  <text x="614" y="234" text-anchor="middle" class="label">re-review</text>
+
+  <!-- squad-qa -->
+  <rect x="265" y="252" width="210" height="52" class="box" fill="#E6F1FB" stroke="#378ADD"/>
+  <text x="370" y="274" text-anchor="middle" class="title" fill="#0C447C">squad-qa</text>
+  <text x="370" y="290" text-anchor="middle" class="sub" fill="#185FA5">sonnet · Read+Bash</text>
+  <line x1="370" y1="304" x2="370" y2="340" class="arr"/>
+
+  <!-- squad-gitops -->
+  <rect x="265" y="342" width="210" height="52" class="box" fill="#F1EFE8" stroke="#888780"/>
+  <text x="370" y="364" text-anchor="middle" class="title" fill="#444441">squad-gitops</text>
+  <text x="370" y="380" text-anchor="middle" class="sub" fill="#5F5E5A">haiku · Read+Bash</text>
+
+  <!-- On-demand -->
+  <text x="105" y="130" text-anchor="middle" font-size="12" font-weight="500" fill="#888">On-demand</text>
+
+  <rect x="20" y="142" width="170" height="52" class="box" fill="#FAEEDA" stroke="#BA7517"/>
+  <text x="105" y="164" text-anchor="middle" class="title" fill="#633806">squad-debug</text>
+  <text x="105" y="180" text-anchor="middle" class="sub" fill="#854F0B">opus · Read+Bash</text>
+
+  <rect x="20" y="252" width="170" height="52" class="box" fill="#FCEBEB" stroke="#E24B4A"/>
+  <text x="105" y="274" text-anchor="middle" class="title" fill="#791F1F">squad-audit</text>
+  <text x="105" y="290" text-anchor="middle" class="sub" fill="#A32D2D">opus · Read-only</text>
+
+  <rect x="20" y="342" width="170" height="52" class="box" fill="#EAF3DE" stroke="#639922"/>
+  <text x="105" y="364" text-anchor="middle" class="title" fill="#27500A">squad-docs</text>
+  <text x="105" y="380" text-anchor="middle" class="sub" fill="#3B6D11">sonnet · Read+Write</text>
+
+  <line x1="190" y1="168" x2="298" y2="168" stroke="#bbb" stroke-width=".8" stroke-dasharray="3 3"/>
+  <line x1="190" y1="278" x2="263" y2="278" stroke="#bbb" stroke-width=".8" stroke-dasharray="3 3"/>
+  <line x1="190" y1="368" x2="263" y2="368" stroke="#bbb" stroke-width=".8" stroke-dasharray="3 3"/>
+
+  <!-- Legend -->
+  <rect x="20" y="430" width="770" height="110" rx="8" fill="none" stroke="#ddd" stroke-width=".8"/>
+  <text x="40" y="454" font-size="13" font-weight="600" fill="#444">Pipeline flow</text>
+  <line x1="40" y1="478" x2="80" y2="478" class="arr"/>
+  <text x="90" y="482" class="legend">Main: squad-plan → squad-review → squad-qa → squad-gitops</text>
+  <line x1="40" y1="500" x2="80" y2="500" class="dash"/>
+  <text x="90" y="504" class="legend">Refactor loop: squad-review finds issues → squad-refactor → re-review</text>
+  <line x1="40" y1="522" x2="80" y2="522" stroke="#bbb" stroke-width=".8" stroke-dasharray="3 3"/>
+  <text x="90" y="526" class="legend">On-demand: squad-debug, squad-audit, squad-docs (invoke anytime)</text>
+</svg>
