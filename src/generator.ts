@@ -14,7 +14,8 @@ export interface Artifact {
 }
 
 const ASSETS = new URL('../assets/', import.meta.url);
-function readAsset(rel: string): string {
+/** assets/ 기준 상대 경로의 자산을 읽는다. (claudebase 등에서 재사용) */
+export function readAsset(rel: string): string {
   return readFileSync(new URL(rel, ASSETS), 'utf8');
 }
 function assetExists(rel: string): boolean {

@@ -73,12 +73,12 @@ export const CATALOG: CatalogComponent[] = [
   { id: 'write-a-skill', kind: 'skill', title: '스킬 작성', description: '재사용 스킬 SKILL.md 스캐폴딩 (mattpocock/skills MIT)', score: 78, core: false, optional: false, applicable: 'all' },
   { id: 'zoom-out', kind: 'skill', title: '시스템 조망', description: '시스템 수준 시야로 모듈·호출 매핑 (mattpocock/skills MIT)', score: 76, core: false, optional: false, applicable: 'all' },
 
-  // ── post-PoC v1.4 (멀티에이전트·튜닝·라우팅) ──
+  // ── post-PoC (멀티에이전트·튜닝·라우팅) ──
   { id: 'model-route', kind: 'skill', title: '모델 라우팅', description: '작업→Haiku/Sonnet/Opus 3-Tier 라우팅(비용 최적화)', score: 85, core: false, optional: false, applicable: 'all' },
   { id: 'parallel-agents', kind: 'skill', title: '멀티에이전트 병렬', description: '최소 병렬화 3~4 에이전트 + git worktree 격리', score: 80, core: false, optional: false, applicable: 'all' },
   { id: 'evaluator-tuning', kind: 'skill', title: 'Evaluator 튜닝', description: '평가자 오판 수집→few-shot 보정 루프', score: 76, core: false, optional: false, applicable: 'all' },
 
-  // ── post-PoC v2.0 (고도화) ──
+  // ── post-PoC (고도화) ──
   { id: 'harness-audit', kind: 'skill', title: '하네스 감사', description: '설치된 하네스 자기 점검(doctor+훅 등록·문법·자산 정합)', score: 78, core: false, optional: false, applicable: 'all' },
   { id: 'coordinator', kind: 'skill', title: '에이전트 조율', description: '멀티에이전트 메일박스/TeamCreate 패턴 가이드', score: 75, core: false, optional: false, applicable: 'all' },
 ];

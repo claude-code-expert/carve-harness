@@ -2,7 +2,7 @@
 
 > 프로젝트를 분석해 그 프로젝트에 맞는 하네스(스킬·훅·서브에이전트)를 대화형으로 선택해 설치하는 CLI.
 
-**v2.4.0** · TypeScript(ESM, 빌드 단계 없음) · Node >=22.18 · 테스트 116 / 커버리지 약 94%
+**v1.0** · TypeScript(ESM, 빌드 단계 없음) · Node >=22.18 · 테스트 116 / 커버리지 약 94%
 
 `carve`는 코드베이스를 읽어 프로젝트 타입과 도구를 탐지하고, 적합한 구성요소를 추천한다.
 사용자가 고른 것만 `.claude/`에 설치한다. carve = 범용 자산을 프로젝트에 맞게 깎아냄.
@@ -187,7 +187,7 @@ npm run check     # 타입체크 (tsc --noEmit)
 
 - **carve vs ECC**: 비용 **58%↓** · 토큰 **47%↓** · 성공 동일(5/5) — ECC는 전역 주입(129 스킬+룰), carve는 필요한 것만 깎아 설치 → "맞춤 경량" 실측 입증.
 - **carve vs no-harness**: 단발 CRUD에선 컨텍스트 주입으로 비용↑(1.57×)이나, carve의 우위는 토큰이 아니라 **안전(누출 0% vs 100% — 결정적 훅은 carve뿐)**.
-- v2.1 codesight/LSP 토큰효율 절약은 위 실측 이후 추가분으로, 대형 fixture 재측정 예정(소형 단발은 MCP 고정비용으로 효과 작음).
+- v1.0 codesight/LSP 토큰효율 절약은 위 실측 이후 추가분으로, 대형 fixture 재측정 예정(소형 단발은 MCP 고정비용으로 효과 작음).
 - 측정 방법·전체 28지표: [carve-harness-benchmark-results.md](./docs/guide/carve-harness-benchmark-results.md).
 
 ## 크레딧
