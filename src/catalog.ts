@@ -61,6 +61,12 @@ export const CATALOG: CatalogComponent[] = [
   { id: 'verify', kind: 'skill', title: '검증 루프', description: 'build→lint→test→typecheck 루프', score: 90, core: false, optional: false, applicable: 'all' },
   { id: 'security-scan', kind: 'skill', title: '보안 스캔', description: 'squad-audit 위임 보안 게이트', score: 80, core: false, optional: false, applicable: 'all' },
   { id: 'test-gen', kind: 'skill', title: '테스트 생성', description: 'UAT 기준 테스트 생성', score: 76, core: false, optional: false, applicable: 'all' },
+
+  // ── 외부 큐레이션 도입 (mattpocock/skills, MIT — 출처 표기) ──
+  { id: 'tdd', kind: 'skill', title: 'TDD', description: 'red-green-refactor 테스트 우선 개발 (mattpocock/skills MIT)', score: 88, core: false, optional: false, applicable: 'all' },
+  { id: 'caveman', kind: 'skill', title: '초압축 모드', description: '토큰 ~75% 절감 압축 커뮤니케이션 (mattpocock/skills MIT)', score: 80, core: false, optional: false, applicable: 'all' },
+  { id: 'write-a-skill', kind: 'skill', title: '스킬 작성', description: '재사용 스킬 SKILL.md 스캐폴딩 (mattpocock/skills MIT)', score: 78, core: false, optional: false, applicable: 'all' },
+  { id: 'zoom-out', kind: 'skill', title: '시스템 조망', description: '시스템 수준 시야로 모듈·호출 매핑 (mattpocock/skills MIT)', score: 76, core: false, optional: false, applicable: 'all' },
 ];
 
 /** 컴포넌트가 주어진 프로젝트 타입에 적합한지 */
