@@ -1,0 +1,4 @@
+[project]
+name = "demo-batch"
+version = "1.0.0"
+dependencies = ["apscheduler>=3.10"]

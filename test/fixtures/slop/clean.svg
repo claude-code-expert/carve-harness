@@ -1,0 +1,4 @@
+<svg viewBox="0 0 200 80" xmlns="http://www.w3.org/2000/svg" font-family="'Noto Sans KR', sans-serif">
+  <rect x="10" y="10" width="120" height="56" rx="8" fill="#F3F4F6" stroke="#6B7280" stroke-width="1.5"/>
+  <text x="70" y="44" text-anchor="middle" font-size="15" fill="#111">사용자</text>
+</svg>

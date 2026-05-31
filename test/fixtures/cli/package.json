@@ -1,0 +1,8 @@
+{
+  "name": "demo-cli",
+  "version": "1.0.0",
+  "bin": { "demo": "bin/demo.js" },
+  "scripts": { "test": "node --test", "lint": "eslint ." },
+  "dependencies": { "commander": "^12.0.0" },
+  "devDependencies": { "typescript": "^5.0.0", "eslint": "^9.0.0" }
+}
