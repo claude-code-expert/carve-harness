@@ -63,6 +63,23 @@ export function parseLevel(args: string[]): HarnessLevel | 'invalid' | undefined
 }
 
 /**
+ * 진입점이 대화형 설치(wizard)로 갈지 결정한다.
+ * 조건: 인자 없음(`carve`) 또는 `carve install` + (--only/--yes 없음) + TTY.
+ * (--only/--yes는 비대화형 의도이므로 run()으로 보낸다.)
+ */
+export function isInteractiveInstall(args: string[], isTTY: boolean): boolean {
+  const intent = args.length === 0 || args[0] === 'install';
+  const hasOnly = args.includes('--only') || args.some((a) => a.startsWith('--only='));
+  return intent && !hasOnly && !args.includes('--yes') && isTTY;
+}
+
+/** 대화형 설치 대상 디렉토리: 첫 비플래그 위치 인자, 없으면 cwd. */
+export function installDir(args: string[]): string {
+  const rest = args[0] === 'install' ? args.slice(1) : args;
+  return rest.find((a) => !a.startsWith('-')) ?? process.cwd();
+}
+
+/**
  * 인자를 해석해 동작을 수행한다. 종료 코드를 반환한다.
  * @param args  process.argv.slice(2)
  * @param io    테스트 주입용 출력 채널

@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { readFileSync, mkdtempSync, rmSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { run, loadVersion, USAGE, type IO } from '../../src/cli.ts';
+import { run, loadVersion, USAGE, isInteractiveInstall, installDir, type IO } from '../../src/cli.ts';
 
 /** 출력을 캡처하는 io 채널 */
 function capture(): { io: IO; out: { log: string; error: string } } {
@@ -48,6 +48,32 @@ test('--help는 사용법을 출력한다', () => {
   const { io, out } = capture();
   assert.equal(run(['--help'], io), 0);
   assert.equal(out.log.trim(), USAGE);
+});
+
+test('isInteractiveInstall: TTY에서 인자없음·install은 대화형, 그 외는 아님', () => {
+  // TTY + (bare | install) → 대화형
+  assert.equal(isInteractiveInstall([], true), true);
+  assert.equal(isInteractiveInstall(['install'], true), true);
+  assert.equal(isInteractiveInstall(['install', './proj'], true), true);
+  // --only/--yes는 비대화형 의도 → run()
+  assert.equal(isInteractiveInstall(['install', '--yes'], true), false);
+  assert.equal(isInteractiveInstall(['install', '--only', 'commit'], true), false);
+  assert.equal(isInteractiveInstall(['install', '--only=commit'], true), false);
+  // 다른 명령·플래그 → 아님
+  assert.equal(isInteractiveInstall(['list'], true), false);
+  assert.equal(isInteractiveInstall(['--help'], true), false);
+  assert.equal(isInteractiveInstall(['-v'], true), false);
+  // 비TTY(파이프·CI)면 인자없음·install이라도 아님 → run()이 help/설치 처리
+  assert.equal(isInteractiveInstall([], false), false);
+  assert.equal(isInteractiveInstall(['install'], false), false);
+});
+
+test('installDir: 첫 비플래그 위치인자, 없으면 cwd', () => {
+  assert.equal(installDir(['install', './proj']), './proj');
+  assert.equal(installDir(['./proj']), './proj');
+  assert.equal(installDir(['install', '--lsp-servers', 'pkg']), 'pkg');
+  assert.equal(installDir(['install']), process.cwd());
+  assert.equal(installDir([]), process.cwd());
 });
 
 test('list는 카탈로그를 출력한다', () => {
