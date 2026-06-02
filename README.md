@@ -134,16 +134,10 @@ npm run build     # 배포용 컴파일 (tsconfig.build.json, in-place .js)
 
 ## 릴리스 (npm 배포)
 
-배포는 **버전 태그 푸시 시 GitHub Actions가 main 기준으로 자동 게시**한다(`.github/workflows/release.yml`).
-사전 1회: 저장소 Settings → Secrets and variables → Actions에 `NPM_TOKEN`(2FA 우회 granular 토큰) 등록.
+배포는 **버전 태그(`vX.Y.Z`) 푸시 시 GitHub Actions가 main 기준으로 자동 게시**한다(`.github/workflows/release.yml`).
+`npm publish`가 `prepublishOnly`(타입체크+테스트)와 `prepack`(빌드)을 자동 실행하므로 테스트 실패 시 게시되지 않는다.
 
-```bash
-git checkout main && git merge --ff-only develop && git push origin main   # develop→main 승격
-npm version patch                                                          # 버전+태그 생성 (1.0.0→1.0.1)
-git push origin main --follow-tags                                         # 태그 푸시 → CI가 빌드·테스트·게시
-```
-
-`npm publish`는 `prepublishOnly`(타입체크+테스트)와 `prepack`(빌드)을 자동 실행한다 — 테스트 실패 시 게시되지 않는다.
+전체 순서(develop 개발 → main 승격 → 태그 게시)는 **[docs/release/RELEASE.md](./docs/release/RELEASE.md)** 참고.
 
 ## 정량 평가 (내부 측정)
 
