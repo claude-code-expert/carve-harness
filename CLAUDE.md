@@ -3,6 +3,35 @@
 > 이 파일은 **carve-harness 리포 자체를 Claude Code로 개발할 때** 읽는 컨텍스트다.
 > carve가 *생성하는* 대상 프로젝트의 CLAUDE.md가 아니다. (두 레이어 혼동 주의)
 
+
+## Hallucination Guard
+
+Before sending, self-verify:
+- Do the referenced file paths / class names / method names actually exist?
+- Are external links the correct domain/path? Is sample code syntactically valid?
+- If unsure, mark it "needs verification" / "unverified" — do not guess.
+
+## Language & Response Policy
+
+| Target | Language |
+|--------|----------|
+| Internal reasoning & planning | English |
+| Code, variable names, comments, logs, error messages | English |
+| Git commit messages | English (Conventional Commits) |
+| User-facing response (explanation · summary · question) | English summary → Korean conclusion (see format below) |
+
+**Response format (always):**
+- Write the working summary / explanation in **English first**.
+- Then state the **final conclusion in Korean** (한글로 최종 결론).
+- Order is fixed: **English summary → Korean conclusion**, each exactly once (see R2).
+- When error output or quoted English text appears, add a brief Korean note for that part only.
+
+**On task completion**, the Korean conclusion covers, in one block, once:
+1. What changed (무엇을 변경했는지)
+2. Why (왜 그렇게 했는지)
+3. Caveats (주의할 점)
+
+
 ## 작업 원칙 (behavioral guidelines)
 
 > LLM이 흔히 저지르는 실수를 줄이기 위한 행동 지침. 사소한 작업엔 판단껏, 비자명한 작업엔 속도보다 신중을 택한다.
@@ -58,22 +87,6 @@
 
 코드를 짤 때 "지금 만지는 게 A인가 B의 템플릿인가"를 항상 분명히 한다.
 
-## 디렉토리 가이드
-
-| 경로 | 역할 | 규칙 |
-|------|------|------|
-| `bin/carve.ts` | CLI 엔트리포인트 | `src/cli.ts`의 얇은 진입점. shebang에서 `--disable-warning` |
-| `src/cli.ts` | CLI 코어 | 인자 해석·명령 디스패치. 로직은 여기서 테스트 |
-| `src/analyzer.ts` | 프로젝트 스캔 | 읽기 전용. 파일 수정 금지 |
-| `src/designer.ts` | 하네스 슬롯 설계 | `vendor/openharness` 분류 체계 참조 |
-| `src/generator.ts` | 자산 깎기·생성 | `vendor/subagents`·`assets`에서 소스 로드 |
-| `src/auditor.ts` | 생성물 자기 검증 | 보안·권한·훅 주입 스캔 |
-| `src/installer.ts` | 대상 프로젝트 설치 | 멱등성 필수 |
-| `src/claudebase.ts` | CLAUDE.md 베이스라인 + 스택별 rules 생성 | `assets/claude-base`에서 스택 선택·렌더 (`carve init-claude`) |
-| `assets/claude-base/` | CLAUDE.md 베이스라인 + 언어별 rules 템플릿 | 스택 무관 `CLAUDE.md` + `rules/<lang>/*` (ts·py·go·rust·java·dart·_default) |
-| `assets/squad/` | Squad 자산(녹여넣음) | vendor/subagents에서 melt-in. carve는 vendor 비의존 |
-| `assets/antislop/` | anti-slop 패밀리(녹여넣음) | vendor/.claude에서 melt-in |
-| `assets/` | 베이스 템플릿 | 깎기 전 원목 |
 
 > `vendor/`(openharness·subagents)는 분석·원본 소스였고 **삭제 대상**이다. 런타임 의존을 없애기 위해
 > 필요한 자산(Squad·anti-slop)은 `assets/`로 녹여넣었다(100% melt-in). carve는 vendor 없이 동작한다.
@@ -103,8 +116,16 @@ npm test                         # 단위 + E2E (node --test, .ts 직접 실행)
 npm run test:cov                 # 커버리지 게이트 (≥80)
 ```
 
-## 참고
+## Project-Specific References (extension slots)
 
-- 요구사항: `requirement.md`
-- 아키텍처: `ARCHITECTURE.md`
-- 기여: `CONTRIBUTING.md`
+Each project defines these in its own `.claude/rules/` and references them here:
+@.claude/rules/project-structure.md
+@.claude/rules/code-style.md
+@.claude/rules/safety.md
+@.claude/rules/gotchas.md
+
+## Project-References
+
+- Requirement: `requirement.md`
+- Architecture: `ARCHITECTURE.md`
+- Contributing: `CONTRIBUTING.md`
