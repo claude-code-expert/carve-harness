@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1360 440" width="1360" height="440" font-family="&#39;JetBrains Mono&#39;, ui-monospace, &#39;SFMono-Regular&#39;, Menlo, Consolas, monospace" role="img" aria-label="carve-harness — carve away the excess, keep the craft">
+  
+  <rect x="0" y="0" width="1360" height="440" fill="#0a0e15"></rect>
+
+  
+  <rect x="120" y="346" width="1120" height="1" fill="#1c2433"></rect>
+
+  
+  <g transform="translate(132,142) scale(1.36)">
+    <path d="M22 34 l9 -4 4 9 -9 4 z" fill="#2a3549" stroke="#3a4863" stroke-width="1" transform="translate(-12,-10)"></path>
+    <path d="M11 22 l7 -3 3 7 -7 3 z" fill="#28324a" stroke="#3a4863" stroke-width="1" transform="translate(-24,-22)" opacity="0.6"></path>
+    <line x1="68" y1="128" x2="76" y2="52" stroke="#5d6a7e" stroke-width="11" stroke-linecap="round"></line>
+    <line x1="68" y1="128" x2="76" y2="52" stroke="#46546a" stroke-width="3" stroke-linecap="round"></line>
+    <path d="M40 26 C 28 30, 22 40, 22 50 C 22 60, 28 70, 40 74 L 62 60 L 90 70 L 94 34 L 62 40 Z" fill="#121826" stroke="#4d9dff" stroke-width="3" stroke-linejoin="round"></path>
+    <path d="M40 26 C 28 30, 22 40, 22 50 C 22 60, 28 70, 40 74" fill="none" stroke="#7bb6ff" stroke-width="3.5" stroke-linecap="round"></path>
+  </g>
+
+  
+  <text x="372" y="158" font-size="19" letter-spacing="5" fill="#4d9dff" opacity="0.9">CARVE-HARNESS ENGINEERING</text>
+
+  <text x="370" y="244" font-size="82" font-weight="700" letter-spacing="-1"><tspan fill="#e8edf6">carve</tspan><tspan fill="#5f6b7e" font-weight="500">-harness</tspan></text>
+
+  <text x="372" y="300" font-size="27" letter-spacing="0.4" fill="#9aa6b8">carve away the excess, keep the craft</text>
+
+  
+  <rect x="372" y="372" width="262" height="44" rx="7" fill="#10151f" stroke="#232c3d" stroke-width="1.5"></rect>
+  <text x="392" y="400" font-size="21" fill="#5f6b7e">$</text>
+  <text x="412" y="400" font-size="21" fill="#cdd6e4">npx carve-harness</text>
+</svg>
