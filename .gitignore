@@ -1,3 +1,7 @@
+# 배포용 컴파일 산출물 (in-place tsc 빌드, npm publish 시 생성). 소스는 .ts.
+bin/*.js
+src/*.js
+
 # GSD (get-shit-done) 설치물 — npx로 재생성하는 개발 툴링(제품 소스 아님). .claude/skills(저작물)은 추적.
 .claude/get-shit-done/
 .claude/agents/
