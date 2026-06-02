@@ -120,15 +120,30 @@ analyzer → catalog → (wizard 선택) → designer → generator → auditor 
 
 ## 개발
 
-TypeScript(ESM)로 작성하되 빌드 단계가 없다. Node >=22.18의 타입 스트리핑으로 `.ts`를 직접 실행한다.
+TypeScript(ESM)로 작성하되 개발 중엔 빌드 단계가 없다. Node >=22.18의 타입 스트리핑으로 `.ts`를 직접 실행한다.
+(배포 시에는 `node_modules`에서 타입 스트리핑이 막히므로 `prepack`이 `.ts`→`.js`로 컴파일해 싣는다.)
 
 ```bash
 npm test          # 단위 + E2E (node --test)
 npm run test:cov  # 커버리지 게이트 (>=80)
 npm run check     # 타입체크 (tsc --noEmit)
+npm run build     # 배포용 컴파일 (tsconfig.build.json, in-place .js)
 ```
 
 마일스톤 진행 기록: [docs/milestones/](./docs/milestones/)
+
+## 릴리스 (npm 배포)
+
+배포는 **버전 태그 푸시 시 GitHub Actions가 main 기준으로 자동 게시**한다(`.github/workflows/release.yml`).
+사전 1회: 저장소 Settings → Secrets and variables → Actions에 `NPM_TOKEN`(2FA 우회 granular 토큰) 등록.
+
+```bash
+git checkout main && git merge --ff-only develop && git push origin main   # develop→main 승격
+npm version patch                                                          # 버전+태그 생성 (1.0.0→1.0.1)
+git push origin main --follow-tags                                         # 태그 푸시 → CI가 빌드·테스트·게시
+```
+
+`npm publish`는 `prepublishOnly`(타입체크+테스트)와 `prepack`(빌드)을 자동 실행한다 — 테스트 실패 시 게시되지 않는다.
 
 ## 정량 평가 (내부 측정)
 
