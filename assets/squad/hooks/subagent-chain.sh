@@ -1,4 +1,4 @@
-#!/usr/bin/env zsh
+#!/usr/bin/env bash
 # subagent-chain.sh — Squad Agent notification + pipeline chaining hook
 # Handles both SubagentStart and SubagentStop events
 # Registered automatically by install.sh

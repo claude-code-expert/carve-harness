@@ -32,6 +32,8 @@ git switch develop && git pull
 npm run check && npm test     # 로컬에서 먼저 통과 확인
 ```
 
+> ⚠️ **로컬에 `shellcheck`를 설치하라**(`brew install shellcheck`). auditor의 셸 문법 검사는 shellcheck가 있으면 그걸, 없으면 `bash -n`(느슨)을 쓴다. CI(ubuntu)엔 shellcheck가 있으므로, 로컬에 없으면 `bash -n`이 못 잡는 문제(예: zsh shebang → SC1071)가 **CI에서만 테스트를 깨고 게시를 막는다.** 로컬 검사를 CI와 일치시켜야 한다.
+
 ### 2. 버전 올리기 (develop에서, 태그는 아직 만들지 않음)
 
 `package.json`의 버전만 올리고 커밋한다. 태그는 main 승격 후 4단계에서 단다.
@@ -104,6 +106,8 @@ VER=$(node -p "require('./package.json').version"); git tag "v$VER" && git push 
 | `403 ... cannot publish over previously published version` | `package.json` 버전이 이미 게시됨 | 2단계로 돌아가 버전을 올린다 |
 | 워크플로가 아예 안 돈다 | 태그가 `v`로 시작 안 함 / 태그 push 누락 | `vX.Y.Z` 형식으로 태그를 push했는지 확인 |
 | 테스트 실패로 게시 중단 | `prepublishOnly` 게이트 | 로컬에서 `npm test` 고치고 다시 릴리스 |
+| 로컬은 통과인데 CI만 테스트 실패 | 로컬에 shellcheck 없어 `bash -n` 폴백(CI는 shellcheck) | `brew install shellcheck` 후 `npm test` 재현·수정 |
+| 게시 전 단계(테스트)에서 막혀 npm엔 안 올라감 | 게이트가 publish 전에 차단 | 수정을 main까지 보낸 뒤, **그 버전이 npm에 없으므로** 같은 태그를 재사용 가능: `git push origin :vX.Y.Z`(원격 삭제) → `git tag -f vX.Y.Z`(수정 커밋) → `git push origin vX.Y.Z`. 또는 다음 patch로 올린다 |
 
 ## 롤백 / 회수
 
