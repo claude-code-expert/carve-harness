@@ -1,0 +1,26 @@
+name: release
+
+# 버전 태그(vX.Y.Z) 푸시 시에만 main 기준으로 빌드·테스트·게시.
+# main 머지만으론 안 돌아 중복 게시를 방지한다. 릴리스: npm version patch && git push --follow-tags
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22          # engines >=22.18 (.ts 타입 스트리핑)
+          registry-url: https://registry.npmjs.org
+      - run: npm ci
+      # npm publish가 prepublishOnly(check+test) → prepack(clean+build)를 자동 실행한다.
+      # 테스트 통과 못 하면 게시도 안 된다.
+      - run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

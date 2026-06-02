@@ -13,21 +13,24 @@
   "homepage": "https://github.com/claude-code-expert/carve-harness#readme",
   "type": "module",
   "bin": {
-    "carve": "bin/carve.ts"
+    "carve": "bin/carve.js"
   },
   "files": [
-    "bin",
-    "src",
-    "assets",
-    "vendor"
+    "bin/carve.js",
+    "src/**/*.js",
+    "assets"
   ],
   "engines": {
     "node": ">=22.18"
   },
   "scripts": {
     "check": "tsc --noEmit",
+    "build": "tsc -p tsconfig.build.json",
+    "clean": "rm -f bin/*.js src/*.js",
     "test": "node --test 'test/**/*.test.ts'",
-    "test:cov": "node --test --experimental-test-coverage --test-coverage-lines=0.8 --test-coverage-functions=0.8 'test/**/*.test.ts'"
+    "test:cov": "node --test --experimental-test-coverage --test-coverage-lines=0.8 --test-coverage-functions=0.8 'test/**/*.test.ts'",
+    "prepack": "npm run clean && npm run build",
+    "prepublishOnly": "npm run check && npm test"
   },
   "dependencies": {
     "@clack/prompts": "^0.7.0"
