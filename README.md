@@ -1,11 +1,25 @@
+<p align="center">
+  <img src="docs/carve-banner.svg" alt="carve-harness — carve away the excess, keep the craft" width="680">
+</p>
+
+<p align="center"><b>필요한 것만 남기고, 나머지는 깎아낸다.</b></p>
+
+<p align="center"><b>한국어</b> · <a href="./README.en.md">English</a></p>
+
 # carve-harness
+
+**carve-harness**는 개발에 필수적인 요소만 최소한으로 구성하는, 개발자를 위한 **하네스 엔지니어링 도구**입니다.
 
 > 프로젝트를 분석해 그 프로젝트에 맞는 하네스(스킬·훅·서브에이전트)를 대화형으로 선택해 설치하는 CLI.
 
-**v1.0** · TypeScript(ESM, 빌드 단계 없음) · Node >=22.18 · 테스트 116 / 커버리지 약 94%
+**v1.0** · TypeScript(ESM, 빌드 단계 없음) · Node >=22.18 · 테스트 118 / 커버리지 약 94%
 
 `carve`는 코드베이스를 읽어 프로젝트 타입과 도구를 탐지하고, 적합한 구성요소를 추천한다.
 사용자가 고른 것만 `.claude/`에 설치한다. carve = 범용 자산을 프로젝트에 맞게 깎아냄.
+
+**"이 프로젝트에 맞는 하네스를 구성해줘"** 한마디로 (옵션을 직접 고를 수 있는) 전체 하네스를 구성하거나,
+`harness-audit`로 현재 설치의 정합성을 실제 점검하거나, `harness-architect`로 "이 프로젝트에 맞게"
+구성요소를 골라 빼주는 작업을 통해 — 프로젝트마다 최적화할 수 있다.
 
 핵심 동작은 한 줄로 검증된다:
 
