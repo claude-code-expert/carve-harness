@@ -61,17 +61,78 @@ carve uninstall    # 클린 제거(.bak 복원)
 **제거**: `carve uninstall` (= `bash install.sh --uninstall`). `carve-manifest.json` 기준으로 carve 설치 파일만 제거하고
 `.bak`가 있으면 원본을 복원한다. `settings.json`의 carve 훅·MCP 항목만 정확히 제거(사용자 항목 보존). 자세히는 [INSTALL.md](./INSTALL.md#11-제거-uninstall).
 
-## 무엇을 설치하나
+## 무엇을 설치하나 — 구성요소 카탈로그 (역할·사용법)
 
-> 각 구성요소의 **역할·사용법(트리거)**은 → **[docs/guide/components.md](./docs/guide/components.md)**. 아래는 목록 요약.
+호출 방식 4종: **스킬**=자연어 또는 `/carve-<이름>` · **훅**=자동(이벤트) · **Squad**=`/squad <멤버> [작업]` 또는 키워드 위임 · **MCP**=자동.
+설치 후 그 프로젝트에서 **Claude Code를 열면** 훅·MCP는 즉시 활성, 스킬·Squad는 아래 방식으로 부른다.
 
-- 토큰 효율(기본 탑재): codesight(구조 맵 MCP) · lsp(cclsp MCP) — settings.json에 자동 등록 + git commit 시 `.codesight/` 갱신
-- 6 핵심 스킬: handoff · memory · commit · changelog · review · pr
-- 진입 스킬: harness-architect (자연어 트리거)
-- 7 필수 훅: 파괴적 명령 차단 · 비밀파일 보호 · 커밋 전 린트 · 푸시 전 테스트 · 자동 포맷 · Slack 알림 · PreCompact 핸드오프
-- 1 선택 훅: 자동 커밋
-- Squad 서브에이전트 9종: review · plan · refactor · qa · debug · docs · gitops · audit · evaluator(완료 기준 독립 평가)
-- anti-ai-slop 팩 + 추가 스킬(점수 75↑): verify·security-scan·test-gen, 그리고 tdd·caveman·write-a-skill·zoom-out (mattpocock/skills, MIT 출처)
+**토큰 효율 (MCP · 자동, 기본 탑재)**
+
+| 구성요소 | 역할 | 사용법 |
+|----------|------|--------|
+| codesight | 프로젝트 구조 맵 MCP — grep 재탐색 대신 구조 질의(대형 코드베이스 탐색 토큰 ~11배↓) | 자동. git commit 시 `.codesight/` 갱신 |
+| lsp (cclsp) | `findReferences`·`getDiagnostics` 등 정확한 코드 네비게이션 MCP | 자동. 언어서버는 `--lsp-servers`로 설치 |
+
+**핵심 스킬 (자연어 또는 `/carve-<이름>`)**
+
+| 스킬 | 역할 | 사용법 |
+|------|------|--------|
+| handoff | 세션 인계 — 진행·결정·다음 할 일을 남겨 다음 세션이 이음 | "핸드오프" / `/carve-handoff` |
+| memory | 프로젝트 지속 메모리 — 결정·맥락 영속화 | "기억해둬" / `/carve-memory` |
+| commit | Conventional Commit 메시지 생성 | "커밋 메시지 만들어" / `/carve-commit` |
+| changelog | CHANGELOG 생성·갱신 | "체인지로그 갱신" / `/carve-changelog` |
+| review | 코드 리뷰(squad-review 위임) | "리뷰해줘" / `/carve-review` |
+| pr | PR 본문 생성 | "PR 본문 써줘" / `/carve-pr` |
+| harness-architect (진입) | 분석 → 추천 → 선택 설치 안내 | "이 프로젝트에 맞는 하네스 구성해줘" |
+
+**훅 (자동 · 이벤트)** — 차단형은 권고가 아니라 `exit 2`로 결정적 차단
+
+| 훅 | 이벤트 | 역할 |
+|----|--------|------|
+| block-destructive | PreToolUse(Bash) | `rm -rf /`·포크밤 등 위험 명령 차단 |
+| protect-secrets | PreToolUse(Read/Edit/Write) | `.env`·키·credentials 접근 차단 |
+| pre-commit-lint | PreToolUse(Bash) | `git commit` 전 린트, 실패 시 차단 |
+| pre-push-test | PreToolUse(Bash) | `git push` 전 테스트, 실패 시 차단 |
+| auto-format | PostToolUse(Edit/Write) | 저장 후 포매터 실행(비차단) |
+| slack-notify | Stop | 세션 종료 시 Slack 알림(웹훅 설정 시) |
+| precompact-handoff | PreCompact | 압축 직전 상태 영속화 |
+| auto-commit *(선택, OFF)* | Stop | 세션 종료 시 자동 커밋. 대화형에서 직접 켤 때만 |
+
+**Squad 서브에이전트 9종 (`/squad <멤버> [작업]` 또는 `/squad-<멤버>`)**
+
+| 멤버 | 역할 |
+|------|------|
+| squad-review | 코드 리뷰(보안·성능·스타일) |
+| squad-plan | 기능 기획·유저스토리·와이어프레임 |
+| squad-refactor | 추출·단순화·이름변경·제거 |
+| squad-qa | 테스트 실행·QA 리포트 |
+| squad-debug | 에러 분석·근본 원인 |
+| squad-docs | 문서 생성·갱신 |
+| squad-gitops | 커밋 메시지·PR·체인지로그 |
+| squad-audit | 보안 감사·취약점 스캔 |
+| squad-evaluator | 완료 기준·Sprint Contract 대비 **독립 평가**(Self-Eval Blindspot 대응) |
+
+**anti-ai-slop 팩 (문서·이미지 생성 시)** — HTML·SVG·카드뉴스·리포트·슬라이드의 AI 슬롭 제거 + `check-slop.mjs` 게이트.
+사용법: "슬롭 없는 html 만들어", "디슬롭 해줘" — 생성·수정 후 린터가 자동 검사(경고 모드).
+
+**추가 스킬 (`full` 레벨 · 자연어 또는 `/carve-<이름>`)**
+
+| 스킬 | 역할 |
+|------|------|
+| verify | `build→lint→test→typecheck` 검증 루프 |
+| security-scan | squad-audit 위임 보안 게이트 |
+| test-gen | UAT 기준 테스트 생성 |
+| tdd | red-green-refactor 테스트 우선 *(mattpocock/skills, MIT)* |
+| caveman | 토큰 ~75%↓ 초압축 커뮤니케이션 *(MIT)* |
+| write-a-skill | 재사용 `SKILL.md` 스캐폴딩 *(MIT)* |
+| zoom-out | 시스템 수준 시야로 모듈·호출 매핑 *(MIT)* |
+| model-route | 작업 → Haiku/Sonnet/Opus 3-Tier 라우팅(비용 최적화) |
+| parallel-agents | 3~4 에이전트 최소 병렬화 + git worktree 격리 |
+| evaluator-tuning | 평가자 오판 수집 → few-shot 보정 |
+| harness-audit | 설치 하네스 자기 점검(doctor + 등록·문법·정합) |
+| coordinator | 멀티에이전트 메일박스/TeamCreate 조율 가이드 |
+
+> 어떤 레벨에서 무엇이 기본 추천되는지는 위 **설치 레벨** 표 참고. 점수(`carve list`의 괄호 숫자, ≥75)는 carve의 내부 유용성 평가다.
 
 설치 시 `flight-rules.md`·`evaluation-criteria.md`·`sprint-contract.md`·`CLAUDE.md`·`HARNESS-GUIDE.md`를 프로젝트에 생성한다.
 지원 프로젝트: CLI · 웹 · 모바일 · 반응형 · 데스크탑 · 배치.
