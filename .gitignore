@@ -12,6 +12,8 @@ src/*.js
 .claude/package.json
 .DS_Store
 
+docs/release
+
 # Logs
 logs
 *.log
