@@ -41,10 +41,13 @@ npx carve-harness            # = carve install (대화형)
 ```
 별도 전역 설치 없이 최신 버전을 실행한다.
 
-### 3.2 bash
+### 3.2 bash 래퍼 (리포 clone 또는 curl 시에만)
+`install.sh`는 **npm 패키지에 포함되지 않는다.** 이 리포를 clone했거나 `curl`로 받았을 때만 존재하는 편의 래퍼이며,
+내부적으로 로컬 소스가 있으면 `node bin/carve.ts`, 없으면 `npx carve-harness@latest`를 호출한다. 일반 프로젝트 설치는 3.1(npx)을 쓴다.
 ```bash
-bash install.sh              # 현재 디렉토리에 설치
+bash install.sh              # 현재 디렉토리에 설치 (리포 안에서)
 bash install.sh --uninstall  # 제거
+curl -fsSL <repo-raw-url>/install.sh | bash   # 리포에서 직접 받아 실행
 ```
 
 ### 3.3 로컬 클론 (개발/검토)
@@ -73,17 +76,19 @@ node bin/carve.ts install <대상-프로젝트-경로>
 
 프로필(타입·언어 수·CI)로 자동 판정하며 `--level`로 강제할 수 있다.
 
+> 레벨에 따라 달라지는 건 **훅 개수와 추가 스킬**이다. 코어 스킬·**Squad 9 에이전트**·anti-slop은 *모든 레벨*에서 기본 추천된다(코어).
+
 | 레벨 | 자동 판정 기준 | 포함 |
 |------|----------------|------|
-| `minimal` | 소형 CLI·라이브러리·배치·미분류 | 코어 스킬 + **필수 훅(차단·보호·핸드오프)** |
-| `standard` (기본) | 일반 앱(웹·모바일·데스크탑) | + **7 필수 훅** + Squad 9 에이전트 + anti-slop |
-| `full` | CI 있음 + 다중 언어 | + 추가 스킬(verify 등) + **멀티에이전트 병렬(parallel-agents)·조율(coordinator)** |
+| `minimal` | 소형 CLI·라이브러리·배치·미분류 | 코어 스킬 + **Squad 9 에이전트** + anti-slop + **필수 훅 3종(차단·보호·핸드오프)** |
+| `standard` (기본) | 일반 앱(웹·모바일·데스크탑) | minimal + **나머지 코어 훅(총 7개: +커밋전 린트·푸시전 테스트·자동포맷·Slack)** |
+| `full` | CI 있음 + 다중 언어 | standard + **추가 스킬(verify·security-scan·test-gen·parallel-agents·coordinator 등)** |
 
 ---
 
 ## 6. 단계별 구성요소 (무엇을 고르나)
 
-대화형 설치에서 제시되는 그룹과 선택 가이드.
+대화형 설치에서 제시되는 그룹과 선택 가이드. **각 구성요소의 역할·사용법(트리거)은 → [docs/guide/components.md](./docs/guide/components.md).**
 
 ### 토큰 효율 (기본 추천)
 - **codesight** — 프로젝트 구조 맵 MCP. grep 재탐색 비용 제거(대형 코드베이스 실측 평균 약 11배).
