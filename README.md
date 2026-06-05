@@ -65,7 +65,13 @@ carve init-claude  # CLAUDE.md 베이스라인 + .claude/rules/* 생성 (언어 
 carve list         # 설치 가능/설치된 구성요소 목록
 carve doctor       # 설치된 하네스 점검 (구성 + 훅 셸 문법)
 carve uninstall    # 클린 제거(.bak 복원)
+carve diff         # 설치본과 현 carve 자산을 3-way 비교 (읽기 전용)
+carve update       # 사용자 수정 보존하며 carve 자산만 갱신 (--force·--yes)
+carve migrate      # carve-manifest 스키마 v1→v2 승격
+carve report       # 설치 훅의 로컬 효과 텔레메트리 집계 (opt-in)
 ```
+
+> **v1.2.0 (v2.0 1차 — 라이프사이클·분석 지능화·텔레메트리)**: `diff`/`update`/`migrate`로 설치된 하네스를 *사용자 수정 보존*하며 안전 갱신한다(manifest 스키마 v2 + 자산 hash, `.bak` 1회·manifest-last 원자성). 분석기가 모노레포·컨테이너 시그널을 읽어 가중 추천하고, opt-in 로컬 텔레메트리(`carve report`)로 훅 효과를 집계한다 — **네트워크 전송 없음**.
 
 **설치 레벨** (프로필로 자동 결정, `--level`로 강제 가능). 코어 스킬·Squad 9 에이전트·anti-slop은 *모든 레벨* 기본 추천이고, 레벨로 달라지는 건 **훅 개수·추가 스킬**이다:
 - `minimal` — 소형 CLI/라이브러리/배치: 코어 스킬 + Squad 9 에이전트 + anti-slop + **필수 훅 3종**(차단·보호·핸드오프)
