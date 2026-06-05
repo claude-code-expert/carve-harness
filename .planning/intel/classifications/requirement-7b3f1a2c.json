@@ -1,0 +1,25 @@
+{
+  "source_path": "/Users/codevillain/Claude-Code-Expert/carve-harness/carve-harness/requirement.md",
+  "type": "SPEC",
+  "confidence": "high",
+  "manifest_override": true,
+  "title": "carve-harness 요구사항",
+  "summary": "Defines the requirements the carve-harness CLI must satisfy: detection-driven interactive harness install, core components, Squad subagents, lifecycle commands, distribution, and quality gates.",
+  "scope": [
+    "carve-harness CLI",
+    "interactive harness install",
+    "core skills and command shims",
+    "required hooks",
+    "Squad subagents",
+    "lifecycle commands (install/uninstall/list/doctor)",
+    "distribution (npx, install.sh)",
+    "quality gates (coverage, auditor)"
+  ],
+  "cross_refs": [
+    "./ARCHITECTURE.md",
+    "./CLAUDE.md"
+  ],
+  "locked": false,
+  "precedence": 1,
+  "notes": "Type set from MANIFEST_TYPE=SPEC (authoritative). Document mixes requirement-style language (R-INSTALL, R-LIFECYCLE, goals/non-goals) with implementation contracts (component lists, hook event bindings, coverage thresholds); manifest override resolves toward SPEC."
+}
