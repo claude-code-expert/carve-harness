@@ -10,7 +10,7 @@
 
 ## Phases
 
-- [ ] **Phase 1: M8 — Lifecycle Foundation** - Asset content-hash + manifest v2; `diff`/`update`/`migrate` with user edits preserved.
+- [x] **Phase 1: M8 — Lifecycle Foundation** - Asset content-hash + manifest v2; `diff`/`update`/`migrate` with user edits preserved.
 - [ ] **Phase 2: M9 — Analysis & Recommendation Intelligence** - Monorepo/Docker signal detection, weighted scoring, preference persistence.
 - [ ] **Phase 3: M10 — Local Effect Telemetry (opt-in)** - `_metrics.sh` emit, redacted recording, `carve report` aggregation.
 
@@ -27,11 +27,11 @@
   4. `carve migrate` lifts a v1 manifest to v2 losslessly and is a no-op when re-run on a v2 manifest.
   5. An induced audit failure during a lifecycle write leaves the prior install and manifest unchanged (atomicity via pre-write audit + manifest-last).
 **Plans**: 5 plans (5 waves — strict dependency chain on manifest→installer→commands→cli→tests)
-  - [ ] 01-01-PLAN.md — manifest schema v2: ManifestFile, hashContent, normalizeManifest, migrateManifest + unit tests (LIFE-01, LIFE-04)
-  - [ ] 01-02-PLAN.md — installer hashes at write, schemaVersion, unionFiles dedup, v2 uninstall + e2e assertions (LIFE-01, LIFE-05)
-  - [ ] 01-03-PLAN.md — classify() 3-way + carve diff + v2-aware doctor (LIFE-02)
-  - [ ] 01-04-PLAN.md — carve update (audit-gated, manifest-last, preserve user edits) + carve migrate (LIFE-03, LIFE-04, LIFE-05)
-  - [ ] 01-05-PLAN.md — cli wiring (diff/update/migrate) + lifecycle e2e roundtrip + phase quality gate (LIFE-02..06)
+  - [x] 01-01-PLAN.md — manifest schema v2: ManifestFile, hashContent, normalizeManifest, migrateManifest + unit tests (LIFE-01, LIFE-04)
+  - [x] 01-02-PLAN.md — installer hashes at write, schemaVersion, unionFiles dedup, v2 uninstall + e2e assertions (LIFE-01, LIFE-05)
+  - [x] 01-03-PLAN.md — classify() 3-way + carve diff + v2-aware doctor (LIFE-02)
+  - [x] 01-04-PLAN.md — carve update (audit-gated, manifest-last, preserve user edits) + carve migrate (LIFE-03, LIFE-04, LIFE-05)
+  - [x] 01-05-PLAN.md — cli wiring (diff/update/migrate) + lifecycle e2e roundtrip + phase quality gate (LIFE-02..06)
 
 ### Phase 2: M9 — Analysis & Recommendation Intelligence
 **Goal**: carve's recommendations reflect real-world project shape — monorepo and container signals raise recommendation accuracy, and the user's own selections stick across runs.
@@ -66,7 +66,7 @@
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. M8 — Lifecycle Foundation | 0/5 | Planned | - |
+| 1. M8 — Lifecycle Foundation | 5/5 | ✅ Complete | 2026-06-05 |
 | 2. M9 — Analysis & Recommendation Intelligence | 0/0 | Not started | - |
 | 3. M10 — Local Effect Telemetry | 0/0 | Not started | - |
 
