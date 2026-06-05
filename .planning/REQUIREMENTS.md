@@ -145,7 +145,7 @@ Source: REQ-m10-telemetry (MS7-v2-roadmap.md), constraints C2, C9.
 | INTEL-01 | Phase 2 | Pending |
 | INTEL-02 | Phase 2 | Pending |
 | INTEL-03 | Phase 2 | Pending |
-| INTEL-04 | Phase 2 | Pending |
+| INTEL-04 | Phase 2 | Complete |
 | TELEM-01 | Phase 3 | Pending |
 | TELEM-02 | Phase 3 | Pending |
 | TELEM-03 | Phase 3 | Pending |

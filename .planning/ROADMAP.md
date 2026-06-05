@@ -43,9 +43,9 @@
   3. The designer recommends a measurably different (higher-coordination) slot set for a monorepo+CI project than for a single-package project, via a testable signal-weighted scoring function.
   4. A user's deselection persists to `.claude/.carve-prefs.json` and is reflected on the next run/update.
 **Plans**: 3 plans (2 waves — wave 1: types+analyzer detection; wave 2: designer weighting ∥ wizard/prefs persistence, no file overlap)
-  - [ ] 02-01-PLAN.md — ProjectProfile workspaces/container fields + analyzer detectWorkspaces/detectContainer + monorepo/docker fixtures + construction-site fixes (INTEL-01, INTEL-02)
+  - [x] 02-01-PLAN.md — ProjectProfile workspaces/container fields + analyzer detectWorkspaces/detectContainer + monorepo/docker fixtures + construction-site fixes (INTEL-01, INTEL-02)
   - [ ] 02-02-PLAN.md — designer applySignalWeights pure helper: monorepo/CI → coordination boost (parallel-agents/coordinator) (INTEL-03)
-  - [ ] 02-03-PLAN.md — prefs.ts read/write/apply + wizard prefs-aware buildChoices/selectInteractive + interactiveInstall root wiring (INTEL-04)
+  - [x] 02-03-PLAN.md — prefs.ts read/write/apply + wizard prefs-aware buildChoices/selectInteractive + interactiveInstall root wiring (INTEL-04)
 
 ### Phase 3: M10 — Local Effect Telemetry (opt-in)
 **Goal**: A user can see what their installed hooks actually did — locally, opt-in, with no command/path/secret ever recorded and no network traffic — and aggregate it with `carve report`.
@@ -70,7 +70,7 @@
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. M8 — Lifecycle Foundation | 5/5 | ✅ Complete | 2026-06-05 |
-| 2. M9 — Analysis & Recommendation Intelligence | 0/3 | Planned | - |
+| 2. M9 — Analysis & Recommendation Intelligence | 2/3 | In Progress|  |
 | 3. M10 — Local Effect Telemetry | 0/0 | Not started | - |
 
 ## Coverage

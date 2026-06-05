@@ -1,3 +1,17 @@
+---
+gsd_state_version: 1.0
+milestone: v2.0
+milestone_name: — from one-shot installer to lifecycle tool.
+status: unknown
+last_updated: "2026-06-05T04:46:01.947Z"
+progress:
+  total_phases: 3
+  completed_phases: 0
+  total_plans: 8
+  completed_plans: 3
+  percent: 0
+---
+
 # STATE.md — carve-harness
 
 > Project memory. Single source of truth for "where are we right now."
@@ -13,10 +27,10 @@
 
 ## Current Position
 
-- **Phase**: 1 — M8 Lifecycle Foundation
-- **Plan**: None yet (roadmap just created; awaiting `/gsd:plan-phase 1`)
-- **Status**: Roadmap created — not started
-- **Progress**: `[          ] 0/3 phases`
+- **Phase**: 2 — M9 Analysis & Recommendation Intelligence
+- **Plan**: 02-03 complete (prefs persistence + prefs-aware wizard, INTEL-04)
+- **Status**: In progress — 3/8 plans complete
+- **Progress**: `[===       ] 3/8 plans`
 
 ## Performance Metrics
 
@@ -29,6 +43,7 @@
 ## Accumulated Context
 
 ### Key decisions (LOCKED — see PROJECT.md `<decisions>`)
+
 - Two-layer model A (repo) / B (target `.claude/`) — never conflate.
 - Writes restricted to `.claude/` + designated root guides + `carve-manifest.json`. Never touch target source.
 - Single runtime dep `@clack/prompts`; new features use stdlib (`node:crypto`, …).
@@ -38,15 +53,17 @@
 - **Atomicity = pre-write audit + manifest-last** (NOT temp-dir swap — `.claude/` is partially user-owned). This refines the MS7 "temp dir + swap" wording.
 
 ### Open todos
+
 - Run `/gsd:plan-phase 1` to decompose M8 into executable plans.
 
 ### Blockers
+
 - None.
 
 ## Session Continuity
 
-- **Last action**: Roadmap, requirements, and project memory initialized from ingested intel (SYNTHESIS + 4 classified intel docs). 3 phases, 14 requirements, 100% coverage.
-- **Next action**: `/gsd:plan-phase 1` (M8 — Lifecycle Foundation).
+- **Last action**: Completed 02-03-PLAN.md — src/prefs.ts (read/write/applyPrefs) + prefs-aware wizard + interactiveInstall root wiring (INTEL-04). tsc clean, 173/173 tests pass.
+- **Next action**: Continue Phase 2 remaining plans (or `/gsd:execute-phase 2`).
 - **Files**:
   - `.planning/PROJECT.md` — core value, scope, LOCKED decisions.
   - `.planning/REQUIREMENTS.md` — 14 active reqs (LIFE/INTEL/TELEM) + traceability.
