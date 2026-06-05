@@ -16,3 +16,9 @@
 | anti-slop-linter | check-slop SVG/Markdown 확장 | ✅ |
 
 이후: v1.1.0(MVP 완료) → v1.2.0(mattpocock 스킬) → v1.2.1(카탈로그-자산 정합). 로드맵은 CHANGELOG `[Unreleased]` 참조.
+
+## 계획 (planned)
+
+| 마일스톤 | 산출물 | 상태 |
+|----------|--------|:--:|
+| [MS7](MS7-v2-roadmap.md) | v2.0 로드맵: 라이프사이클(update/diff/migrate)·분석 지능화·효과 텔레메트리·증명 벤치·피드백 루프 | 📋 |
