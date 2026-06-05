@@ -11,7 +11,7 @@
 ## Phases
 
 - [x] **Phase 1: M8 — Lifecycle Foundation** - Asset content-hash + manifest v2; `diff`/`update`/`migrate` with user edits preserved.
-- [ ] **Phase 2: M9 — Analysis & Recommendation Intelligence** - Monorepo/Docker signal detection, weighted scoring, preference persistence.
+- [x] **Phase 2: M9 — Analysis & Recommendation Intelligence** - Monorepo/Docker signal detection, weighted scoring, preference persistence.
 - [ ] **Phase 3: M10 — Local Effect Telemetry (opt-in)** - `_metrics.sh` emit, redacted recording, `carve report` aggregation.
 
 ## Phase Details
@@ -44,7 +44,7 @@
   4. A user's deselection persists to `.claude/.carve-prefs.json` and is reflected on the next run/update.
 **Plans**: 3 plans (2 waves — wave 1: types+analyzer detection; wave 2: designer weighting ∥ wizard/prefs persistence, no file overlap)
   - [x] 02-01-PLAN.md — ProjectProfile workspaces/container fields + analyzer detectWorkspaces/detectContainer + monorepo/docker fixtures + construction-site fixes (INTEL-01, INTEL-02)
-  - [ ] 02-02-PLAN.md — designer applySignalWeights pure helper: monorepo/CI → coordination boost (parallel-agents/coordinator) (INTEL-03)
+  - [x] 02-02-PLAN.md — designer applySignalWeights pure helper: monorepo/CI → coordination boost (parallel-agents/coordinator) (INTEL-03)
   - [x] 02-03-PLAN.md — prefs.ts read/write/apply + wizard prefs-aware buildChoices/selectInteractive + interactiveInstall root wiring (INTEL-04)
 
 ### Phase 3: M10 — Local Effect Telemetry (opt-in)
@@ -70,7 +70,7 @@
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. M8 — Lifecycle Foundation | 5/5 | ✅ Complete | 2026-06-05 |
-| 2. M9 — Analysis & Recommendation Intelligence | 2/3 | In Progress|  |
+| 2. M9 — Analysis & Recommendation Intelligence | 3/3 | ✅ Complete | 2026-06-05 |
 | 3. M10 — Local Effect Telemetry | 0/0 | Not started | - |
 
 ## Coverage
