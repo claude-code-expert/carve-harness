@@ -40,7 +40,7 @@ test('fresh install: 파일·settings 훅·manifest 생성, 실행권한', () =>
     assert.ok(m && m.files.length === 2 && m.hooks.length === 1);
     // schema v2: 파일별 hash·assetVersion 기록
     assert.equal(m!.schemaVersion, 2);
-    assert.ok(m!.files[0].hash !== '', 'hash가 비어있음');
+    assert.ok(m && m.files[0] && m.files[0].hash !== '', 'hash가 비어있음');
     assert.ok(m!.files.every((f) => f.assetVersion === CARVE_VERSION), 'assetVersion 불일치');
   });
 });
