@@ -28,6 +28,32 @@ export function harnessLevel(p: ProjectProfile): HarnessLevel {
   return 'standard';
 }
 
+// 모노레포/CI 시그널이 있을 때 가중하는 조정 컴포넌트 id (INTEL-03).
+// 단 2개뿐이라 catalog 메타(boostOn) 대신 designer에 명시 유지 (over-design 회피).
+const COORDINATION_IDS = ['parallel-agents', 'coordinator'];
+
+/**
+ * 시그널 가중 스코어링 (INTEL-03, 순수 함수).
+ * 모노레포(workspaces 비어있지 않음) 또는 CI(ci !== null) 시그널이 있으면
+ * 조정 컴포넌트를 추천 목록에 가중한다 — 단 `available`에 있는 id만, 중복 없이.
+ * 입력을 변형하지 않고 새 배열을 반환한다.
+ */
+export function applySignalWeights(
+  p: ProjectProfile,
+  baseRecommended: string[],
+  available: string[],
+): string[] {
+  const result = new Set(baseRecommended);
+  const isMonorepo = p.workspaces.length > 0;
+  const hasCi = p.ci !== null;
+  if (isMonorepo || hasCi) {
+    for (const id of COORDINATION_IDS) {
+      if (available.includes(id)) result.add(id);
+    }
+  }
+  return [...result];
+}
+
 /** ProjectProfile → 추천 슬롯 설계. levelOverride로 자동 레벨을 덮어쓸 수 있다(--level). */
 export function design(p: ProjectProfile, levelOverride?: HarnessLevel): HarnessDesign {
   const level = levelOverride ?? harnessLevel(p);
@@ -68,11 +94,19 @@ export function design(p: ProjectProfile, levelOverride?: HarnessLevel): Harness
     rationale.push('full 레벨: 추가 스킬(verify·security-scan·test-gen) 포함');
   }
 
+  // 시그널 가중 (INTEL-03): 모노레포/CI 시그널 → 조정 컴포넌트 가중 (ADDITIVE).
+  const availableIds = available.map((c: CatalogComponent) => c.id);
+  const recommended = applySignalWeights(p, [...rec], availableIds);
+  if (recommended.length > rec.size) {
+    if (p.workspaces.length > 0) rationale.push('monorepo 시그널 — 병렬·조율 에이전트 가중');
+    if (p.ci !== null) rationale.push('CI 시그널 — 조율 컴포넌트 가중');
+  }
+
   // 선택 컴포넌트(auto-commit 등)는 절대 자동 추천하지 않는다 — wizard에서 사용자가 켠다.
   return {
     level,
-    recommended: [...rec],
-    available: available.map((c: CatalogComponent) => c.id),
+    recommended,
+    available: availableIds,
     rationale,
   };
 }
