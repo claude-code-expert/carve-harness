@@ -82,6 +82,19 @@ test('list는 카탈로그를 출력한다', () => {
   assert.match(out.log, /harness-architect/);
 });
 
+test('report: 빈 디렉토리 → 기록 없음 + 0 (KNOWN_COMMANDS·USAGE 포함)', () => {
+  const root = mkdtempSync(join(tmpdir(), 'carve-cli-rep-'));
+  try {
+    const { io, out } = capture();
+    assert.equal(run(['report', root], io), 0);
+    assert.match(out.log, /기록 없음/);
+    assert.ok(KNOWN_COMMANDS.includes('report'));
+    assert.match(USAGE, /carve report/);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test('install→doctor→uninstall 라운드트립 (임시 디렉토리)', () => {
   const root = mkdtempSync(join(tmpdir(), 'carve-cli-'));
   try {

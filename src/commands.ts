@@ -327,6 +327,80 @@ export function cmdMigrate(root: string, io: IO): number {
   return 0;
 }
 
+/** 메트릭 한 줄의 신뢰 가능한 형태 — {ts, hook, event}만 본다. */
+interface MetricLine {
+  ts: number;
+  hook: string;
+  event: string;
+}
+
+/** 손편집·부분기록 가능한 jsonl 한 줄을 안전하게 파싱·검증. 무효면 null(throw 없음). */
+function parseMetricLine(line: string): MetricLine | null {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(line);
+  } catch {
+    return null;
+  }
+  if (typeof parsed !== 'object' || parsed === null) return null;
+  const o = parsed as Record<string, unknown>;
+  if (typeof o.hook !== 'string' || typeof o.event !== 'string') return null;
+  const ts = typeof o.ts === 'number' ? o.ts : 0;
+  return { ts, hook: o.hook, event: o.event };
+}
+
+/**
+ * carve report — 설치 훅의 로컬 효과 텔레메트리(.claude/.carve-metrics.jsonl)를 집계한다.
+ * 훅별 발화(total)·차단(event==='block') 수와, 매니페스트 기준 0회 발화 훅(노이즈 후보)을 보고한다.
+ * opt-in 기록이 없으면 graceful degrade(메시지 + return 0). 손상 줄은 줄 단위 try/catch로 건너뛴다.
+ */
+export function cmdReport(root: string, io: IO): number {
+  const metricsPath = join(root, '.claude/.carve-metrics.jsonl');
+  if (!existsSync(metricsPath)) {
+    io.log('텔레메트리 기록 없음 (opt-in: CARVE_METRICS=on 또는 .claude/.carve-metrics.enabled 파일).');
+    return 0;
+  }
+
+  const agg = new Map<string, { total: number; blocks: number }>();
+  let parsedLines = 0;
+  for (const line of readFileSync(metricsPath, 'utf8').split(/\r?\n/)) {
+    if (line.trim() === '') continue;
+    const m = parseMetricLine(line);
+    if (!m) continue; // 손상·필드 누락 줄은 방어적으로 건너뜀
+    parsedLines += 1;
+    const e = agg.get(m.hook) ?? { total: 0, blocks: 0 };
+    e.total += 1;
+    if (m.event === 'block') e.blocks += 1;
+    agg.set(m.hook, e);
+  }
+
+  io.log('carve 로컬 효과 텔레메트리 (opt-in):');
+  let totalFires = 0;
+  let totalBlocks = 0;
+  for (const [hook, { total, blocks }] of agg) {
+    totalFires += total;
+    totalBlocks += blocks;
+    io.log(`  · ${hook}: 발화 ${total} · 차단 ${blocks}`);
+  }
+
+  // 0회 발화 훅: 매니페스트의 설치 훅 중 메트릭에 한 번도 안 나온 id를 노이즈 후보로 본다.
+  const m = readManifest(root);
+  if (m) {
+    const zeroFire: string[] = [];
+    for (const f of m.files) {
+      const match = /^\.claude\/hooks\/carve-(.+)\.sh$/.exec(f.path);
+      const id = match?.[1];
+      if (id !== undefined && !agg.has(id)) zeroFire.push(id);
+    }
+    io.log(`발화 0회 훅(노이즈 후보): ${zeroFire.length ? zeroFire.join(', ') : '없음'}`);
+  } else {
+    io.log('발화 0회 훅: 매니페스트 없음 — 0-fire 판정 생략.');
+  }
+
+  io.log(`합계: 발화 ${totalFires} · 차단 ${totalBlocks} (유효 ${parsedLines}줄, 훅 ${agg.size}종)`);
+  return 0;
+}
+
 /** 클린 제거 */
 export function cmdUninstall(root: string, io: IO): number {
   const r = uninstall(root);
