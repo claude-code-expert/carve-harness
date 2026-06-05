@@ -101,7 +101,10 @@ export async function interactiveInstall(root: string, io: IO): Promise<number> 
   const profile = analyze(root);
   const d = design(profile);
   const { selectInteractive } = await import('./wizard.ts');
-  const selected = await selectInteractive(d);
+  // root를 넘겨 선호(.claude/.carve-prefs.json)를 라운드트립한다.
+  // 주의: .carve-prefs.json은 사용자 데이터이므로 install manifest에 추가하지 않는다
+  // (uninstall이 사용자 선호를 지우거나 update가 자산처럼 diff하면 안 됨).
+  const selected = await selectInteractive(d, root);
   if (selected.length === 0) {
     io.log('선택된 구성요소가 없어 설치를 건너뜁니다.');
     return 0;
