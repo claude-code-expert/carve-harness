@@ -6,6 +6,10 @@
 
 <p align="center"><b>한국어</b> · <a href="./README.en.md">English</a></p>
 
+> **변경 이력 (Changelog)** — 전체 [CHANGELOG.md](CHANGELOG.md) · 상세 [What's New](#whats-new)
+> - `2026-06-05` **v1.2.0** — 라이프사이클(`diff`/`update`/`migrate`) · 분석·추천 지능화(모노레포·컨테이너 가중) · opt-in 로컬 텔레메트리(`carve report`)
+> - `2026-06-02` **v1.1.0** — 프로젝트 맞춤 하네스 설치 CLI(MVP): 분석→설계→생성→audit→멱등 설치
+
 # carve-harness
 
 **carve-harness**는 개발에 필수적인 요소만 최소한으로 구성하는, 개발자를 위한 **하네스 엔지니어링 도구**입니다.
