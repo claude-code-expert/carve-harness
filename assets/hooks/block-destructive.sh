@@ -2,12 +2,13 @@
 # carve-block-destructive — PreToolUse(Bash) 위험 명령 결정적 차단 (exit 2).
 # JSON은 node로 파싱(대상 프로젝트에 항상 존재). 차단 시 exit 2 + stderr 사유.
 set -uo pipefail
+source "$(dirname "${BASH_SOURCE[0]}")/_metrics.sh" 2>/dev/null || true
 
 input=$(cat)
 cmd=$(printf '%s' "$input" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{const j=JSON.parse(s);process.stdout.write(String((j.tool_input&&j.tool_input.command)||""))}catch{process.stdout.write("")}})' 2>/dev/null)
 [ -z "$cmd" ] && exit 0
 
-block() { echo "[carve:block-destructive] 위험 명령 차단: $cmd" >&2; exit 2; }
+block() { echo "[carve:block-destructive] 위험 명령 차단: $cmd" >&2; carve_metric block-destructive block; exit 2; }
 
 # 1) 무조건 위험 (포크밤·디스크 파괴·전역 권한)
 if printf '%s' "$cmd" | grep -Eq ':\(\)[[:space:]]*\{|[[:space:]]mkfs|dd[[:space:]]+if=.*of=/dev/|>[[:space:]]*/dev/sd|chmod[[:space:]]+-R[[:space:]]+777[[:space:]]+/'; then
