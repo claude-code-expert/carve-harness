@@ -49,6 +49,31 @@ test('generate: 추천 시 결정적 차단 훅 + anti-slop 훅 생성(executabl
   assert.ok(find(arts, '.claude/hooks/carve-anti-slop.sh'));
 });
 
+test('generate: 훅 설치 시 _metrics.sh 정확히 1회 동봉(executable, verbatim) (TELEM-01)', () => {
+  const p = profile({});
+  const arts = generate(p, design(p)); // standard → 다수 훅 추천
+  const metrics = arts.filter((a) => a.path === '.claude/hooks/_metrics.sh');
+  assert.equal(metrics.length, 1, '_metrics.sh는 훅 다수여도 정확히 1회');
+  const m = metrics[0];
+  assert.ok(m);
+  assert.equal(m.executable, true);
+  assert.ok(m.content.includes('carve_metric')); // 헬퍼 본문
+  assert.ok(!m.content.includes('{{')); // 템플릿 토큰 없음 = verbatim
+  // settings.json 훅 등록에는 들어가지 않는다 (sourced helper)
+  assert.ok(!hookRegsFor(design(p)).some((r) => /_metrics/.test(r.command)));
+});
+
+test('generate: 훅 없는 설계면 _metrics.sh 미동봉 (TELEM-01)', () => {
+  const noHooks: HarnessDesign = {
+    level: 'minimal',
+    recommended: [], // 훅 자산 없음
+    available: [],
+    rationale: [],
+  };
+  const arts = generate(profile({ languages: ['go'] }), noHooks);
+  assert.equal(arts.filter((a) => a.path === '.claude/hooks/_metrics.sh').length, 0);
+});
+
 test('generate: anti-slop 미추천이면 anti-slop 섹션·훅 없음', () => {
   const noSlop: HarnessDesign = {
     level: 'minimal',
