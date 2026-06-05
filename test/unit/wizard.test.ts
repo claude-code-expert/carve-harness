@@ -12,7 +12,8 @@ import type { ProjectProfile } from '../../src/types.ts';
 function profile(over: Partial<ProjectProfile>): ProjectProfile {
   return {
     root: '/x', type: 'web', languages: ['typescript'], packageManager: 'npm',
-    testCmd: 'npm test', lintCmd: null, formatCmd: null, ci: null, hasGit: true, signals: [], ...over,
+    testCmd: 'npm test', lintCmd: null, formatCmd: null, ci: null, hasGit: true, signals: [],
+    workspaces: [], container: { dockerfile: false, compose: false, makefile: false }, ...over,
   };
 }
 function capture() {

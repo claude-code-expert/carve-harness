@@ -9,6 +9,7 @@ function profile(over: Partial<ProjectProfile>): ProjectProfile {
   return {
     root: '/x', type: 'unknown', languages: [], packageManager: null,
     testCmd: null, lintCmd: null, formatCmd: null, ci: null, hasGit: false, signals: [],
+    workspaces: [], container: { dockerfile: false, compose: false, makefile: false },
     ...over,
   };
 }

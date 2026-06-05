@@ -10,7 +10,8 @@ function profile(over: Partial<ProjectProfile>): ProjectProfile {
   return {
     root: '/x', type: 'web', languages: ['typescript'], packageManager: 'npm',
     testCmd: 'npm test', lintCmd: 'npm run lint', formatCmd: null,
-    ci: null, hasGit: true, signals: [], ...over,
+    ci: null, hasGit: true, signals: [],
+    workspaces: [], container: { dockerfile: false, compose: false, makefile: false }, ...over,
   };
 }
 const find = (arts: Artifact[], p: string) => arts.find((a) => a.path === p);
