@@ -1,6 +1,8 @@
 // src/commands.ts — CLI 명령 핸들러 (레이어 A). 파이프라인 와이어링.
-import { readFileSync, existsSync } from 'node:fs';
-import { join } from 'node:path';
+import {
+  readFileSync, writeFileSync, existsSync, mkdirSync, chmodSync, copyFileSync,
+} from 'node:fs';
+import { join, dirname } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { analyze } from './analyzer.ts';
 import type { ProjectProfile } from './types.ts';
@@ -9,7 +11,10 @@ import { generate, hookRegsFor, mcpRegsFor, type Artifact } from './generator.ts
 import { audit, auditShellSyntax, errorsOf, type AuditFinding } from './auditor.ts';
 import { install, uninstall, installClaudeBase } from './installer.ts';
 import { generateClaudeBase, selectStack, ROOT_IMPORT_BLOCK, ROOT_IMPORT_MARKER } from './claudebase.ts';
-import { readManifest, hashContent, type Manifest } from './manifest.ts';
+import {
+  readManifest, writeManifest, migrateManifest, hashContent, CARVE_VERSION,
+  type Manifest, type ManifestFile,
+} from './manifest.ts';
 import { CATALOG } from './catalog.ts';
 import type { IO } from './cli.ts';
 
@@ -204,6 +209,118 @@ export function cmdDiff(root: string, io: IO): number {
     io.log('미마이그레이션 항목 있음 — `carve migrate` 권장');
   }
   io.log(`총 ${entries.length}개 자산 비교 완료.`);
+  return 0;
+}
+
+/**
+ * carve-updated 자산 1건을 디스크에 기록하고 갱신된 ManifestFile을 반환한다.
+ * - 사용자 현재 콘텐츠를 .bak로 1회 보존(이미 .bak가 있으면 보존 안 함 — installer의 .bak-once 규칙 거울).
+ * - 실행 자산이면 chmod 0o755. 해시는 기록 시점에 계산.
+ * 주의: 호출 전 audit 게이트를 반드시 통과시킨다(디스크 변경은 audit 이후에만).
+ */
+function writeUpdatedArtifact(root: string, a: Artifact): ManifestFile {
+  const full = join(root, a.path);
+  mkdirSync(dirname(full), { recursive: true });
+  if (existsSync(full)) {
+    const bak = full + '.bak';
+    if (!existsSync(bak)) copyFileSync(full, bak);
+  }
+  writeFileSync(full, a.content);
+  if (a.executable) chmodSync(full, 0o755);
+  return { path: a.path, hash: hashContent(a.content), assetVersion: CARVE_VERSION };
+}
+
+/**
+ * carve update — carve-updated 자산만 제자리 갱신, user-modified는 보존(기본), new-recommended는 제안만.
+ * audit-gate-before-write + manifest-last(원자성: audit 실패 시 이전 설치·매니페스트가 그대로 유지된다).
+ * opts: { yes?: 비대화형 확인, force?: user-modified 강제 덮어쓰기(.bak 1회 보존 후) }.
+ */
+export function cmdUpdate(root: string, io: IO, opts: { yes?: boolean; force?: boolean } = {}): number {
+  const m = readManifest(root);
+  if (!m) {
+    io.log('carve 설치 없음 — `carve install`을 먼저 실행하세요.');
+    return 0;
+  }
+  // 미마이그레이션 v1(해시 빈 문자열) — 보수적으로 중단(모든 파일을 user-modified로 오분류해 강제 덮어쓸 위험 회피).
+  if (m.schemaVersion < 2 || m.files.some((f) => f.hash === '')) {
+    io.error('manifest v1(미마이그레이션) — `carve migrate`를 먼저 실행하세요.');
+    return 1;
+  }
+
+  const profile = analyze(root);
+  const d = design(profile);
+  const artifacts = generate(profile, d);
+  const entries = classify(root, m, artifacts);
+  const artByPath = new Map(artifacts.map((a) => [a.path, a]));
+
+  const carveUpdated = entries.filter((e) => e.status === 'carve-updated');
+  const userModified = entries.filter((e) => e.status === 'user-modified');
+  const newRecommended = entries.filter((e) => e.status === 'new-recommended');
+
+  // 기록 대상 자산 수집: carve-updated + (force일 때) user-modified.
+  const toWrite: Artifact[] = [];
+  for (const e of carveUpdated) {
+    const a = artByPath.get(e.path);
+    if (a) toWrite.push(a);
+  }
+  if (opts.force) {
+    for (const e of userModified) {
+      const a = artByPath.get(e.path);
+      if (a) toWrite.push(a);
+    }
+  }
+
+  // AUDIT GATE FIRST — 디스크 변경(.bak·write) 전에 검사. 차단되면 아무것도 쓰지 않고 종료.
+  if (auditGate([...audit(toWrite), ...auditShellSyntax(toWrite)], io, '업데이트')) return 1;
+
+  // audit 통과 후에만 디스크를 만진다(원자성). 갱신 파일의 매니페스트 항목을 새 해시로 교체.
+  const updatedByPath = new Map<string, ManifestFile>();
+  for (const a of toWrite) {
+    const mf = writeUpdatedArtifact(root, a);
+    updatedByPath.set(mf.path, mf);
+  }
+
+  // 설정(settings.json) 훅/MCP 재병합은 하지 않는다(의도적):
+  //   install()은 manifest.files를 toWrite로 통째 덮어 미변경 항목을 잃는다 → 매니페스트 손상.
+  //   훅 .sh 파일 자체는 위에서 자산으로 갱신되며, settings.json의 훅 등록은 install 시점과 동일해
+  //   재병합이 불필요하다(가장 단순·안전한 선택). 신규 훅 추가는 new-recommended → `carve install` 경로.
+
+  // 매니페스트는 완전한 기록을 유지: 기존 files를 보존하되 갱신 항목만 새 해시로 교체(manifest-last).
+  const updatedFiles: ManifestFile[] = m.files.map((f) => updatedByPath.get(f.path) ?? f);
+  writeManifest(root, { ...m, schemaVersion: 2, files: updatedFiles });
+
+  // new-recommended: 절대 자동 설치하지 않고 제안만.
+  for (const e of newRecommended) {
+    io.log(`신규 추천: ${e.path} — \`carve install\`로 추가할 수 있습니다.`);
+  }
+  // user-modified: 기본 보존, 건너뜀 안내(+ --force 힌트). force면 위에서 덮어썼으므로 안내 문구를 달리한다.
+  for (const e of userModified) {
+    if (opts.force) io.log(`사용자 수정 강제 덮어씀(원본 .bak 보존): ${e.path}`);
+    else io.log(`사용자 수정 보존(건너뜀): ${e.path} — 덮어쓰려면 --force`);
+  }
+
+  io.log(`업데이트 완료: 갱신 ${carveUpdated.length} · 보존(사용자수정) ${opts.force ? 0 : userModified.length} · 신규 제안 ${newRecommended.length}`);
+  return 0;
+}
+
+/**
+ * carve migrate — v1 매니페스트를 v2로 승급(파일별 해시 back-fill). migrateManifest에 위임.
+ * 한계: 설치 시점 원본 해시는 복구 불가 → 현재 디스크 콘텐츠 기준으로 채운다.
+ * 멱등: 이미 v2면 재기록 없이 no-op.
+ */
+export function cmdMigrate(root: string, io: IO): number {
+  const r = migrateManifest(root);
+  if (r.from === 0) {
+    io.log('carve 설치 없음 — `carve install`을 먼저 실행하세요.');
+    return 0;
+  }
+  if (!r.migrated) {
+    io.log('이미 최신 스키마 (v2) — 변경 없음.');
+    return 0;
+  }
+  io.log(`마이그레이션 완료: v${r.from} → v2, 파일 ${r.filled}개 해시 채움.`);
+  io.log('한계: 설치 시점 원본 해시는 복구 불가 — 현재 디스크 콘텐츠 기준으로 채웠습니다.');
+  io.log('따라서 migrate 직후 첫 diff는 carve 갱신분만 반영됩니다(이미 수정된 파일은 그 상태가 기준선).');
   return 0;
 }
 
