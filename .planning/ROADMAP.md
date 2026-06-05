@@ -56,7 +56,11 @@
   2. Deterministic exit-2 blocking behavior of every instrumented hook is byte-for-byte unchanged — emit is a pure side-effect.
   3. Every recorded line contains only `{ts, hook, event}` — never a command body, path, or secret — and no network call is made.
   4. `carve report` aggregates the jsonl into per-hook fire counts, block counts, and a list of 0-fire hooks, and degrades gracefully when no metrics file exists.
-**Plans**: TBD
+**Plans**: 4 plans (3 waves — wave 1: shell helper+instrumentation ∥ cmdReport/cli; wave 2: generator ships _metrics.sh; wave 3: phase gate)
+  - [ ] 03-01-PLAN.md — _metrics.sh emit helper + instrument 6 effect hooks (blocking byte-identical) + metrics.test.ts (TELEM-01, TELEM-02, TELEM-03)
+  - [ ] 03-02-PLAN.md — generator ships .claude/hooks/_metrics.sh when any hook installs + generator.test.ts (TELEM-01, TELEM-02)
+  - [ ] 03-03-PLAN.md — cmdReport aggregation (fire/block/0-fire) + cli wiring (report) + commands/report e2e tests (TELEM-04)
+  - [ ] 03-04-PLAN.md — phase quality gate: check/test/cov>=80 + bash -n + auditor + no-network/no-new-dep guardrails (TELEM-01..04)
 
 ## Future Milestones (backlog — NOT active phases)
 
@@ -71,7 +75,7 @@
 |-------|----------------|--------|-----------|
 | 1. M8 — Lifecycle Foundation | 5/5 | ✅ Complete | 2026-06-05 |
 | 2. M9 — Analysis & Recommendation Intelligence | 3/3 | ✅ Complete | 2026-06-05 |
-| 3. M10 — Local Effect Telemetry | 0/0 | Not started | - |
+| 3. M10 — Local Effect Telemetry | 0/4 | Not started | - |
 
 ## Coverage
 
