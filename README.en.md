@@ -6,7 +6,9 @@
 
 <p align="center"><a href="./README.md">한국어</a> · <b>English</b></p>
 
+## Update
 > **Changelog** — full history in [CHANGELOG.md](CHANGELOG.md)
+> - `2026-06-06` **v1.3.0** — Autonomous fix loop (`iterate`) · plan separation/verification · context diet + full audit patch (critical: `update` deadlock fixed)
 > - `2026-06-05` **v1.2.0** — Lifecycle (`diff`/`update`/`migrate`) · smarter analysis (monorepo/container weighting) · opt-in local telemetry (`carve report`)
 > - `2026-06-02` **v1.1.0** — Project-tailored harness install CLI (MVP): analyze → design → generate → audit → idempotent install
 
@@ -16,7 +18,7 @@
 
 > A CLI that analyzes a project and interactively selects and installs a harness (skills, hooks, subagents) tailored to that project.
 
-**v1.2.0** · TypeScript (ESM, no build step) · Node >=22.18 · 191 tests / ~95.6% coverage
+**v1.3.0** · TypeScript (ESM, no build step) · Node >=22.18 · 204 tests / ~95.7% coverage
 
 `carve` reads the codebase to detect the project type and tooling, then recommends suitable components.
 It installs only what the user selects into `.claude/`. carve = carving general-purpose assets down to fit a project.
@@ -69,6 +71,10 @@ carve init-claude  # Generate CLAUDE.md baseline + .claude/rules/* (based on lan
 carve list         # List installable / installed components
 carve doctor       # Inspect the installed harness (config + hook shell syntax)
 carve uninstall    # Clean removal (.bak restore)
+carve diff         # 3-way compare installed assets vs manifest/current carve assets (read-only)
+carve update       # Refresh carve-updated assets in place, preserve user edits (--force · --yes)
+carve migrate      # Promote a v1 manifest to v2 (per-file hash back-fill)
+carve report       # Aggregate local-effect telemetry of installed hooks (opt-in)
 ```
 
 **Install levels** (automatically determined by profile, can be forced with `--level`). Core skills, the 9 Squad agents, and anti-slop are recommended by default at *every level*; what changes by level is the **number of hooks and additional skills**:

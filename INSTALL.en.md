@@ -72,12 +72,13 @@ node bin/carve.ts install <대상-프로젝트-경로>
 ## 5. Install levels
 
 Auto-determined by profile (type, language count, CI) and can be forced with `--level`.
+What changes by level is the **number of hooks and additional skills** — core skills, the 9 Squad agents, and anti-slop are recommended by default at *every level*.
 
 | Level | Auto-detection criteria | Includes |
 |------|----------------|----|
-| `minimal` | Small CLI·library·batch·unclassified | Core skills + **essential hooks (block·protect·handoff)** |
-| `standard` (default) | General apps (web·mobile·desktop) | + **7 essential hooks** + Squad 9 agents + anti-slop |
-| `full` | Has CI + multiple languages | + additional skills (verify, etc.) + **multi-agent parallel (parallel-agents)·coordination (coordinator)** |
+| `minimal` | Small CLI·library·batch·unclassified | Core skills + Squad 9 agents + anti-slop + **3 essential hooks (block·protect·handoff)** |
+| `standard` (default) | General apps (web·mobile·desktop) | minimal + **the remaining core hooks (7 total:** +lint, test, format, Slack) |
+| `full` | Has CI + multiple languages | standard + **additional skills** (verify, security-scan, test-gen, parallel-agents, coordinator, etc.) |
 
 ---
 
@@ -187,6 +188,10 @@ Package manager and test/lint/format commands are substituted with values detect
 | `carve list` | List installable/installed components |
 | `carve doctor` | Install check (component list + hook shell syntax) |
 | `carve uninstall` | Clean removal (.bak restore) |
+| `carve diff` | 3-way compare installed assets vs manifest/current carve assets (read-only) |
+| `carve update` | Refresh only carve-updated assets in place, preserve user edits (`--force`, `--yes`) |
+| `carve migrate` | Promote a v1 manifest to v2 (per-file hash back-fill) |
+| `carve report` | Aggregate local-effect telemetry of installed hooks (opt-in) |
 | `carve --version` · `carve --help` | Version / help |
 
 ---

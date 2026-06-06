@@ -1,4 +1,4 @@
-# 마일스톤 기록 (전부 완료 — v1.2.x)
+# 마일스톤 기록 (전부 완료 — v1.3.x)
 
 > 이 디렉토리의 `MS*.md`·`anti-slop-linter.md`는 **개발 당시의 틱별 스냅샷**이다.
 > 각 문서의 "남은 것"·"다음:" 항목은 *그 시점*의 TODO이며, 이후 틱에서 해소됐다(현재 TODO 아님).
@@ -15,7 +15,7 @@
 | MS6 | PoC E2E + README + 벤치마크 점수 | ✅ |
 | anti-slop-linter | check-slop SVG/Markdown 확장 | ✅ |
 
-이후: v1.1.0(MVP 완료) → v1.2.0(mattpocock 스킬) → v1.2.1(카탈로그-자산 정합). 로드맵은 CHANGELOG `[Unreleased]` 참조.
+이후: v1.1.0(MVP + post-PoC + mattpocock 스킬 + 카탈로그-자산 정합) → v1.1.1(대화형 진입 수정) → v1.2.0(M8·M9·M10 — 라이프사이클·분석 지능화·텔레메트리) → v1.3.0(운용 3대 조건 보강 + 전수 감사 패치). 로드맵은 CHANGELOG `[Unreleased]`·MS7 참조.
 
 ## v2.0 ([MS7 로드맵](MS7-v2-roadmap.md))
 
