@@ -1,0 +1,17 @@
+{
+  "source_path": "/Users/codevillain/Claude-Code-Expert/carve-harness/carve-harness/docs/milestones/README.md",
+  "type": "DOC",
+  "confidence": "high",
+  "manifest_override": true,
+  "title": "마일스톤 기록 (전부 완료 — v1.2.x)",
+  "summary": "Milestone status index tracking carve-harness development progress: MS0-MS6 plus anti-slop-linter complete, MS7 v2.0 roadmap planned.",
+  "scope": ["milestones", "MS0-MS6", "MS7 v2.0 roadmap", "anti-slop-linter", "development progress"],
+  "cross_refs": [
+    "MS7-v2-roadmap.md",
+    "CHANGELOG.md",
+    "docs/guide/carve-harness-benchmark-results.md"
+  ],
+  "locked": false,
+  "precedence": 3,
+  "notes": ""
+}

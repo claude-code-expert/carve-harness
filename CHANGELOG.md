@@ -7,8 +7,25 @@
 ## [Unreleased]
 
 ### 잔여
+- v2.0 로드맵 **M11(비교·증명 벤치)·M12(피드백 루프)** 예정 — `docs/milestones/MS7-v2-roadmap.md`.
 - v1.0 토큰효율 **절약 수치 검증**: 대형 fixture·탐색 태스크로 벤치 재측정 필요(소형 단발은 MCP 고정비용으로 효과 작음).
 - 벤치 cross-harness **축 3(트리거 정확도)·축 4(컨텍스트 점유율)** 라이브 미측정(추가 LLM 필요).
+
+---
+
+## [1.2.0] — 2026-06-05
+
+v2.0 1차 — 설치기에서 **라이프사이클 도구**로. M8(라이프사이클)·M9(분석 지능화)·M10(opt-in 텔레메트리) 완료. GSD로 계획·실행(`.planning/`).
+
+### Added
+- **라이프사이클 명령(M8)**: `carve diff`(설치본 vs 현 자산 3-way 분류 — unchanged/carve-updated/user-modified/new-recommended), `carve update`(사용자 수정 보존하며 carve 자산만 제자리 갱신, `--force`·`--yes`, audit 게이트, `.bak` 1회), `carve migrate`(manifest 스키마 v1→v2 무손실 승격).
+- **manifest 스키마 v2**: `files`가 `{path, hash, assetVersion}[]`로 확장 + `schemaVersion`. 자산 content-hash(`node:crypto` sha256)는 installer가 쓰기 시점에 산출. `normalizeManifest`로 v1을 단일 지점에서 흡수(uninstall·doctor 비파괴). 원자성 = pre-write audit + manifest-last(부분 실패 시 이전 상태 보존).
+- **분석·추천 지능화(M9)**: analyzer가 모노레포(pnpm-workspace·turbo·nx·lerna·cargo·npm workspaces)·컨테이너(Dockerfile·docker-compose·Makefile) 시그널을 `ProjectProfile`에 채움. designer가 모노레포/CI 시그널로 조정 컴포넌트(parallel-agents·coordinator)를 가중(`applySignalWeights`). wizard 선택을 `.claude/.carve-prefs.json`에 영속화(`prefs.ts`).
+- **로컬 효과 텔레메트리(M10, opt-in)**: `assets/hooks/_metrics.sh` emit 헬퍼(기본 OFF — `CARVE_METRICS=on` 또는 `.claude/.carve-metrics.enabled`). 6개 효과 훅이 `{ts, hook, event}`만 `.claude/.carve-metrics.jsonl`에 append(명령·경로·secret 비기록, **네트워크 없음**, 차단 exit-2 로직 byte-for-byte 불변). `carve report`로 발화·차단·0-fire 훅 집계.
+
+### Notes
+- **191 테스트 / 커버리지 ~95.6%**(라인). tsc strict clean, auditor·`bash -n` 통과, 런타임 의존성 불변(`@clack/prompts`만, `node:crypto` 등 표준만 추가).
+- 가드레일 준수: 쓰기는 `.claude/`+루트 가이드+manifest만, 대상 소스 비수정, 멱등·`.bak` 1회. `.carve-prefs.json`·`.carve-metrics.jsonl`은 사용자 데이터라 설치 manifest에서 제외(uninstall이 지우지 않음).
 
 ---
 

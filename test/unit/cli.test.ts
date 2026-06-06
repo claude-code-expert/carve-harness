@@ -1,10 +1,10 @@
 // test/unit/cli.test.ts — CLI 코어 단위 테스트 (Milestone 0 게이트)
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync, mkdtempSync, rmSync, existsSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdtempSync, rmSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { run, loadVersion, USAGE, isInteractiveInstall, installDir, type IO } from '../../src/cli.ts';
+import { run, loadVersion, USAGE, KNOWN_COMMANDS, isInteractiveInstall, installDir, type IO } from '../../src/cli.ts';
 
 /** 출력을 캡처하는 io 채널 */
 function capture(): { io: IO; out: { log: string; error: string } } {
@@ -82,6 +82,19 @@ test('list는 카탈로그를 출력한다', () => {
   assert.match(out.log, /harness-architect/);
 });
 
+test('report: 빈 디렉토리 → 기록 없음 + 0 (KNOWN_COMMANDS·USAGE 포함)', () => {
+  const root = mkdtempSync(join(tmpdir(), 'carve-cli-rep-'));
+  try {
+    const { io, out } = capture();
+    assert.equal(run(['report', root], io), 0);
+    assert.match(out.log, /기록 없음/);
+    assert.ok(KNOWN_COMMANDS.includes('report'));
+    assert.match(USAGE, /carve report/);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test('install→doctor→uninstall 라운드트립 (임시 디렉토리)', () => {
   const root = mkdtempSync(join(tmpdir(), 'carve-cli-'));
   try {
@@ -104,6 +117,58 @@ test('install→doctor→uninstall 라운드트립 (임시 디렉토리)', () =>
     // uninstall → 매니페스트 제거
     assert.equal(run(['uninstall', root], capture().io), 0);
     assert.ok(!existsSync(join(root, 'carve-manifest.json')));
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('KNOWN_COMMANDS는 라이프사이클 명령(update/diff/migrate)을 포함한다', () => {
+  for (const c of ['update', 'diff', 'migrate']) {
+    assert.ok((KNOWN_COMMANDS as readonly string[]).includes(c), `KNOWN_COMMANDS에 ${c} 없음`);
+  }
+});
+
+test('USAGE는 라이프사이클 명령(diff/update/migrate)을 안내한다', () => {
+  for (const c of ['diff', 'update', 'migrate']) {
+    assert.match(USAGE, new RegExp(`carve ${c}`), `USAGE에 carve ${c} 없음`);
+  }
+});
+
+test('diff/migrate/update는 설치 없는 빈 디렉토리에서 0을 반환한다(올바른 핸들러로 디스패치)', () => {
+  const root = mkdtempSync(join(tmpdir(), 'carve-cli-life-'));
+  try {
+    // 설치 없음 → 각 핸들러는 안내 후 0 반환 (cmdDiff/cmdMigrate/cmdUpdate의 manifest null 경로)
+    const diff = capture();
+    assert.equal(run(['diff', root], diff.io), 0);
+    assert.match(diff.out.log, /carve 설치 없음|carve install/);
+
+    const migrate = capture();
+    assert.equal(run(['migrate', root], migrate.io), 0);
+    assert.match(migrate.out.log, /carve install/);
+
+    const update = capture();
+    assert.equal(run(['update', root], update.io), 0);
+    assert.match(update.out.log, /carve install/);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('update는 --force·--yes 플래그를 cmdUpdate로 전달한다(설치본 강제 갱신)', () => {
+  const root = mkdtempSync(join(tmpdir(), 'carve-cli-force-'));
+  try {
+    // 설치 후 사용자가 한 파일을 수정 → user-modified
+    assert.equal(run(['install', root], capture().io), 0);
+    writeFileSync(join(root, 'flight-rules.md'), 'USER EDIT — should be forced over\n');
+    // --force 없이: 보존(건너뜀)
+    const noForce = capture();
+    assert.equal(run(['update', root], noForce.io), 0);
+    assert.equal(readFileSync(join(root, 'flight-rules.md'), 'utf8'), 'USER EDIT — should be forced over\n');
+    // --force --yes: 강제 덮어씀 + .bak 보존 → 플래그가 전달되었음을 증명
+    const forced = capture();
+    assert.equal(run(['update', root, '--force', '--yes'], forced.io), 0);
+    assert.match(forced.out.log, /강제 덮어씀/);
+    assert.equal(readFileSync(join(root, 'flight-rules.md.bak'), 'utf8'), 'USER EDIT — should be forced over\n');
   } finally {
     rmSync(root, { recursive: true, force: true });
   }

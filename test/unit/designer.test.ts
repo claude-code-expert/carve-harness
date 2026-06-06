@@ -2,13 +2,14 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { CATALOG, applicableTo, forType, byId, type CatalogComponent } from '../../src/catalog.ts';
-import { design, harnessLevel } from '../../src/designer.ts';
+import { design, harnessLevel, applySignalWeights } from '../../src/designer.ts';
 import type { ProjectProfile, ProjectType } from '../../src/types.ts';
 
 function profile(over: Partial<ProjectProfile>): ProjectProfile {
   return {
     root: '/x', type: 'unknown', languages: [], packageManager: null,
     testCmd: null, lintCmd: null, formatCmd: null, ci: null, hasGit: false, signals: [],
+    workspaces: [], container: { dockerfile: false, compose: false, makefile: false },
     ...over,
   };
 }
@@ -92,4 +93,64 @@ test('recommended ⊆ available, auto-commit은 어떤 레벨에서도 미추천
     assert.ok(d.recommended.every((id) => d.available.includes(id)), `${t}: recommended ⊄ available`);
     assert.ok(!d.recommended.includes('auto-commit'), `${t}: auto-commit 추천됨`);
   }
+});
+
+// ── applySignalWeights (시그널 가중, INTEL-03) ──
+const COORD_IDS = ['parallel-agents', 'coordinator'];
+
+test('applySignalWeights: 모노레포 시그널 → 조정 컴포넌트 가중', () => {
+  // 워크스페이스 비어있지 않음(monorepo) + available에 두 id 존재 → 둘 다 추가
+  const base = ['commit', 'review'];
+  const available = [...base, ...COORD_IDS];
+  const out = applySignalWeights(profile({ workspaces: ['pnpm-workspace'], ci: null }), base, available);
+  assert.ok(out.includes('parallel-agents'));
+  assert.ok(out.includes('coordinator'));
+  // base 멤버십 보존
+  assert.ok(base.every((id) => out.includes(id)));
+});
+
+test('applySignalWeights: CI 시그널만으로도 가중', () => {
+  const base = ['commit'];
+  const available = [...base, ...COORD_IDS];
+  const out = applySignalWeights(profile({ workspaces: [], ci: 'github-actions' }), base, available);
+  assert.ok(out.includes('parallel-agents'));
+  assert.ok(out.includes('coordinator'));
+});
+
+test('applySignalWeights: 시그널 없으면 base 멤버십 불변', () => {
+  const base = ['commit', 'review'];
+  const available = [...base, ...COORD_IDS];
+  const out = applySignalWeights(profile({ workspaces: [], ci: null }), base, available);
+  assert.equal(new Set(out).size, new Set(base).size);
+  assert.ok(base.every((id) => out.includes(id)));
+  assert.ok(!out.includes('parallel-agents'));
+  assert.ok(!out.includes('coordinator'));
+});
+
+test('applySignalWeights: available에 없는 id는 추가하지 않음 (no-op)', () => {
+  const base = ['commit'];
+  const available = ['commit']; // 조정 id 미포함
+  const out = applySignalWeights(profile({ workspaces: ['turbo'], ci: 'github-actions' }), base, available);
+  assert.ok(!out.includes('parallel-agents'));
+  assert.ok(!out.includes('coordinator'));
+});
+
+test('applySignalWeights: 멱등 — 이미 있으면 중복 없음', () => {
+  const base = ['commit', 'parallel-agents'];
+  const available = [...base, 'coordinator'];
+  const out = applySignalWeights(profile({ workspaces: ['turbo'], ci: null }), base, available);
+  assert.equal(out.filter((id) => id === 'parallel-agents').length, 1);
+});
+
+// ── design() 통합 (시그널 가중) ──
+test('design: 모노레포+CI → 조정 컴포넌트 추천 (single-package의 strict superset)', () => {
+  const mono = design(profile({ type: 'web', workspaces: ['turbo'], ci: 'github-actions', languages: ['ts', 'js'] }));
+  assert.ok(mono.recommended.includes('parallel-agents'));
+  assert.ok(mono.recommended.includes('coordinator'));
+});
+
+test('design: single-package(web) → 조정 컴포넌트 미추천 (회귀 가드)', () => {
+  const single = design(profile({ type: 'web' }));
+  assert.ok(!single.recommended.includes('parallel-agents'));
+  assert.ok(!single.recommended.includes('coordinator'));
 });

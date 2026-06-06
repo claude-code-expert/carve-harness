@@ -35,4 +35,8 @@ export interface ProjectProfile {
   hasGit: boolean;
   /** 분류 근거가 된 시그널 (디버깅·doctor용) */
   signals: string[];
+  /** monorepo 워크스페이스 도구 태그 (예: ['pnpm-workspace','turbo']). 비-monorepo면 빈 배열. */
+  workspaces: string[];
+  /** 컨테이너·빌드 시그널. */
+  container: { dockerfile: boolean; compose: boolean; makefile: boolean };
 }

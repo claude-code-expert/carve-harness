@@ -7,7 +7,8 @@ import {
 import { join, dirname } from 'node:path';
 import type { Artifact } from './generator.ts';
 import {
-  readManifest, writeManifest, removeManifest, CARVE_VERSION, type Manifest,
+  readManifest, writeManifest, removeManifest, hashContent, SCHEMA_VERSION,
+  CARVE_VERSION, type Manifest, type ManifestFile,
 } from './manifest.ts';
 
 const SETTINGS_REL = '.claude/settings.json';
@@ -84,9 +85,13 @@ function mergeSettings(root: string, hooks: HookReg[], mcps: McpReg[]): void {
   writeSettings(root, s);
 }
 
-/** artifacts를 쓰고, carve가 만든 적 없는 사용자 파일은 1회 .bak 보존한다. written 경로 반환. */
-function writeArtifacts(root: string, artifacts: Artifact[], prevFiles: Set<string>, backedUp: string[]): string[] {
-  const written: string[] = [];
+/**
+ * artifacts를 쓰고, carve가 만든 적 없는 사용자 파일은 1회 .bak 보존한다.
+ * 해시는 installer가 쓰는 시점에 계산한다(generator/Artifact는 순수 값객체 유지).
+ * ManifestFile[] 반환 — 경로별 {path, hash, assetVersion}.
+ */
+function writeArtifacts(root: string, artifacts: Artifact[], prevFiles: Set<string>, backedUp: string[]): ManifestFile[] {
+  const written: ManifestFile[] = [];
   for (const a of artifacts) {
     const full = join(root, a.path);
     mkdirSync(dirname(full), { recursive: true });
@@ -99,9 +104,17 @@ function writeArtifacts(root: string, artifacts: Artifact[], prevFiles: Set<stri
     }
     writeFileSync(full, a.content);
     if (a.executable) chmodSync(full, 0o755);
-    written.push(a.path);
+    written.push({ path: a.path, hash: hashContent(a.content), assetVersion: CARVE_VERSION });
   }
   return written;
+}
+
+/** ManifestFile[] 두 개를 경로 기준으로 합친다(뒤 항목이 앞을 덮음 → 재설치 시 해시 갱신). */
+function unionFiles(a: ManifestFile[], b: ManifestFile[]): ManifestFile[] {
+  const byPath = new Map<string, ManifestFile>();
+  for (const f of a) byPath.set(f.path, f);
+  for (const f of b) byPath.set(f.path, f);
+  return [...byPath.values()];
 }
 
 function stripCarveMcp(root: string, names: string[]): void {
@@ -134,21 +147,23 @@ function stripCarveHooks(root: string): void {
 /** 자산을 멱등 설치한다. */
 export function install(root: string, artifacts: Artifact[], hooks: HookReg[] = [], mcps: McpReg[] = []): InstallResult {
   const prev = readManifest(root);
-  const prevFiles = new Set(prev?.files ?? []);
+  const prevFiles = new Set((prev?.files ?? []).map((f) => f.path));
   const backedUp: string[] = [...(prev?.backups ?? [])];
 
   const written = writeArtifacts(root, artifacts, prevFiles, backedUp);
   mergeSettings(root, hooks, mcps);
 
   const manifest: Manifest = {
+    schemaVersion: SCHEMA_VERSION,
     version: CARVE_VERSION,
     files: written,
     backups: backedUp,
     hooks: hooks.map((h) => ({ event: h.event, command: h.command })),
     mcps: mcps.map((m) => m.name),
   };
+  // manifest-last = 부분 실패 시 이전 상태 보존 (artifacts·settings가 모두 쓰인 뒤 마지막에 기록)
   writeManifest(root, manifest);
-  return { written, backedUp: backedUp.slice(prev?.backups?.length ?? 0), hooks: hooks.length };
+  return { written: written.map((f) => f.path), backedUp: backedUp.slice(prev?.backups?.length ?? 0), hooks: hooks.length };
 }
 
 const ROOT_CLAUDE = 'CLAUDE.md';
@@ -162,7 +177,7 @@ export function installClaudeBase(
   root: string, artifacts: Artifact[], importBlock: string, marker: string,
 ): InstallResult {
   const prev = readManifest(root);
-  const prevFiles = new Set(prev?.files ?? []);
+  const prevFiles = new Set((prev?.files ?? []).map((f) => f.path));
   const backedUp: string[] = [...(prev?.backups ?? [])];
 
   const written = writeArtifacts(root, artifacts, prevFiles, backedUp);
@@ -183,17 +198,22 @@ export function installClaudeBase(
       : `# CLAUDE.md\n${importBlock}`;
     writeFileSync(rootFull, next);
   }
-  if (!written.includes(ROOT_CLAUDE)) written.push(ROOT_CLAUDE);
+  // CLAUDE.md는 append-merge(전체 파일을 carve가 소유하지 않음)라 hash diff 대상에서 제외 → hash ''.
+  if (!written.some((f) => f.path === ROOT_CLAUDE)) {
+    written.push({ path: ROOT_CLAUDE, hash: '', assetVersion: CARVE_VERSION });
+  }
 
   const manifest: Manifest = {
+    schemaVersion: SCHEMA_VERSION,
     version: CARVE_VERSION,
-    files: [...new Set([...(prev?.files ?? []), ...written])],
+    files: unionFiles(prev?.files ?? [], written),
     backups: [...new Set(backedUp)],
     hooks: prev?.hooks ?? [],
     mcps: prev?.mcps ?? [],
   };
+  // manifest-last = 부분 실패 시 이전 상태 보존
   writeManifest(root, manifest);
-  return { written, backedUp: backedUp.slice(prev?.backups?.length ?? 0), hooks: 0 };
+  return { written: written.map((f) => f.path), backedUp: backedUp.slice(prev?.backups?.length ?? 0), hooks: 0 };
 }
 
 /** manifest 기준으로 carve 자산을 제거하고 .bak를 복원한다. */
@@ -203,17 +223,18 @@ export function uninstall(root: string): UninstallResult {
   const removed: string[] = [];
   const restored: string[] = [];
 
-  for (const f of m.files) {
-    const full = join(root, f);
+  // readManifest는 v1도 정규화 v2로 돌려주므로 {path} 구조분해가 v1/v2 모두 안전.
+  for (const { path } of m.files) {
+    const full = join(root, path);
     if (existsSync(full)) {
       rmSync(full);
-      removed.push(f);
+      removed.push(path);
     }
     const bak = full + '.bak';
     if (existsSync(bak)) {
       copyFileSync(bak, full);
       rmSync(bak);
-      restored.push(f);
+      restored.push(path);
     }
   }
 

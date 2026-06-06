@@ -1,0 +1,37 @@
+{
+  "source_path": "/Users/codevillain/Claude-Code-Expert/carve-harness/carve-harness/docs/milestones/MS7-v2-roadmap.md",
+  "type": "SPEC",
+  "confidence": "high",
+  "manifest_override": true,
+  "title": "MS7 — carve-harness v2.0 로드맵: \"하네스 엔지니어링 도구\"로의 진화",
+  "summary": "Phased v2.0 roadmap defining lifecycle (update/diff/migrate), analysis intelligence, local telemetry, comparison bench, and feedback-loop milestones with file-level implementation contracts.",
+  "scope": [
+    "manifest schema v2",
+    "carve update / diff / migrate commands",
+    "atomic installer",
+    "analyzer monorepo/Docker signals",
+    "designer weighted scoring",
+    "local telemetry (.carve-metrics.jsonl)",
+    "carve report command",
+    "cross-harness benchmark",
+    "designer feedback loop"
+  ],
+  "cross_refs": [
+    "docs/guide/carve-harness-benchmark-results.md",
+    "bench/run.mjs",
+    "src/manifest.ts",
+    "src/installer.ts",
+    "src/commands.ts",
+    "src/cli.ts",
+    "src/analyzer.ts",
+    "src/types.ts",
+    "src/designer.ts",
+    "src/catalog.ts",
+    "src/wizard.ts",
+    "src/generator.ts",
+    "assets/hooks/_metrics.sh"
+  ],
+  "locked": false,
+  "precedence": 1,
+  "notes": "Type set from MANIFEST_TYPE=SPEC (authoritative). Content is a phased roadmap with implementation contracts (manifest schema v2, command surfaces, file-level change tables, validation gates), consistent with SPEC."
+}

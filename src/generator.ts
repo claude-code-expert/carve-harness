@@ -203,5 +203,12 @@ export function generate(profile: ProjectProfile, design: HarnessDesign): Artifa
     }
   }
 
+  // 텔레메트리 헬퍼(_metrics.sh): 훅이 하나라도 깔리면 source 대상이 되도록 동봉.
+  // settings.json 훅 등록 대상 아님(hookRegsFor 제외) — sibling 훅이 source만 한다. verbatim ship.
+  const anyHook = artifacts.some((a) => a.path.startsWith('.claude/hooks/'));
+  if (anyHook) {
+    artifacts.push({ path: '.claude/hooks/_metrics.sh', content: readAsset('hooks/_metrics.sh'), executable: true });
+  }
+
   return artifacts;
 }

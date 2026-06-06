@@ -1,0 +1,33 @@
+{
+  "source_path": "/Users/codevillain/Claude-Code-Expert/carve-harness/carve-harness/ARCHITECTURE.md",
+  "type": "ADR",
+  "confidence": "high",
+  "manifest_override": true,
+  "title": "carve-harness 아키텍처",
+  "summary": "Locked architecture for the carve CLI: two-layer model (A=CLI repo, B=installed harness), the analyze→install pipeline, tech stack, MUST components, and milestones.",
+  "scope": [
+    "carve CLI",
+    "two-layer model (Layer A / Layer B)",
+    "analyzer",
+    "catalog",
+    "wizard",
+    "designer",
+    "generator",
+    "auditor",
+    "installer",
+    "manifest",
+    "assets (squad, antislop)",
+    "TypeScript ESM buildless stack",
+    "MUST components M1-M7",
+    "milestones MS0-MS6",
+    "post-PoC roadmap (v1.0/v1.1)"
+  ],
+  "cross_refs": [
+    "./requirement.md",
+    "./CLAUDE.md",
+    "docs/guide/carve-harness-features-priority.md"
+  ],
+  "locked": true,
+  "precedence": 0,
+  "notes": "Type set from MANIFEST_TYPE=ADR (authoritative); locked=true per manifest declaration of an accepted architecture doc. No YAML frontmatter present; document is architectural-decision prose without explicit Status field."
+}

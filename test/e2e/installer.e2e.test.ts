@@ -7,7 +7,7 @@ import {
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { install, uninstall, type HookReg, type McpReg } from '../../src/installer.ts';
-import { readManifest } from '../../src/manifest.ts';
+import { readManifest, CARVE_VERSION } from '../../src/manifest.ts';
 import type { Artifact } from '../../src/generator.ts';
 
 function withTemp(fn: (root: string) => void): void {
@@ -38,6 +38,10 @@ test('fresh install: 파일·settings 훅·manifest 생성, 실행권한', () =>
     assert.equal(settings.hooks.PreToolUse.length, 1);
     const m = readManifest(root);
     assert.ok(m && m.files.length === 2 && m.hooks.length === 1);
+    // schema v2: 파일별 hash·assetVersion 기록
+    assert.equal(m!.schemaVersion, 2);
+    assert.ok(m && m.files[0] && m.files[0].hash !== '', 'hash가 비어있음');
+    assert.ok(m!.files.every((f) => f.assetVersion === CARVE_VERSION), 'assetVersion 불일치');
   });
 });
 
@@ -112,5 +116,29 @@ test('manifest 없는 곳에서 uninstall은 무해', () => {
   withTemp((root) => {
     const r = uninstall(root);
     assert.deepEqual(r, { removed: [], restored: [] });
+  });
+});
+
+test('v1 매니페스트(files=string[], schemaVersion 부재) uninstall 비파괴', () => {
+  withTemp((root) => {
+    // 디스크에 v1 형태로 직접 기록 — files는 문자열 배열, schemaVersion 없음
+    writeFileSync(join(root, 'flight-rules.md'), 'CARVE RULES\n');
+    mkdirSync(join(root, '.claude/hooks'), { recursive: true });
+    writeFileSync(join(root, '.claude/hooks/carve-x.sh'), '#!/usr/bin/env bash\nexit 0\n');
+    writeFileSync(
+      join(root, 'carve-manifest.json'),
+      JSON.stringify({
+        version: '0.0.0',
+        files: ['flight-rules.md', '.claude/hooks/carve-x.sh'],
+        backups: [],
+        hooks: [],
+      }, null, 2),
+    );
+    // readManifest가 v1→v2 정규화하므로 uninstall이 {path} 구조분해로 동작해야 함
+    const res = uninstall(root);
+    assert.ok(res.removed.includes('flight-rules.md'));
+    assert.ok(res.removed.includes('.claude/hooks/carve-x.sh'));
+    assert.ok(!existsSync(join(root, 'flight-rules.md')));
+    assert.equal(readManifest(root), null);
   });
 });

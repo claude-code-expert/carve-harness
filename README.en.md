@@ -6,13 +6,17 @@
 
 <p align="center"><a href="./README.md">한국어</a> · <b>English</b></p>
 
+> **Changelog** — full history in [CHANGELOG.md](CHANGELOG.md)
+> - `2026-06-05` **v1.2.0** — Lifecycle (`diff`/`update`/`migrate`) · smarter analysis (monorepo/container weighting) · opt-in local telemetry (`carve report`)
+> - `2026-06-02` **v1.1.0** — Project-tailored harness install CLI (MVP): analyze → design → generate → audit → idempotent install
+
 # carve-harness
 
 **carve-harness** is a harness-engineering tool for developers that assembles only the essentials for development — nothing more.
 
 > A CLI that analyzes a project and interactively selects and installs a harness (skills, hooks, subagents) tailored to that project.
 
-**v1.0** · TypeScript (ESM, no build step) · Node >=22.18 · 118 tests / ~94% coverage
+**v1.2.0** · TypeScript (ESM, no build step) · Node >=22.18 · 191 tests / ~95.6% coverage
 
 `carve` reads the codebase to detect the project type and tooling, then recommends suitable components.
 It installs only what the user selects into `.claude/`. carve = carving general-purpose assets down to fit a project.

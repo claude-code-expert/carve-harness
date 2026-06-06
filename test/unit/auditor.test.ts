@@ -10,6 +10,7 @@ import type { ProjectProfile } from '../../src/types.ts';
 const profile: ProjectProfile = {
   root: '/x', type: 'web', languages: ['typescript'], packageManager: 'npm',
   testCmd: 'npm test', lintCmd: 'npm run lint', formatCmd: null, ci: null, hasGit: true, signals: [],
+  workspaces: [], container: { dockerfile: false, compose: false, makefile: false },
 };
 const A = (path: string, content: string): Artifact => ({ path, content, executable: false });
 

@@ -1,0 +1,29 @@
+{
+  "source_path": "/Users/codevillain/Claude-Code-Expert/carve-harness/carve-harness/CLAUDE.md",
+  "type": "DOC",
+  "confidence": "high",
+  "manifest_override": true,
+  "title": "CLAUDE.md — carve-harness 개발 가이드",
+  "summary": "Developer guide for the carve-harness repo itself: guardrails, two-layer rule, language policy, behavioral guidelines, and asset-generation conventions.",
+  "scope": [
+    "carve CLI",
+    "two-layer model (repo vs generated artifacts)",
+    "flight-rules",
+    "language & response policy",
+    "behavioral guidelines",
+    "asset generation conventions",
+    "hallucination guard"
+  ],
+  "cross_refs": [
+    ".claude/rules/project-structure.md",
+    ".claude/rules/code-style.md",
+    ".claude/rules/safety.md",
+    ".claude/rules/gotchas.md",
+    "requirement.md",
+    "ARCHITECTURE.md",
+    "CONTRIBUTING.md"
+  ],
+  "locked": false,
+  "precedence": 3,
+  "notes": ""
+}

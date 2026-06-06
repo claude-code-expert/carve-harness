@@ -12,7 +12,8 @@ import type { ProjectProfile } from '../../src/types.ts';
 function profile(over: Partial<ProjectProfile>): ProjectProfile {
   return {
     root: '/x', type: 'web', languages: ['typescript'], packageManager: 'npm',
-    testCmd: 'npm test', lintCmd: null, formatCmd: null, ci: null, hasGit: true, signals: [], ...over,
+    testCmd: 'npm test', lintCmd: null, formatCmd: null, ci: null, hasGit: true, signals: [],
+    workspaces: [], container: { dockerfile: false, compose: false, makefile: false }, ...over,
   };
 }
 function capture() {
@@ -29,6 +30,23 @@ test('buildChoices: 추천 항목은 selected=true, 나머지는 false', () => {
   assert.ok(commit?.selected); // 코어 → 추천
   const autocommit = choices.find((c) => c.value === 'auto-commit');
   assert.ok(autocommit && !autocommit.selected); // 선택 컴포넌트 → 미추천
+});
+
+test('buildChoices(design, prefs): deselected 항목은 selected=false', () => {
+  const d = design(profile({ type: 'web' }));
+  const choices = buildChoices(d, { deselected: ['commit'], selected: [], updatedAt: 't' });
+  const commit = choices.find((c) => c.value === 'commit');
+  assert.ok(commit && !commit.selected); // 추천이었지만 끔 → false
+  // 다른 추천 항목은 여전히 selected=true (handoff는 코어 스킬)
+  const handoff = choices.find((c) => c.value === 'handoff');
+  assert.ok(handoff?.selected);
+});
+
+test('buildChoices(design, prefs): selected 항목은 selected=true', () => {
+  const d = design(profile({ type: 'web' }));
+  const choices = buildChoices(d, { deselected: [], selected: ['auto-commit'], updatedAt: 't' });
+  const autocommit = choices.find((c) => c.value === 'auto-commit');
+  assert.ok(autocommit?.selected); // 보통 미추천이지만 사용자가 켬 → true
 });
 
 test('parseOnly: --only a,b 및 --only=a,b 파싱', () => {

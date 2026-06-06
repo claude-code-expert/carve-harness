@@ -155,3 +155,42 @@ test('.git 디렉토리 → hasGit=true', () => {
     assert.equal(analyze(root).hasGit, true);
   });
 });
+
+// ---- monorepo 워크스페이스 탐지 (INTEL-01) ----
+
+test('fixture monorepo → workspaces에 pnpm-workspace 포함', () => {
+  const p = analyze(join(FIXTURES, 'monorepo'));
+  assert.ok(p.workspaces.includes('pnpm-workspace'));
+  assert.ok(p.workspaces.includes('npm-workspaces'));
+  assert.ok(p.workspaces.length > 0);
+});
+
+test('단일 패키지 fixture(cli) → workspaces는 빈 배열', () => {
+  const p = analyze(join(FIXTURES, 'cli'));
+  assert.deepEqual(p.workspaces, []);
+});
+
+test('Cargo.toml [workspace] → workspaces에 cargo-workspace', () => {
+  withTempProject(
+    { 'Cargo.toml': '[workspace]\nmembers = ["crates/*"]\n' },
+    (root) => {
+      assert.ok(analyze(root).workspaces.includes('cargo-workspace'));
+    },
+  );
+});
+
+// ---- 컨테이너·빌드 시그널 탐지 (INTEL-02) ----
+
+test('fixture docker → container 전부 true', () => {
+  const p = analyze(join(FIXTURES, 'docker'));
+  assert.equal(p.container.dockerfile, true);
+  assert.equal(p.container.compose, true);
+  assert.equal(p.container.makefile, true);
+});
+
+test('단일 패키지 fixture(cli) → container 전부 false', () => {
+  const p = analyze(join(FIXTURES, 'cli'));
+  assert.equal(p.container.dockerfile, false);
+  assert.equal(p.container.compose, false);
+  assert.equal(p.container.makefile, false);
+});

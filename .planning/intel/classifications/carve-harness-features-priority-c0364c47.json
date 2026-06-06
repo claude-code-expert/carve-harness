@@ -1,0 +1,36 @@
+{
+  "source_path": "/Users/codevillain/Claude-Code-Expert/carve-harness/carve-harness/docs/guide/carve-harness-features-priority.md",
+  "type": "DOC",
+  "confidence": "high",
+  "manifest_override": true,
+  "title": "carve-harness — 필수 기능·개념증명·구현 우선순위",
+  "summary": "Planning guide ranking carve-harness essential features, PoC success criteria, and MUST/SHOULD/COULD implementation priorities with a roadmap.",
+  "scope": [
+    "analyzer",
+    "designer",
+    "generator",
+    "evaluation-criteria",
+    "flight-rules",
+    "validation hooks",
+    "idempotent installer",
+    "CLI entrypoint",
+    "evaluator subagent",
+    "sprint contract",
+    "auditor",
+    "implementation roadmap"
+  ],
+  "cross_refs": [
+    "HARNESS-ENGINEERING-LECTURE.md",
+    "harness-engineering-tutorial.md",
+    "requirement.md",
+    "https://github.com/HKUDS/OpenHarness",
+    "https://github.com/claude-code-expert/subagents",
+    "https://github.com/affaan-m/everything-claude-code",
+    "https://github.com/gsd-build/get-shit-done",
+    "https://www.anthropic.com/engineering/harness-design-long-running-apps",
+    "https://platform.claude.com/docs/en/agents-and-tools/agent-skills/overview"
+  ],
+  "locked": false,
+  "precedence": 3,
+  "notes": ""
+}

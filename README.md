@@ -6,13 +6,17 @@
 
 <p align="center"><b>한국어</b> · <a href="./README.en.md">English</a></p>
 
+> **변경 이력 (Changelog)** — 전체 [CHANGELOG.md](CHANGELOG.md) · 상세 [What's New](#whats-new)
+> - `2026-06-05` **v1.2.0** — 라이프사이클(`diff`/`update`/`migrate`) · 분석·추천 지능화(모노레포·컨테이너 가중) · opt-in 로컬 텔레메트리(`carve report`)
+> - `2026-06-02` **v1.1.0** — 프로젝트 맞춤 하네스 설치 CLI(MVP): 분석→설계→생성→audit→멱등 설치
+
 # carve-harness
 
 **carve-harness**는 개발에 필수적인 요소만 최소한으로 구성하는, 개발자를 위한 **하네스 엔지니어링 도구**입니다.
 
 > 프로젝트를 분석해 그 프로젝트에 맞는 하네스(스킬·훅·서브에이전트)를 대화형으로 선택해 설치하는 CLI.
 
-**v1.0** · TypeScript(ESM, 빌드 단계 없음) · Node >=22.18 · 테스트 118 / 커버리지 약 94%
+**v1.2.0** · TypeScript(ESM, 빌드 단계 없음) · Node >=22.18 · 테스트 191 / 커버리지 약 95.6%
 
 `carve`는 코드베이스를 읽어 프로젝트 타입과 도구를 탐지하고, 적합한 구성요소를 추천한다.
 사용자가 고른 것만 `.claude/`에 설치한다. carve = 범용 자산을 프로젝트에 맞게 깎아냄.
@@ -27,6 +31,39 @@
 carve install → 스택 탐지 → (구성요소 선택) → .claude/에 자산 생성
               → 생성된 검증 훅이 위험 명령을 exit code 2로 결정적으로 차단
 ```
+
+## What's New
+
+<!-- changelog:start -->
+### v1.2.0 — 라이프사이클 · 분석 지능화 · 텔레메트리 (2026-06-05)
+
+설치 한 번으로 끝나던 carve가 **설치된 하네스를 안전하게 갱신·진단**하는 라이프사이클 도구로 확장됐다.
+(v2.0 로드맵 M8·M9·M10 — 상세: [MS7 로드맵](docs/milestones/MS7-v2-roadmap.md) · 전체 변경: [CHANGELOG](CHANGELOG.md))
+
+**1. 라이프사이클 — `diff` / `update` / `migrate`**
+- **핵심**: carve 새 버전이 나와도 *내가 고친 자산은 보존*하고 carve가 만든 자산만 갱신한다.
+- **원리**: 설치 때 파일마다 내용 해시(sha256)를 `carve-manifest.json`에 적어둔다 → 나중에 (원본 해시 vs 현재 디스크 vs 새 carve 자산) **3-way 비교**로 "내가 고쳤는지 / carve가 바뀌었는지"를 가른다.
+  ```bash
+  carve diff      # unchanged / carve-updated / user-modified / new-recommended 로 분류
+  carve update    # carve 갱신분만 제자리 갱신 (내 수정은 .bak 후 보존, 신규는 제안만)
+  carve migrate   # 구(v1) manifest → v2(해시 기록)로 무손실 승격
+  ```
+  예) `flight-rules.md`를 내가 고쳤고 carve가 `commit` 스킬을 개선했다면 → `update`는 commit 스킬만 갱신하고 내 flight-rules는 그대로 둔다.
+
+**2. 분석·추천 지능화**
+- **핵심**: 모노레포·컨테이너 프로젝트를 알아보고 거기 맞는 구성요소를 더 추천한다.
+- **원리**: analyzer가 `pnpm-workspace.yaml`·`turbo.json`·`Dockerfile` 같은 시그널을 읽어 프로필에 채우고, designer가 그 시그널로 점수를 **가중**한다(모노레포/CI → `parallel-agents`·`coordinator` 추천↑). 고른 내역은 `.claude/.carve-prefs.json`에 남아 다음 실행에 반영된다.
+  예) pnpm 워크스페이스 + GitHub Actions가 있으면 단일 패키지보다 조율 에이전트를 더 추천.
+
+**3. 로컬 효과 텔레메트리 — `carve report` (opt-in)**
+- **핵심**: 설치한 훅이 *실제로* 무엇을 막았는지 로컬로만 본다. **네트워크 전송 없음.**
+- **원리**: 옵트인일 때만 훅이 `{ts, hook, event}` 한 줄을 `.claude/.carve-metrics.jsonl`에 남긴다(명령·경로·secret 비기록). 차단 로직(exit 2)은 그대로 — 기록은 부수효과일 뿐이다.
+  ```bash
+  export CARVE_METRICS=on   # 옵트인 (기본 off)
+  carve report             # 훅별 발화·차단 횟수 + "한 번도 안 쓴 훅"(노이즈 후보)
+  ```
+  예) `block-destructive` 12회 차단, `pre-push-test` 0회 발화 → 0회 훅은 다음에 뺄 후보로 보고된다.
+<!-- changelog:end -->
 
 ## 특징
 
@@ -65,7 +102,13 @@ carve init-claude  # CLAUDE.md 베이스라인 + .claude/rules/* 생성 (언어 
 carve list         # 설치 가능/설치된 구성요소 목록
 carve doctor       # 설치된 하네스 점검 (구성 + 훅 셸 문법)
 carve uninstall    # 클린 제거(.bak 복원)
+carve diff         # 설치본과 현 carve 자산을 3-way 비교 (읽기 전용)
+carve update       # 사용자 수정 보존하며 carve 자산만 갱신 (--force·--yes)
+carve migrate      # carve-manifest 스키마 v1→v2 승격
+carve report       # 설치 훅의 로컬 효과 텔레메트리 집계 (opt-in)
 ```
+
+> **v1.2.0 신규** `diff`·`update`·`migrate`·`report` — 동작·원리는 위 [What's New](#whats-new) 참고.
 
 **설치 레벨** (프로필로 자동 결정, `--level`로 강제 가능). 코어 스킬·Squad 9 에이전트·anti-slop은 *모든 레벨* 기본 추천이고, 레벨로 달라지는 건 **훅 개수·추가 스킬**이다:
 - `minimal` — 소형 CLI/라이브러리/배치: 코어 스킬 + Squad 9 에이전트 + anti-slop + **필수 훅 3종**(차단·보호·핸드오프)

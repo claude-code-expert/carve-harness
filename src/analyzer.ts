@@ -17,6 +17,7 @@ interface PackageJson {
   devDependencies?: Record<string, string>;
   exports?: unknown;
   main?: unknown;
+  workspaces?: unknown;
 }
 
 function parsePackageJson(raw: string | null): PackageJson | null {
@@ -185,6 +186,41 @@ function detectType(
 }
 
 /**
+ * monorepo 워크스페이스 도구를 읽기 전용으로 탐지한다.
+ * 결정적이며 순서 안정적. 비-monorepo면 빈 배열을 반환한다.
+ */
+function detectWorkspaces(root: string, pkg: PackageJson | null): string[] {
+  const tags: string[] = [];
+  if (existsSync(join(root, 'pnpm-workspace.yaml'))) tags.push('pnpm-workspace');
+  if (existsSync(join(root, 'turbo.json'))) tags.push('turbo');
+  if (existsSync(join(root, 'nx.json'))) tags.push('nx');
+  if (existsSync(join(root, 'lerna.json'))) tags.push('lerna');
+  // npm/yarn workspaces 필드: 배열 또는 객체 모두 truthy로 간주
+  if (pkg?.workspaces !== undefined && pkg.workspaces !== null) {
+    tags.push('npm-workspaces');
+  }
+  // cargo workspace: Cargo.toml에 [workspace] 섹션이 있을 때만
+  const cargo = readIf(root, 'Cargo.toml');
+  if (cargo !== null && cargo.includes('[workspace]')) tags.push('cargo-workspace');
+  return tags;
+}
+
+/**
+ * 컨테이너·빌드 시그널을 읽기 전용으로 탐지한다.
+ */
+function detectContainer(
+  root: string,
+): { dockerfile: boolean; compose: boolean; makefile: boolean } {
+  const dockerfile = existsSync(join(root, 'Dockerfile'));
+  const compose =
+    existsSync(join(root, 'docker-compose.yml')) ||
+    existsSync(join(root, 'docker-compose.yaml')) ||
+    existsSync(join(root, 'compose.yaml'));
+  const makefile = existsSync(join(root, 'Makefile'));
+  return { dockerfile, compose, makefile };
+}
+
+/**
  * 프로젝트 루트를 분석해 ProjectProfile을 반환한다.
  * @param root  분석할 프로젝트 절대경로
  */
@@ -216,6 +252,14 @@ export function analyze(root: string): ProjectProfile {
 
   const hasGit = existsSync(join(root, '.git'));
 
+  const workspaces = detectWorkspaces(root, pkg);
+  for (const w of workspaces) signals.push(`monorepo: ${w}`);
+
+  const container = detectContainer(root);
+  if (container.dockerfile) signals.push('container: Dockerfile');
+  if (container.compose) signals.push('container: docker-compose');
+  if (container.makefile) signals.push('container: Makefile');
+
   return {
     root,
     type,
@@ -227,5 +271,7 @@ export function analyze(root: string): ProjectProfile {
     ci,
     hasGit,
     signals,
+    workspaces,
+    container,
   };
 }
