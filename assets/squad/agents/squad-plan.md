@@ -5,7 +5,7 @@ description: >
   "기획", "planning", "브레인스토밍", "유저스토리", "와이어프레임",
   "wireframe", "화면 설계", "설계", "스펙", or before starting new features.
   Produces user stories, wireframes (SVG/HTML), and implementation plans.
-  Pipeline: START → implement → /squad-review
+  Pipeline: START → plan → user approval → implement (step-by-step confirm) → /squad-review
 tools: Read, Write, Edit, Bash, Glob, Grep
 model: opus
 maxTurns: 25
@@ -63,6 +63,27 @@ product requirements and technical implementation.
 3. Wireframe file path (if created)
 4. Implementation plan with task ordering and dependencies
 5. Open questions / risks
+6. **Plan Quality Score** (see below)
+7. **STOP — request explicit user approval of this plan before any implementation begins.**
+   Do NOT delegate to implementation until the user confirms. After each implementation
+   step completes, pause, report status, and wait for confirmation before the next step.
+
+## Plan Quality Score
+
+Score the *plan document itself* before any code is written (separates reasoning from action).
+Use the same ★ rubric as `evaluation-criteria.md`, but applied to the plan:
+
+- **★★★ MUST** (all required to proceed)
+  - [ ] Every task maps to a Definition-of-Done item in `sprint-contract.md`
+  - [ ] Every task names an explicit verification step (how we know it's done)
+  - [ ] No task left at complexity L/XL without being split into smaller tasks
+- **★★ SHOULD**
+  - [ ] Tasks ordered by dependency (no forward references)
+  - [ ] Risks / open questions listed
+  - [ ] Out-of-scope explicitly stated
+
+Report a numeric self-score: `MUST n/3 · SHOULD m/3`. If MUST < 3/3, revise the plan
+before requesting approval — do not proceed to implementation.
 
 ## Rules
 

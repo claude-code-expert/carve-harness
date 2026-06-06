@@ -89,12 +89,14 @@ const HOOK_ASSETS: Record<string, string> = {
   'auto-format': 'hooks/auto-format.sh',
   'slack-notify': 'hooks/slack-notify.sh',
   'precompact-handoff': 'hooks/precompact-handoff.sh',
+  'auto-commit': 'hooks/auto-commit.sh',
 };
 
 /** 설계+프로필로부터 생성 산출물 목록을 만든다. */
 export function generate(profile: ProjectProfile, design: HarnessDesign): Artifact[] {
   const artifacts: Artifact[] = [];
   const antiSlop = design.recommended.includes('anti-ai-slop');
+  const has = (id: string): boolean => design.recommended.includes(id);
 
   const vars: Record<string, string> = {
     PROJECT_TYPE: profile.type,
@@ -105,10 +107,17 @@ export function generate(profile: ProjectProfile, design: HarnessDesign): Artifa
       : '',
     ANTI_SLOP_SECTION: antiSlop ? readAsset('templates/_flight-rules-antislop.md') : '',
     ANTI_SLOP_EVAL: antiSlop ? '- [ ] 생성 HTML/SVG/문서 `check-slop` 0 ERROR' : '',
-    // 훅 템플릿용 (미탐지 시 빈 문자열 → 훅이 스킵)
+    // 훅 템플릿용 (미탐지 시 빈 문자열 → 훅이 스킵; 'npm test' 하드코딩 금지 — 비Node/무스크립트 프로젝트의 푸시 전면 차단 방지)
     HOOK_LINT_CMD: profile.lintCmd ?? '',
-    HOOK_TEST_CMD: profile.testCmd ?? 'npm test',
+    HOOK_TEST_CMD: profile.testCmd ?? '',
     HOOK_FORMAT_CMD: profile.formatCmd ?? '',
+    // 설치 레벨에 따라 달라지는 가이드 조각 (미설치 컴포넌트를 무조건 문서화하지 않도록 조건부)
+    ANTI_SLOP_CLAUDE: antiSlop
+      ? '- 시각·문서 산출물(HTML·SVG·문서)은 **anti-ai-slop** 표준 — `check-slop`이 게이트한다.'
+      : '',
+    ITERATE_SECTION: has('iterate')
+      ? '## 자율 수렴 루프 (iterate)\n"통과할 때까지 네가 직접 돌려서 고쳐" 류 요청은 `iterate` 스킬이 처리한다 — green까지 실행→진단→수정→재실행, **최종 결과만** 보고(최대 N회·무진전 시 중단). 위험·대형 변경은 git worktree에서 돌릴 수 있다. opt-in 텔레메트리는 루프 pass/fail만 기록한다.\n\n'
+      : '',
     COMPONENT_LIST: design.recommended
       .map((id) => { const c = byId(id); return `- ${c?.title ?? id} (\`${id}\`)`; })
       .join('\n'),
@@ -116,6 +125,8 @@ export function generate(profile: ProjectProfile, design: HarnessDesign): Artifa
       design.recommended.includes('codesight') ? '- 코드 탐색·구조 파악은 **codesight MCP**(`codesight_get_*`)·`.codesight/`를 우선한다.' : '',
       design.recommended.includes('lsp') ? '- 참조/정의/타입 확인은 **LSP**(`findReferences`/`getDiagnostics`)를 우선한다.' : '',
       '- grep·전체 파일 읽기는 위로 안 되는 것만 보조로 쓴다(토큰 효율).',
+      '- 컨텍스트 점유율 **40% 이하**를 목표로 한다. 초과 시 `handoff`로 스냅샷하고 세션을 분리한다(설치된 압축 스킬이 있으면 함께 활용).',
+      '- **편집 중인 파일만** 전체 로드한다. 그 외는 codesight·LSP로 부분 조회(전체 읽기 금지).',
     ].filter(Boolean).join('\n'),
   };
 

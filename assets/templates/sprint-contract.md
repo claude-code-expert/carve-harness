@@ -5,6 +5,11 @@
 ## 목표
 - (이번 작업이 무엇을 "완료"로 보는가 — 한두 문장)
 
+## 계획 승인 (Plan Gate)
+> 코드 작성 *전* 계획을 분리·검증한다. 추론(왜)과 실행(무엇)을 나눠 먼저 합의한다.
+- [ ] 구현 전 계획(Spec/플랜)을 사용자가 명시적으로 승인
+- [ ] Plan Quality Score 기록 — MUST 3/3 (미달 시 계획 보완 후 재승인)
+
 ## 완료 조건 (Definition of Done)
 - [ ] `{{TEST_CMD}}` 통과
 - [ ] `evaluation-criteria.md`의 MUST PASS 전부 충족

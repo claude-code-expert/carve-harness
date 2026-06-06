@@ -107,6 +107,18 @@ test('generate: standard 레벨 7 필수 훅 전부 생성 + 변수 치환', () 
   assert.ok(lint && !lint.content.includes('{{')); // 미치환 placeholder 없음
 });
 
+test('generate: 계획 분리·검증 마커 — sprint-contract Plan Gate + CLAUDE.md 계획 우선 (GAP2)', () => {
+  const p = profile({});
+  const arts = generate(p, design(p));
+  const sc = find(arts, 'sprint-contract.md');
+  assert.ok(sc && /Plan Gate/.test(sc.content)); // 계획 승인 게이트
+  assert.ok(sc && /Plan Quality Score/.test(sc.content)); // 플랜 정량 채점
+  const cm = find(arts, 'CLAUDE.md');
+  assert.ok(cm && /계획 우선/.test(cm.content)); // plan-before-code 스탠자
+  const fr = find(arts, 'flight-rules.md');
+  assert.ok(fr && /계획 우선/.test(fr.content)); // flight-rules MUST
+});
+
 test('generate: 대상 CLAUDE.md + HARNESS-GUIDE 생성, COMPONENT_LIST 치환', () => {
   const p = profile({});
   const arts = generate(p, design(p));
@@ -158,6 +170,16 @@ test('토큰 효율 기본 탑재: codesight/lsp 스킬 + MCP + flight-rules 지
   assert.ok(mcps.some((m) => m.name === 'cclsp'));
 });
 
+test('generate: 컨텍스트 다이어트 — flight-rules/CLAUDE.md에 40% 예산 + 편집파일만 (GAP3)', () => {
+  const p = profile({});
+  const arts = generate(p, design(p));
+  const fr = find(arts, 'flight-rules.md');
+  assert.ok(fr && /40%/.test(fr.content)); // 컨텍스트 예산
+  assert.ok(fr && /편집 중인 파일만/.test(fr.content)); // 편집 파일만 로드
+  const cm = find(arts, 'CLAUDE.md');
+  assert.ok(cm && /40%/.test(cm.content)); // 동일 출처(TOKEN_EFFICIENCY) CLAUDE.md에도 반영
+});
+
 test('hookRegsFor: Squad 추천 시 라우터/체이닝 등록(UserPromptSubmit·SubagentStart/Stop)', () => {
   const p = profile({});
   const regs = hookRegsFor(design(p));
@@ -170,4 +192,21 @@ test('generate: testCmd 미탐지 시 기본값 사용', () => {
   const arts = generate(profile({ testCmd: null }), design(profile({ testCmd: null })));
   const fr = find(arts, 'flight-rules.md');
   assert.ok(fr && /npm test/.test(fr.content));
+});
+
+test('generate: testCmd 미탐지 시 pre-push-test 훅은 빈 TEST(스킵) — npm test 하드코딩 금지 (회귀)', () => {
+  const p = profile({ testCmd: null }); // web → standard → pre-push-test 포함
+  const arts = generate(p, design(p));
+  const hook = find(arts, '.claude/hooks/carve-pre-push-test.sh');
+  assert.ok(hook);
+  assert.ok(hook.content.includes('TEST=""'), 'pre-push-test가 빈 TEST가 아님(스킵 안 됨)');
+  assert.ok(!hook.content.includes('TEST="npm test"'), 'npm test가 하드코딩돼 비Node 프로젝트 푸시 전면 차단');
+});
+
+test('generate: auto-commit 선택 시 훅 자산 생성 (회귀: 카탈로그에 있으나 자산 없어 무동작)', () => {
+  const p = profile({});
+  const d = design(p);
+  const withAC = { ...d, recommended: [...d.recommended, 'auto-commit'] };
+  const arts = generate(p, withAC);
+  assert.ok(find(arts, '.claude/hooks/carve-auto-commit.sh')?.executable, 'auto-commit 자산 미생성');
 });
