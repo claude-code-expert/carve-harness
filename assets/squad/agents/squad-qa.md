@@ -5,7 +5,7 @@ description: >
   functionality, and generate reports. Trigger when user says
   "테스트", "test", "QA", "검증", "동작 확인", "돌려봐",
   or after code changes that need validation.
-  Pipeline: after /squad-review APPROVE or /squad-refactor → test → /squad-gitops
+  Pipeline: after /squad-review APPROVE or /squad-refactor → test → /squad-evaluator
 tools: Read, Bash, Glob, Grep
 model: sonnet
 maxTurns: 20

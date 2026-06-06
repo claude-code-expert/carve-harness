@@ -32,6 +32,8 @@ export interface Manifest {
   /** 매니페스트 스키마 버전 (v2부터) */
   schemaVersion: number;
   version: string;
+  /** 설치 시 적용된 하네스 레벨 (update/diff가 동일 레벨로 재생성하도록 영속). 미기록=auto. */
+  level?: string;
   /** carve가 설치한 파일 (v2: 경로+해시+자산버전) */
   files: ManifestFile[];
   /** 사용자 파일을 보존한 .bak 경로 */
@@ -49,6 +51,7 @@ export interface Manifest {
 interface RawManifest {
   schemaVersion?: number;
   version?: string;
+  level?: string;
   files?: (string | ManifestFile)[];
   backups?: string[];
   hooks?: ManifestHook[];
@@ -85,6 +88,7 @@ export function normalizeManifest(raw: unknown): Manifest {
   return {
     schemaVersion: SCHEMA_VERSION,
     version,
+    level: typeof r.level === 'string' ? r.level : undefined,
     files,
     backups: Array.isArray(r.backups) ? r.backups : [],
     hooks: Array.isArray(r.hooks) ? r.hooks : [],

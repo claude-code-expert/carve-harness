@@ -3,8 +3,8 @@
 # Triggered by UserPromptSubmit: detects keywords in user prompts
 # and injects subagent delegation context via stdout.
 #
-# Registered automatically by install.sh
-# See docs/SQUAD-ROUTER-KEYWORDS.md for keyword reference
+# Registered into .claude/settings.json by `carve install` (generator.hookRegsFor / UserPromptSubmit)
+# Keyword routing table lives inline in the Phase 2/3 case blocks below
 #
 # Opt-out:
 #   Per-prompt: add --no-route or #direct to your prompt
@@ -94,12 +94,16 @@ if [ -z "$AGENT" ]; then
     *"릴리즈 노트"*|*"release note"*|*"conventional"*)
       AGENT="squad-gitops" ;;
 
-    # 7. squad-qa (test/verification)
+    # 7. squad-evaluator (independent completion-criteria scoring — before qa/review)
+    *"평가"*|*"evaluate"*|*"완료 기준"*|*"채점"*|*"다 됐는지"*)
+      AGENT="squad-evaluator" ;;
+
+    # 8. squad-qa (test/verification)
     *"테스트"*|*"test"*|*"qa"*|*"검증"*|\
     *"린트"*|*"lint"*|*"타입체크"*|*"type check"*|*"리그레션"*|*"regression"*)
       AGENT="squad-qa" ;;
 
-    # 8. squad-review (broadest — last)
+    # 9. squad-review (broadest — last)
     *"리뷰"*|*"review"*|*"코드 검토"*|*"검토해"*|*"diff 봐"*)
       AGENT="squad-review" ;;
   esac

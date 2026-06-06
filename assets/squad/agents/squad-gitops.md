@@ -4,7 +4,7 @@ description: >
   Git workflow automation. Use when user says "커밋 메시지",
   "commit message", "PR 작성", "PR description", "체인지로그",
   "changelog", "릴리즈 노트", "conventional commit".
-  Pipeline: after /squad-qa PASS → commit/PR
+  Pipeline: after /squad-evaluator PASS → commit/PR
 tools: Read, Bash, Glob, Grep
 model: haiku
 maxTurns: 10

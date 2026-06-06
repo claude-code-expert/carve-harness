@@ -9,7 +9,7 @@ import type { ProjectProfile } from './types.ts';
 import { design, type HarnessLevel } from './designer.ts';
 import { generate, hookRegsFor, mcpRegsFor, type Artifact } from './generator.ts';
 import { audit, auditShellSyntax, errorsOf, type AuditFinding } from './auditor.ts';
-import { install, uninstall, installClaudeBase } from './installer.ts';
+import { install, uninstall, installClaudeBase, ROOT_CLAUDE } from './installer.ts';
 import { generateClaudeBase, selectStack, ROOT_IMPORT_BLOCK, ROOT_IMPORT_MARKER } from './claudebase.ts';
 import {
   readManifest, writeManifest, migrateManifest, hashContent, CARVE_VERSION,
@@ -48,6 +48,15 @@ function installLspServers(profile: ProjectProfile, io: IO): void {
   io.log(r.status === 0 ? 'LSP 언어서버 설치 완료.' : 'LSP 언어서버 설치 실패 — 수동: npm i -g ' + [...pkgs].join(' '));
 }
 
+/**
+ * 진짜 미마이그레이션 v1 매니페스트 판정.
+ * hash:''는 두 가지를 뜻한다 — (a) v1에서 승급된 미상 해시(전 파일), (b) 루트 CLAUDE.md의 append-merge 센티넬.
+ * (b)는 init-claude가 정상 v2에 남기는 합법 항목이므로 v1 신호에서 제외한다. (schemaVersion은 normalize 후 항상 2라 검사 안 함.)
+ */
+function isUnmigrated(m: Manifest): boolean {
+  return m.files.some((f) => f.hash === '' && f.path !== ROOT_CLAUDE);
+}
+
 /** 생성물 감사 — ERROR가 있으면 출력하고 true(차단)를 반환한다. */
 function auditGate(findings: AuditFinding[], io: IO, verb: string): boolean {
   const errs = errorsOf(findings);
@@ -72,7 +81,7 @@ export function cmdInstall(root: string, io: IO, selected?: string[], lspServers
 
   const hooks = hookRegsFor(d);
   const mcps = mcpRegsFor(d);
-  const r = install(root, artifacts, hooks, mcps);
+  const r = install(root, artifacts, hooks, mcps, d.level); // d.level 영속 → update/diff가 동일 레벨로 재현
   io.log(`설치 완료 [${profile.type}/${d.level}]: 파일 ${r.written.length} · 훅 ${r.hooks} · MCP ${mcps.length} · 백업 ${r.backedUp.length}`);
 
   // 토큰 효율: LSP 언어서버 자동설치(대화형/명시 요청 시)
@@ -96,10 +105,10 @@ export function cmdInitClaude(root: string, io: IO): number {
   return 0;
 }
 
-/** 대화형 설치: 추천을 기본 체크로 제시 → 사용자 선택 → 설치 (TTY). */
-export async function interactiveInstall(root: string, io: IO): Promise<number> {
+/** 대화형 설치: 추천을 기본 체크로 제시 → 사용자 선택 → 설치 (TTY). level=--level 강제. */
+export async function interactiveInstall(root: string, io: IO, level?: HarnessLevel): Promise<number> {
   const profile = analyze(root);
-  const d = design(profile);
+  const d = design(profile, level); // --level을 wizard 추천 베이스라인에 반영
   const { selectInteractive } = await import('./wizard.ts');
   // root를 넘겨 선호(.claude/.carve-prefs.json)를 라운드트립한다.
   // 주의: .carve-prefs.json은 사용자 데이터이므로 install manifest에 추가하지 않는다
@@ -109,7 +118,7 @@ export async function interactiveInstall(root: string, io: IO): Promise<number> 
     io.log('선택된 구성요소가 없어 설치를 건너뜁니다.');
     return 0;
   }
-  return cmdInstall(root, io, selected, true); // 대화형 설치 → LSP 언어서버 자동설치
+  return cmdInstall(root, io, selected, true, level); // 대화형 설치 → LSP 자동설치 + --level 전달
 }
 
 /** 설치된 하네스 점검 */
@@ -122,8 +131,8 @@ export function cmdDoctor(root: string, io: IO): number {
   io.log(`carve 설치됨 (v${m.version}): 파일 ${m.files.length} · 훅 ${m.hooks.length} · 백업 ${m.backups.length}`);
   io.log(`스키마 v${m.schemaVersion}`);
   for (const { path } of m.files) io.log(`  · ${path}`);
-  // v1/미마이그레이션(해시 빈 문자열) 매니페스트 안내
-  if (m.schemaVersion < 2 || m.files.some((f) => f.hash === '')) {
+  // v1/미마이그레이션(해시 빈 문자열) 매니페스트 안내 (CLAUDE.md append-merge 센티넬은 제외)
+  if (isUnmigrated(m)) {
     io.log('미마이그레이션 매니페스트 — `carve migrate` 권장');
   }
   // 설치된 셸 훅 문법 점검 (harness-audit) — v2 파일 객체에서 .path 사용
@@ -166,8 +175,13 @@ export function classify(root: string, m: Manifest | null, artifacts: Artifact[]
       // 매니페스트에 없는 신규 추천
       entries.push({ path: a.path, status: 'new-recommended' });
     } else if (orig === '') {
-      // v1 미마이그레이션 — 설치 시점 해시 미상이므로 보수적으로 user-modified (자동 덮어쓰기 금지)
-      entries.push({ path: a.path, status: 'user-modified', unmigrated: true });
+      if (a.path === ROOT_CLAUDE) {
+        // append-merge 센티넬 — carve가 파일 전체를 소유하지 않음. 갱신/미마이그레이션 대상이 아니다.
+        entries.push({ path: a.path, status: 'unchanged' });
+      } else {
+        // v1 미마이그레이션 — 설치 시점 해시 미상이므로 보수적으로 user-modified (자동 덮어쓰기 금지)
+        entries.push({ path: a.path, status: 'user-modified', unmigrated: true });
+      }
     } else if (cur === null) {
       // 디스크에서 삭제됨 — 갱신(복원)으로 분류한다(보수적 복원 선택)
       entries.push({ path: a.path, status: 'carve-updated' });
@@ -192,7 +206,7 @@ export function cmdDiff(root: string, io: IO): number {
     return 0;
   }
   const profile = analyze(root);
-  const d = design(profile);
+  const d = design(profile, m.level as HarnessLevel | undefined); // 설치 레벨 재현(미기록=auto)
   const artifacts = generate(profile, d);
   const entries = classify(root, m, artifacts);
 
@@ -245,13 +259,14 @@ export function cmdUpdate(root: string, io: IO, opts: { yes?: boolean; force?: b
     return 0;
   }
   // 미마이그레이션 v1(해시 빈 문자열) — 보수적으로 중단(모든 파일을 user-modified로 오분류해 강제 덮어쓸 위험 회피).
-  if (m.schemaVersion < 2 || m.files.some((f) => f.hash === '')) {
+  // CLAUDE.md append-merge 센티넬은 정상 v2의 합법 항목이므로 제외(init-claude 후 update 차단 방지).
+  if (isUnmigrated(m)) {
     io.error('manifest v1(미마이그레이션) — `carve migrate`를 먼저 실행하세요.');
     return 1;
   }
 
   const profile = analyze(root);
-  const d = design(profile);
+  const d = design(profile, m.level as HarnessLevel | undefined); // 설치 레벨 재현(미기록=auto)
   const artifacts = generate(profile, d);
   const entries = classify(root, m, artifacts);
   const artByPath = new Map(artifacts.map((a) => [a.path, a]));
@@ -327,6 +342,12 @@ export function cmdMigrate(root: string, io: IO): number {
   return 0;
 }
 
+/** carve_metric을 실제로 호출하는(계측된) 훅 id — 0-fire 판정 대상. 비계측 훅(slack-notify·codesight-refresh)은 제외. */
+const INSTRUMENTED_HOOKS = new Set([
+  'block-destructive', 'protect-secrets', 'pre-commit-lint',
+  'pre-push-test', 'auto-format', 'precompact-handoff', 'anti-slop',
+]);
+
 /** 메트릭 한 줄의 신뢰 가능한 형태 — {ts, hook, event}만 본다. */
 interface MetricLine {
   ts: number;
@@ -383,14 +404,15 @@ export function cmdReport(root: string, io: IO): number {
     io.log(`  · ${hook}: 발화 ${total} · 차단 ${blocks}`);
   }
 
-  // 0회 발화 훅: 매니페스트의 설치 훅 중 메트릭에 한 번도 안 나온 id를 노이즈 후보로 본다.
+  // 0회 발화 훅: 계측된(carve_metric 호출) 훅 중 메트릭에 한 번도 안 나온 id만 노이즈 후보로 본다.
+  // slack-notify·codesight-refresh는 의도적으로 비계측이라 구조상 0회 → 오탐 방지 위해 제외.
   const m = readManifest(root);
   if (m) {
     const zeroFire: string[] = [];
     for (const f of m.files) {
       const match = /^\.claude\/hooks\/carve-(.+)\.sh$/.exec(f.path);
       const id = match?.[1];
-      if (id !== undefined && !agg.has(id)) zeroFire.push(id);
+      if (id !== undefined && INSTRUMENTED_HOOKS.has(id) && !agg.has(id)) zeroFire.push(id);
     }
     io.log(`발화 0회 훅(노이즈 후보): ${zeroFire.length ? zeroFire.join(', ') : '없음'}`);
   } else {

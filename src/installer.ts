@@ -144,8 +144,8 @@ function stripCarveHooks(root: string): void {
   writeSettings(root, s);
 }
 
-/** 자산을 멱등 설치한다. */
-export function install(root: string, artifacts: Artifact[], hooks: HookReg[] = [], mcps: McpReg[] = []): InstallResult {
+/** 자산을 멱등 설치한다. level=적용 레벨(update/diff 재현용으로 영속). */
+export function install(root: string, artifacts: Artifact[], hooks: HookReg[] = [], mcps: McpReg[] = [], level?: string): InstallResult {
   const prev = readManifest(root);
   const prevFiles = new Set((prev?.files ?? []).map((f) => f.path));
   const backedUp: string[] = [...(prev?.backups ?? [])];
@@ -156,7 +156,9 @@ export function install(root: string, artifacts: Artifact[], hooks: HookReg[] = 
   const manifest: Manifest = {
     schemaVersion: SCHEMA_VERSION,
     version: CARVE_VERSION,
-    files: written,
+    level: level ?? prev?.level,
+    // 기존 files를 union 보존 — 재설치/혼합(init-claude) 시 claude-base 파일이 누락돼 클린 제거가 깨지는 것을 방지.
+    files: unionFiles(prev?.files ?? [], written),
     backups: backedUp,
     hooks: hooks.map((h) => ({ event: h.event, command: h.command })),
     mcps: mcps.map((m) => m.name),
@@ -166,7 +168,8 @@ export function install(root: string, artifacts: Artifact[], hooks: HookReg[] = 
   return { written: written.map((f) => f.path), backedUp: backedUp.slice(prev?.backups?.length ?? 0), hooks: hooks.length };
 }
 
-const ROOT_CLAUDE = 'CLAUDE.md';
+/** 루트 CLAUDE.md — carve가 @import만 append-merge하는 비소유 파일(매니페스트에 hash:'' 센티넬로 기록). */
+export const ROOT_CLAUDE = 'CLAUDE.md';
 
 /**
  * CLAUDE.md 베이스라인 + .claude/rules/* 를 멱등 설치한다 (carve init-claude).
@@ -206,6 +209,7 @@ export function installClaudeBase(
   const manifest: Manifest = {
     schemaVersion: SCHEMA_VERSION,
     version: CARVE_VERSION,
+    level: prev?.level,
     files: unionFiles(prev?.files ?? [], written),
     backups: [...new Set(backedUp)],
     hooks: prev?.hooks ?? [],
