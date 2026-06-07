@@ -44,121 +44,94 @@ carve install → stack detection → (component selection) → generate assets 
 - Self-verification: before installing, the auditor scans generated assets for secrets, excessive permissions, hook injection, and shell syntax.
 - Zero build: runs `.ts` directly. Distributed via both npx and bash.
 
-## Installation & Usage
+## Quick start — these 3 lines are all it takes
 
-> **Full installation manual**: [INSTALL.md](./INSTALL.md) (Korean) · [INSTALL.en.md](./INSTALL.en.md) (English)
-> — covering requirements, install modes, per-level components, and troubleshooting in detail.
-
-**Full install flow (3 steps)**
+> Full manual: [INSTALL.md](./INSTALL.md) (Korean) · [INSTALL.en.md](./INSTALL.en.md) (English) — requirements, modes, troubleshooting.
 
 ```bash
-npx carve-harness              # 1. Interactive selective install (detect → recommend → select)
-npx carve-harness init-claude  # 2. Generate CLAUDE.md baseline + language stack rules
-npx carve-harness doctor       # 3. Inspect installation (config, hook syntax)
+npx carve-harness              # 1. Install — detect → recommend → select (interactive, no bulk install)
+npx carve-harness init-claude  # 2. First setup — CLAUDE.md baseline + language stack rules
+npx carve-harness doctor       # 3. Inspect — config + hook syntax
 ```
 
-When installing into another project, **`npx carve-harness` is the standard** (run it in the folder you want to install into). `install.sh` is not included in the npm package, so it is only a convenience wrapper for when you have cloned this repo or fetched it via `curl` (internally it calls `npx carve-harness@latest`).
-Within a session, saying **"set up a harness that fits this project"** lets the harness-architect skill guide the same flow.
+That's the whole install. After that, just **open Claude Code** in the project: hooks and MCP (codesight·LSP) turn on automatically, and skills/Squad are called as shown below. (`npx carve-harness` is the install standard — run it in the target folder; `install.sh` is a convenience wrapper for repo-clone/`curl` users.)
 
-**Command reference**
+## Daily workflow — natural language in a session
+
+Four commands cover everyday use. Call them in natural language or via `/carve-<name>`.
+
+| What you want | How to call | What it does |
+|---|---|---|
+| Commit message | "write a commit message" · `/carve-commit` | Generates a Conventional Commit |
+| Code review | "review this" · `/carve-review` | Review delegated to squad-review |
+| Session handoff | "handoff" · `/carve-handoff` | Leaves progress/decisions/next steps for the next session |
+| Remember a decision | "remember this" · `/carve-memory` | Persistent project memory |
+
+And the **block / protect / format hooks run automatically — no need to call them**: dangerous commands (`rm -rf /`, fork bombs) and secret files (`.env`, keys) are stopped with `exit 2` (not advisory), the formatter runs on save, and lint/test are enforced before commit/push.
+
+> This is "easy carve" — 3 lines to install, 4 for daily use. Go below only when you want to dig deeper.
+
+## Going deeper — commands by scenario (the more you use, the more advanced)
+
+Add them one at a time as needed. All are part of the install (by level) and cost no context until you call them (on-demand loading). Two ways to call: **skills** via natural language or `/carve-<name>`; **Squad specialists** via `/squad <member>` or `/squad-<member>` (the `squad-…` entries below are those members).
+
+**Code quality & verification**
+- `verify` — `build→lint→test→typecheck` in one go ("run the verify loop")
+- `iterate` — diagnose→fix→re-run until tests are green, report only the final result ("fix it until it passes")
+- `squad-refactor` extract/simplify · `squad-debug` root cause · `squad-evaluator` independent evaluation against completion criteria (Self-Eval Blindspot)
+
+**Testing**
+- `test-gen` tests from UAT criteria · `tdd` red-green-refactor first · `squad-qa` test execution & QA report
+
+**Security**
+- `security-scan` security gate (delegates to squad-audit) · `squad-audit` security audit & vulnerability scan
+
+**Release & collaboration**
+- `pr` PR body · `changelog` CHANGELOG updates · `squad-gitops` commits/PRs/changelog · `squad-docs` docs · `squad-plan` planning/user stories
+
+**Docs & visuals (anti-slop)**
+- When generating HTML, SVG, card news, reports, and slides, AI slop (gradients, glow, watermarks, etc.) is removed and `check-slop` gates deterministically ("make a slop-free html")
+
+**Multi-agent & cost**
+- `parallel-agents` 3–4 in parallel + git worktree isolation · `coordinator` mailbox/TeamCreate orchestration · `model-route` Haiku/Sonnet/Opus routing · `evaluator-tuning` few-shot evaluator correction
+
+**Other helpers** — `caveman` ultra-compression (~75% fewer tokens) · `write-a-skill` skill scaffolding · `zoom-out` system-level view. *(tdd, caveman, write-a-skill, zoom-out are rewrites of [mattpocock/skills](https://github.com/mattpocock/skills) patterns, MIT)*
+
+**9 Squad specialists** — call via `/squad <member> [task]` (e.g. `/squad review`) or directly `/squad-<member>` (e.g. `/squad-refactor src/`); keyword auto-delegation also works. Members: review · plan · refactor · qa · debug · docs · gitops · audit · evaluator (the actual agent name is `squad-<member>`).
+
+**Automatic hooks (event-based · no need to call)** — blocking hooks are deterministic `exit 2`, not advisory:
+`block-destructive` (dangerous commands) · `protect-secrets` (.env/keys) · `pre-commit-lint` (before commit) · `pre-push-test` (before push) · `auto-format` (after save) · `precompact-handoff` (persists state before compaction) · `slack-notify` (at session end, if a webhook is set) · `auto-commit` (optional, OFF by default).
+
+### Harness lifecycle management (CLI)
+
+Commands for managing the harness itself after install. You can ignore these day-to-day — reach for them only when a new carve ships or you want to inspect the install.
 
 ```bash
-carve              # = carve install — interactive selective install (no bulk install)
-carve install --level full        # Force level (minimal|standard|full). full = includes multi-agent parallelism and coordination
-carve install --only commit,handoff,block-destructive   # Non-interactive explicit selection
-carve install --lsp-servers       # Auto-install LSP language servers
-carve init-claude  # Generate CLAUDE.md baseline + .claude/rules/* (based on language stack)
-carve list         # List installable / installed components
-carve doctor       # Inspect the installed harness (config + hook shell syntax)
-carve uninstall    # Clean removal (.bak restore)
-carve diff         # 3-way compare installed assets vs manifest/current carve assets (read-only)
-carve update       # Refresh carve-updated assets in place, preserve user edits (--force · --yes)
-carve migrate      # Promote a v1 manifest to v2 (per-file hash back-fill)
-carve report       # Aggregate local-effect telemetry of installed hooks (opt-in)
+carve list      # List installable / installed components
+carve diff      # 3-way compare installed assets vs current carve assets (read-only)
+carve update    # Refresh carve-updated assets in place, preserving your edits (--force · --yes)
+carve migrate   # Promote carve-manifest schema v1 → v2
+carve report    # Aggregate what the installed hooks actually blocked (opt-in, no network)
+carve uninstall # Clean removal — removes only carve files, restores .bak, preserves your settings
 ```
 
-**Install levels** (automatically determined by profile, can be forced with `--level`). Core skills, the 9 Squad agents, and anti-slop are recommended by default at *every level*; what changes by level is the **number of hooks and additional skills**:
-- `minimal` — small CLI/library/batch: core skills + 9 Squad agents + anti-slop + **3 essential hooks** (block, protect, handoff)
-- `standard` (default) — general apps: minimal + **the remaining core hooks (7 total:** +lint, test, format, Slack)
-- `full` — standard + **additional skills** (verify, security-scan, test-gen, parallel-agents, coordinator, etc.)
+Within a session, the `harness-audit` skill checks install integrity (hook registration, shell syntax, assets).
 
-**Removal**: `carve uninstall` (= `bash install.sh --uninstall`). Based on `carve-manifest.json`, it removes only the files carve installed and
-restores the original from `.bak` if present. It removes exactly the carve hook and MCP entries in `settings.json` (preserving user entries). See [INSTALL.en.md](./INSTALL.en.md#11-uninstall) for details.
+## Install levels (auto-determined by profile, forceable with `--level`)
 
-## What gets installed — component catalog (roles, usage)
+Core skills, the 9 Squad agents, and anti-slop are recommended at *every level*; what changes by level is the **number of hooks and additional skills**.
+- `minimal` — small CLI/library/batch: core + 9 Squad + anti-slop + **3 essential hooks** (block, protect, handoff)
+- `standard` (default) — general apps: minimal + **the remaining core hooks** (7 total: +lint, test, format, Slack)
+- `full` — standard + **additional skills** (verify, iterate, security-scan, test-gen, parallel-agents, coordinator, etc.)
 
-Four invocation methods: **Skills** = natural language or `/carve-<name>` · **Hooks** = automatic (events) · **Squad** = `/squad <member> [task]` or keyword delegation · **MCP** = automatic.
-After installation, when you **open Claude Code** in that project, hooks and MCP are immediately active, while skills and Squad are invoked via the methods below.
+```bash
+carve install --level full                   # Force level (minimal|standard|full)
+carve install --only commit,handoff,review   # Non-interactive explicit selection (no bulk install)
+carve install --lsp-servers                  # Auto-install LSP language servers
+```
 
-**Token efficiency (MCP · automatic, built in)**
+> The score (the number in parentheses in `carve list`, ≥75) is carve's internal usefulness assessment. For per-level defaults and the full component list, see [INSTALL.en.md](./INSTALL.en.md).
 
-| Component | Role | Usage |
-|----------|------|--------|
-| codesight | Project structure-map MCP — structural queries instead of repeated grep searches (~11x fewer tokens for navigating large codebases) | Automatic. Refreshes `.codesight/` on git commit |
-| lsp (cclsp) | Precise code-navigation MCP such as `findReferences` and `getDiagnostics` | Automatic. Install language servers with `--lsp-servers` |
-
-**Core skills (natural language or `/carve-<name>`)**
-
-| Skill | Role | Usage |
-|------|------|--------|
-| handoff | Session handoff — leaves progress, decisions, and next steps so the next session can pick up | "handoff" / `/carve-handoff` |
-| memory | Persistent project memory — persists decisions and context | "remember this" / `/carve-memory` |
-| commit | Generates Conventional Commit messages | "write a commit message" / `/carve-commit` |
-| changelog | Generates and updates the CHANGELOG | "update the changelog" / `/carve-changelog` |
-| review | Code review (delegates to squad-review) | "review this" / `/carve-review` |
-| pr | Generates PR body | "write a PR body" / `/carve-pr` |
-| harness-architect (entry) | Guides analysis → recommendation → selective install | "set up a harness that fits this project" |
-
-**Hooks (automatic · events)** — blocking hooks are not advisory; they block deterministically with `exit 2`
-
-| Hook | Event | Role |
-|----|--------|------|
-| block-destructive | PreToolUse(Bash) | Blocks dangerous commands such as `rm -rf /` and fork bombs |
-| protect-secrets | PreToolUse(Read/Edit/Write) | Blocks access to `.env`, keys, and credentials |
-| pre-commit-lint | PreToolUse(Bash) | Lints before `git commit`, blocks on failure |
-| pre-push-test | PreToolUse(Bash) | Tests before `git push`, blocks on failure |
-| auto-format | PostToolUse(Edit/Write) | Runs the formatter after save (non-blocking) |
-| slack-notify | Stop | Slack notification at session end (when a webhook is configured) |
-| precompact-handoff | PreCompact | Persists state right before compaction |
-| auto-commit *(optional, OFF)* | Stop | Auto-commit at session end. Only when explicitly enabled interactively |
-
-**9 Squad subagents (`/squad <member> [task]` or `/squad-<member>`)**
-
-| Member | Role |
-|------|------|
-| squad-review | Code review (security, performance, style) |
-| squad-plan | Feature planning, user stories, wireframes |
-| squad-refactor | Extract, simplify, rename, remove |
-| squad-qa | Test execution, QA report |
-| squad-debug | Error analysis, root cause |
-| squad-docs | Documentation generation and updates |
-| squad-gitops | Commit messages, PRs, changelog |
-| squad-audit | Security audit, vulnerability scan |
-| squad-evaluator | **Independent evaluation** against completion criteria and the Sprint Contract (addresses the Self-Eval Blindspot) |
-
-**anti-ai-slop pack (when generating docs/images)** — removes AI slop from HTML, SVG, card news, reports, and slides + the `check-slop.mjs` gate.
-Usage: "make a slop-free html", "deslop this" — the linter automatically checks after generation/edits (warning mode).
-
-**Additional skills (`full` level · natural language or `/carve-<name>`)**
-
-| Skill | Role |
-|------|------|
-| verify | `build→lint→test→typecheck` verification loop |
-| security-scan | Security gate delegating to squad-audit |
-| test-gen | Generates tests from UAT criteria |
-| tdd | red-green-refactor test-first *(mattpocock/skills, MIT)* |
-| caveman | Ultra-compressed communication, ~75% fewer tokens *(MIT)* |
-| write-a-skill | Reusable `SKILL.md` scaffolding *(MIT)* |
-| zoom-out | Maps modules and call paths at a system-level view *(MIT)* |
-| model-route | Routes tasks to a 3-tier Haiku/Sonnet/Opus (cost optimization) |
-| parallel-agents | Minimal parallelization of 3–4 agents + git worktree isolation |
-| evaluator-tuning | Collects evaluator misjudgments → few-shot correction |
-| harness-audit | Self-inspection of the installed harness (doctor + registration, syntax, consistency) |
-| coordinator | Multi-agent mailbox/TeamCreate coordination guide |
-
-> See the **Install levels** table above for what is recommended by default at each level. The score (the number in parentheses in `carve list`, ≥75) is carve's internal usefulness assessment.
-
-On installation, it generates `flight-rules.md`, `evaluation-criteria.md`, `sprint-contract.md`, `CLAUDE.md`, and `HARNESS-GUIDE.md` into the project.
 Supported projects: CLI · web · mobile · responsive · desktop · batch.
 
 ## CLAUDE.md baseline + stack rules (`carve init-claude`)
