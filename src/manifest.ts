@@ -2,6 +2,7 @@
 import { readFileSync, writeFileSync, existsSync, rmSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { join } from 'node:path';
+import type { HarnessLevel } from './designer.ts';
 
 export const MANIFEST_NAME = 'carve-manifest.json';
 
@@ -33,7 +34,7 @@ export interface Manifest {
   schemaVersion: number;
   version: string;
   /** 설치 시 적용된 하네스 레벨 (update/diff가 동일 레벨로 재생성하도록 영속). 미기록=auto. */
-  level?: string;
+  level?: HarnessLevel;
   /** carve가 설치한 파일 (v2: 경로+해시+자산버전) */
   files: ManifestFile[];
   /** 사용자 파일을 보존한 .bak 경로 */
@@ -88,7 +89,8 @@ export function normalizeManifest(raw: unknown): Manifest {
   return {
     schemaVersion: SCHEMA_VERSION,
     version,
-    level: typeof r.level === 'string' ? r.level : undefined,
+    // 신뢰 불가한 raw 레벨을 HarnessLevel union으로 검증(손편집 'ful' 등은 undefined=auto). as 캐스트 없이 좁힌다.
+    level: (r.level === 'minimal' || r.level === 'standard' || r.level === 'full') ? r.level : undefined,
     files,
     backups: Array.isArray(r.backups) ? r.backups : [],
     hooks: Array.isArray(r.hooks) ? r.hooks : [],

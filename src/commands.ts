@@ -206,7 +206,7 @@ export function cmdDiff(root: string, io: IO): number {
     return 0;
   }
   const profile = analyze(root);
-  const d = design(profile, m.level as HarnessLevel | undefined); // 설치 레벨 재현(미기록=auto)
+  const d = design(profile, m.level); // 설치 레벨 재현(미기록=auto, normalize에서 검증됨)
   const artifacts = generate(profile, d);
   const entries = classify(root, m, artifacts);
 
@@ -266,7 +266,7 @@ export function cmdUpdate(root: string, io: IO, opts: { yes?: boolean; force?: b
   }
 
   const profile = analyze(root);
-  const d = design(profile, m.level as HarnessLevel | undefined); // 설치 레벨 재현(미기록=auto)
+  const d = design(profile, m.level); // 설치 레벨 재현(미기록=auto, normalize에서 검증됨)
   const artifacts = generate(profile, d);
   const entries = classify(root, m, artifacts);
   const artByPath = new Map(artifacts.map((a) => [a.path, a]));

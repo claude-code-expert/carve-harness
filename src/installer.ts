@@ -6,6 +6,7 @@ import {
 } from 'node:fs';
 import { join, dirname } from 'node:path';
 import type { Artifact } from './generator.ts';
+import type { HarnessLevel } from './designer.ts';
 import {
   readManifest, writeManifest, removeManifest, hashContent, SCHEMA_VERSION,
   CARVE_VERSION, type Manifest, type ManifestFile,
@@ -145,7 +146,7 @@ function stripCarveHooks(root: string): void {
 }
 
 /** 자산을 멱등 설치한다. level=적용 레벨(update/diff 재현용으로 영속). */
-export function install(root: string, artifacts: Artifact[], hooks: HookReg[] = [], mcps: McpReg[] = [], level?: string): InstallResult {
+export function install(root: string, artifacts: Artifact[], hooks: HookReg[] = [], mcps: McpReg[] = [], level?: HarnessLevel): InstallResult {
   const prev = readManifest(root);
   const prevFiles = new Set((prev?.files ?? []).map((f) => f.path));
   const backedUp: string[] = [...(prev?.backups ?? [])];
