@@ -5,10 +5,10 @@
 ## Daily
 | Task | Command |
 |------|---------|
-| Install deps | `{{PKG_MANAGER}} install` |
-| Dev server | `{{PKG_MANAGER}} run dev` |
-| Run app | `{{PKG_MANAGER}} run start` |
-| Build (wheel/sdist) | `{{PKG_MANAGER}} build` |
+| Install deps | `{{PKG_MANAGER}} install -r requirements.txt` (poetry/uv: `{{PKG_MANAGER}} install` / `uv sync`) |
+| Run app | `python -m <package>` (or `python main.py`) |
+| Dev server | framework-specific, e.g. `uvicorn app:app --reload` · `flask run` · `python manage.py runserver` |
+| Build (wheel/sdist) | `python -m build` |
 
 ## Quality (run before commit)
 | Task | Command |

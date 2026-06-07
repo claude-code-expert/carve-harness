@@ -31,7 +31,7 @@ export const CATALOG: CatalogComponent[] = [
   { id: 'lsp', kind: 'skill', title: 'LSP 인텔리전스', description: '정확한 코드 네비게이션 MCP — findReferences/getDiagnostics(grep 대체)', score: 90, core: true, optional: false, applicable: 'all' },
 
   // ── 6 핵심 스킬 (Skill + 커맨드 shim) ──
-  { id: 'handoff', kind: 'skill', title: '핸드오프', description: '세션 인계 컨텍스트(PreCompact/SessionStart 연동)', score: 90, core: true, optional: false, applicable: 'all' },
+  { id: 'handoff', kind: 'skill', title: '핸드오프', description: '세션 인계 컨텍스트(PreCompact 훅 연동)', score: 90, core: true, optional: false, applicable: 'all' },
   { id: 'memory', kind: 'skill', title: '메모리', description: '프로젝트 지속 메모리', score: 90, core: true, optional: false, applicable: 'all' },
   { id: 'commit', kind: 'skill', title: '커밋', description: 'Conventional Commit 메시지 생성', score: 90, core: true, optional: false, applicable: 'all' },
   { id: 'changelog', kind: 'skill', title: '체인지로그', description: 'CHANGELOG 생성·갱신', score: 85, core: true, optional: false, applicable: 'all' },
@@ -64,6 +64,7 @@ export const CATALOG: CatalogComponent[] = [
   // ── 추가 컴포넌트 (≥75) ──
   { id: 'anti-ai-slop', kind: 'pack', title: 'Anti-AI-Slop 팩', description: 'HTML·SVG·문서 슬롭 제거 스킬 + check-slop 검증 훅', score: 85, core: false, optional: false, applicable: 'all' },
   { id: 'verify', kind: 'skill', title: '검증 루프', description: 'build→lint→test→typecheck 루프', score: 90, core: false, optional: false, applicable: 'all' },
+  { id: 'iterate', kind: 'skill', title: '자율 수렴 루프', description: 'verify green까지 진단→수정→재실행, 최종만 보고(최대 N회)', score: 85, core: false, optional: false, applicable: 'all' },
   { id: 'security-scan', kind: 'skill', title: '보안 스캔', description: 'squad-audit 위임 보안 게이트', score: 80, core: false, optional: false, applicable: 'all' },
   { id: 'test-gen', kind: 'skill', title: '테스트 생성', description: 'UAT 기준 테스트 생성', score: 76, core: false, optional: false, applicable: 'all' },
 

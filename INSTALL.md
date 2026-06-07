@@ -192,6 +192,10 @@ carve init-claude
 | `carve list` | 설치 가능/설치된 구성요소 목록 |
 | `carve doctor` | 설치 점검(구성 목록 + 훅 셸 문법) |
 | `carve uninstall` | 클린 제거(.bak 복원) |
+| `carve diff` | 설치본을 매니페스트/현 carve 자산과 3-way 비교(읽기 전용) |
+| `carve update` | carve 갱신분만 제자리 갱신·사용자 수정 보존(`--force`·`--yes`) |
+| `carve migrate` | v1 매니페스트를 v2로 승급(파일별 해시 back-fill) |
+| `carve report` | 설치 훅의 로컬 효과 텔레메트리 집계(opt-in) |
 | `carve --version` · `carve --help` | 버전 / 도움말 |
 
 ---

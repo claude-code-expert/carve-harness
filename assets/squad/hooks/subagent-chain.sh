@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # subagent-chain.sh — Squad Agent notification + pipeline chaining hook
 # Handles both SubagentStart and SubagentStop events
-# Registered automatically by install.sh
+# Registered into .claude/settings.json by `carve install` (generator.hookRegsFor / SubagentStart+SubagentStop)
 #
 # Cross-platform: macOS (osascript), Linux (notify-send), Windows/WSL (powershell)
 # Claude Code is a TUI app — stdout/stderr from SubagentStart/Stop hooks
@@ -75,7 +75,8 @@ elif [ "$EVENT" = "SubagentStop" ]; then
     "squad-plan")    NEXT="→ implement, then /squad-review" ;;
     "squad-review")  NEXT="→ /squad-refactor or /squad-qa" ;;
     "squad-refactor") NEXT="→ /squad-review to verify" ;;
-    "squad-qa")      NEXT="→ /squad-gitops commit" ;;
+    "squad-qa")      NEXT="→ /squad-evaluator (완료 기준 채점)" ;;
+    "squad-evaluator") NEXT="PASS → /squad-gitops · FAIL → /squad-refactor or /squad-debug" ;;
     "squad-debug")   NEXT="→ implement the fix" ;;
     "squad-docs")    NEXT="Documentation updated." ;;
     "squad-gitops")  NEXT="Git artifacts generated." ;;

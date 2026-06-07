@@ -6,7 +6,10 @@
 
 <p align="center"><b>한국어</b> · <a href="./README.en.md">English</a></p>
 
-> **변경 이력 (Changelog)** — 전체 [CHANGELOG.md](CHANGELOG.md) · 상세 [What's New](#whats-new)
+
+## Update
+> **변경 이력 (Changelog)** — 전체 [CHANGELOG.md](CHANGELOG.md)
+> - `2026-06-06` **v1.3.0** — 자율 수렴 루프(`iterate`)·계획 분리·검증·컨텍스트 다이어트 보강 + 전수 감사 패치(치명: `update` 데드락 해소)
 > - `2026-06-05` **v1.2.0** — 라이프사이클(`diff`/`update`/`migrate`) · 분석·추천 지능화(모노레포·컨테이너 가중) · opt-in 로컬 텔레메트리(`carve report`)
 > - `2026-06-02` **v1.1.0** — 프로젝트 맞춤 하네스 설치 CLI(MVP): 분석→설계→생성→audit→멱등 설치
 
@@ -16,7 +19,7 @@
 
 > 프로젝트를 분석해 그 프로젝트에 맞는 하네스(스킬·훅·서브에이전트)를 대화형으로 선택해 설치하는 CLI.
 
-**v1.2.0** · TypeScript(ESM, 빌드 단계 없음) · Node >=22.18 · 테스트 191 / 커버리지 약 95.6%
+**v1.3.0** · TypeScript(ESM, 빌드 단계 없음) · Node >=22.18 · 테스트 204 / 커버리지 약 95.7%
 
 `carve`는 코드베이스를 읽어 프로젝트 타입과 도구를 탐지하고, 적합한 구성요소를 추천한다.
 사용자가 고른 것만 `.claude/`에 설치한다. carve = 범용 자산을 프로젝트에 맞게 깎아냄.
@@ -32,46 +35,13 @@ carve install → 스택 탐지 → (구성요소 선택) → .claude/에 자산
               → 생성된 검증 훅이 위험 명령을 exit code 2로 결정적으로 차단
 ```
 
-## What's New
-
-<!-- changelog:start -->
-### v1.2.0 — 라이프사이클 · 분석 지능화 · 텔레메트리 (2026-06-05)
-
-설치 한 번으로 끝나던 carve가 **설치된 하네스를 안전하게 갱신·진단**하는 라이프사이클 도구로 확장됐다.
-(v2.0 로드맵 M8·M9·M10 — 상세: [MS7 로드맵](docs/milestones/MS7-v2-roadmap.md) · 전체 변경: [CHANGELOG](CHANGELOG.md))
-
-**1. 라이프사이클 — `diff` / `update` / `migrate`**
-- **핵심**: carve 새 버전이 나와도 *내가 고친 자산은 보존*하고 carve가 만든 자산만 갱신한다.
-- **원리**: 설치 때 파일마다 내용 해시(sha256)를 `carve-manifest.json`에 적어둔다 → 나중에 (원본 해시 vs 현재 디스크 vs 새 carve 자산) **3-way 비교**로 "내가 고쳤는지 / carve가 바뀌었는지"를 가른다.
-  ```bash
-  carve diff      # unchanged / carve-updated / user-modified / new-recommended 로 분류
-  carve update    # carve 갱신분만 제자리 갱신 (내 수정은 .bak 후 보존, 신규는 제안만)
-  carve migrate   # 구(v1) manifest → v2(해시 기록)로 무손실 승격
-  ```
-  예) `flight-rules.md`를 내가 고쳤고 carve가 `commit` 스킬을 개선했다면 → `update`는 commit 스킬만 갱신하고 내 flight-rules는 그대로 둔다.
-
-**2. 분석·추천 지능화**
-- **핵심**: 모노레포·컨테이너 프로젝트를 알아보고 거기 맞는 구성요소를 더 추천한다.
-- **원리**: analyzer가 `pnpm-workspace.yaml`·`turbo.json`·`Dockerfile` 같은 시그널을 읽어 프로필에 채우고, designer가 그 시그널로 점수를 **가중**한다(모노레포/CI → `parallel-agents`·`coordinator` 추천↑). 고른 내역은 `.claude/.carve-prefs.json`에 남아 다음 실행에 반영된다.
-  예) pnpm 워크스페이스 + GitHub Actions가 있으면 단일 패키지보다 조율 에이전트를 더 추천.
-
-**3. 로컬 효과 텔레메트리 — `carve report` (opt-in)**
-- **핵심**: 설치한 훅이 *실제로* 무엇을 막았는지 로컬로만 본다. **네트워크 전송 없음.**
-- **원리**: 옵트인일 때만 훅이 `{ts, hook, event}` 한 줄을 `.claude/.carve-metrics.jsonl`에 남긴다(명령·경로·secret 비기록). 차단 로직(exit 2)은 그대로 — 기록은 부수효과일 뿐이다.
-  ```bash
-  export CARVE_METRICS=on   # 옵트인 (기본 off)
-  carve report             # 훅별 발화·차단 횟수 + "한 번도 안 쓴 훅"(노이즈 후보)
-  ```
-  예) `block-destructive` 12회 차단, `pre-push-test` 0회 발화 → 0회 훅은 다음에 뺄 후보로 보고된다.
-<!-- changelog:end -->
-
 ## 특징
 
-- 토큰 효율 기본 탑재: codesight(구조 맵 MCP)·LSP(cclsp MCP)가 설치 시 자동 등록 — 별도 설치 없이 grep 대신 정확 탐색.
+- 토큰 효율 기본 탑재: codesight(구조 맵 MCP)·LSP(cclsp MCP)가 설치 시 자동 등록 — 별도 설치 없이 grep 대신 정확한 탐색과 최소 50% 이상의 비용 절검 유도, 대형 코듭베이스 기준 최소 5배 이상 절감 가능.
 - 결정적 안전: 위험 명령(`rm -rf /`·포크밤)·비밀 파일(`.env`·키)을 exit code 2로 강제 차단한다(권고가 아님).
 - 맞춤 선택 설치: 탐지 → 추천 → 사용자 선택. 일괄 설치 없음, 멱등 재설치·클린 제거.
 - anti-slop 생성: HTML·SVG·문서의 AI 슬롭을 린터로 게이트한다.
-- Squad 서브에이전트 100% 보존: 9 전문가(+evaluator) + 키워드 라우팅·체이닝.
+- Squad 서브에이전트 100% 보존: 9 전문가(evaluator 포함) + 키워드 라우팅·체이닝.
 - 자기검증: 설치 전 auditor가 생성물의 secret·과도 권한·훅 주입·셸 문법을 스캔한다.
 - 빌드 0: `.ts` 직접 실행. npx + bash 양쪽 배포.
 
@@ -108,7 +78,7 @@ carve migrate      # carve-manifest 스키마 v1→v2 승격
 carve report       # 설치 훅의 로컬 효과 텔레메트리 집계 (opt-in)
 ```
 
-> **v1.2.0 신규** `diff`·`update`·`migrate`·`report` — 동작·원리는 위 [What's New](#whats-new) 참고.
+> **v1.2.0 신규** `diff`·`update`·`migrate`·`report` — 동작·원리는 [CHANGELOG](CHANGELOG.md) 참고.
 
 **설치 레벨** (프로필로 자동 결정, `--level`로 강제 가능). 코어 스킬·Squad 9 에이전트·anti-slop은 *모든 레벨* 기본 추천이고, 레벨로 달라지는 건 **훅 개수·추가 스킬**이다:
 - `minimal` — 소형 CLI/라이브러리/배치: 코어 스킬 + Squad 9 에이전트 + anti-slop + **필수 훅 3종**(차단·보호·핸드오프)
@@ -169,9 +139,6 @@ carve report       # 설치 훅의 로컬 효과 텔레메트리 집계 (opt-in)
 | squad-audit | 보안 감사·취약점 스캔 |
 | squad-evaluator | 완료 기준·Sprint Contract 대비 **독립 평가**(Self-Eval Blindspot 대응) |
 
-**anti-ai-slop 팩 (문서·이미지 생성 시)** — HTML·SVG·카드뉴스·리포트·슬라이드의 AI 슬롭 제거 + `check-slop.mjs` 게이트.
-사용법: "슬롭 없는 html 만들어", "디슬롭 해줘" — 생성·수정 후 린터가 자동 검사(경고 모드).
-
 **추가 스킬 (`full` 레벨 · 자연어 또는 `/carve-<이름>`)**
 
 | 스킬 | 역할 |
@@ -191,7 +158,7 @@ carve report       # 설치 훅의 로컬 효과 텔레메트리 집계 (opt-in)
 
 > 어떤 레벨에서 무엇이 기본 추천되는지는 위 **설치 레벨** 표 참고. 점수(`carve list`의 괄호 숫자, ≥75)는 carve의 내부 유용성 평가다.
 
-설치 시 `flight-rules.md`·`evaluation-criteria.md`·`sprint-contract.md`·`CLAUDE.md`·`HARNESS-GUIDE.md`를 프로젝트에 생성한다.
+
 지원 프로젝트: CLI · 웹 · 모바일 · 반응형 · 데스크탑 · 배치.
 
 ## CLAUDE.md 베이스라인 + 스택 규칙 (`carve init-claude`)
@@ -323,8 +290,7 @@ npm run build     # 배포용 컴파일 (tsconfig.build.json, in-place .js)
 
 ## 크레딧
 
-일부 추가 스킬(`tdd`·`caveman`·`write-a-skill`·`zoom-out`)은 [mattpocock/skills](https://github.com/mattpocock/skills)(MIT)의
-패턴에서 영감을 받아 carve 포맷으로 재작성했다.
+일부 추가 스킬(`tdd`·`caveman`·`write-a-skill`·`zoom-out`)은 [mattpocock/skills](https://github.com/mattpocock/skills)(MIT)의 패턴에서 영감을 받아 carve 포맷으로 재작성했다.
 
 ## 라이선스
 

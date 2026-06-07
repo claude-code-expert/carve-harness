@@ -31,7 +31,7 @@
 1개 선택 Hook: 자동 커밋 (기본 OFF)
 
 ### 2.3 서브에이전트 (R-SQUAD)
-Squad 8종(review·plan·refactor·qa·debug·docs·gitops·audit) + 키워드 라우터 훅 + 체이닝/알림 훅을
+Squad 8종(review·plan·refactor·qa·debug·docs·gitops·audit) + post-PoC squad-evaluator = 9종 설치 + 키워드 라우터 훅 + 체이닝/알림 훅을
 **100% 보존**하여 설치한다. (vendor/subagents가 원본)
 
 ### 2.4 추가 구성요소 (R-EXTRA)

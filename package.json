@@ -1,6 +1,6 @@
 {
   "name": "carve-harness",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "범용 하네스 자산을 프로젝트에 맞게 깎아 설치하는 CLI (carve = 깎아서 만들다, a.k.a. 하네스 깎는 노인 코드빌런)",
   "author": "villainscode <villainscode@gmail.com>",
   "repository": {

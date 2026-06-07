@@ -65,16 +65,71 @@ test('opt-in CARVE_METRICS=on: exit 2 + 리댁션된 {ts,hook,event} 한 줄', (
   }
 });
 
+// ── GAP3: precompact-handoff 압축 proxy (opt-in 시 {event:"compact"} 한 줄) ──
+test('opt-in: precompact-handoff 압축 proxy {ts,hook,event:"compact"} (GAP3)', () => {
+  const cwd = mkdtempSync(join(tmpdir(), 'carve-metrics-'));
+  mkdirSync(join(cwd, '.claude'), { recursive: true });
+  try {
+    const r = spawnSync('bash', [hook('precompact-handoff.sh')], {
+      input: '{}', encoding: 'utf8', cwd,
+      env: { ...process.env, CARVE_METRICS: 'on' },
+    });
+    assert.equal(r.status, 0); // 비차단
+    const jsonl = join(cwd, '.claude', '.carve-metrics.jsonl');
+    assert.ok(existsSync(jsonl));
+    const lines = readFileSync(jsonl, 'utf8').split('\n').filter((l) => l.trim());
+    assert.equal(lines.length, 1);
+    const obj = JSON.parse(lines[0] ?? '{}');
+    assert.deepEqual(Object.keys(obj).sort(), ['event', 'hook', 'ts']);
+    assert.equal(obj.hook, 'precompact-handoff');
+    assert.equal(obj.event, 'compact');
+  } finally {
+    rmSync(cwd, { recursive: true, force: true });
+  }
+});
+
+// ── GAP1: iterate 루프 텔레메트리 (스키마 무변경 — carve_metric iterate pass/fail) ──
+test('opt-in: carve_metric iterate pass → {ts,hook:"iterate",event:"pass"} (GAP1)', () => {
+  const cwd = mkdtempSync(join(tmpdir(), 'carve-metrics-'));
+  mkdirSync(join(cwd, '.claude'), { recursive: true });
+  try {
+    const r = spawnSync('bash', ['-c', `source '${hook('_metrics.sh')}'; carve_metric iterate pass`], {
+      encoding: 'utf8', cwd, env: { ...process.env, CARVE_METRICS: 'on' },
+    });
+    assert.equal(r.status, 0);
+    const jsonl = join(cwd, '.claude', '.carve-metrics.jsonl');
+    assert.ok(existsSync(jsonl));
+    const obj = JSON.parse(readFileSync(jsonl, 'utf8').split('\n').filter((l) => l.trim())[0] ?? '{}');
+    assert.deepEqual(Object.keys(obj).sort(), ['event', 'hook', 'ts']); // 스키마 불변
+    assert.equal(obj.hook, 'iterate');
+    assert.equal(obj.event, 'pass');
+  } finally {
+    rmSync(cwd, { recursive: true, force: true });
+  }
+});
+
+test('opt-out: carve_metric iterate 는 no-op (jsonl 미생성) (GAP1)', () => {
+  const cwd = mkdtempSync(join(tmpdir(), 'carve-metrics-'));
+  try {
+    const env = { ...process.env };
+    delete env.CARVE_METRICS;
+    spawnSync('bash', ['-c', `source '${hook('_metrics.sh')}'; carve_metric iterate fail`], { encoding: 'utf8', cwd, env });
+    assert.equal(existsSync(join(cwd, '.claude', '.carve-metrics.jsonl')), false);
+  } finally {
+    rmSync(cwd, { recursive: true, force: true });
+  }
+});
+
 // ── no-network: 헬퍼 + 6개 훅에 curl/wget/nc 없음 ──
 test('no-network: _metrics.sh + 6개 훅에 curl/wget/nc 없음', () => {
-  for (const f of [HELPER, ...HOOKS]) {
+  for (const f of [HELPER, ...HOOKS, 'precompact-handoff.sh']) {
     const src = readFileSync(hook(f), 'utf8');
     assert.equal(/curl|wget|[^a-z]nc[^a-z]/.test(src), false, `${f} contains network call`);
   }
 });
 
-// ── bash -n: 헬퍼 + 6개 훅 문법 OK ──
-for (const f of [HELPER, ...HOOKS]) {
+// ── bash -n: 헬퍼 + 6개 훅 + precompact-handoff 문법 OK ──
+for (const f of [HELPER, ...HOOKS, 'precompact-handoff.sh']) {
   test(`${f} bash 문법 OK`, () => {
     assert.equal(spawnSync('bash', ['-n', hook(f)]).status, 0);
   });
