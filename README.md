@@ -45,119 +45,93 @@ carve install → 스택 탐지 → (구성요소 선택) → .claude/에 자산
 - 자기검증: 설치 전 auditor가 생성물의 secret·과도 권한·훅 주입·셸 문법을 스캔한다.
 - 빌드 0: `.ts` 직접 실행. npx + bash 양쪽 배포.
 
-## 설치 & 사용
+## 빠른 시작 — 이 3줄이면 끝
 
-> **전체 설치 매뉴얼**: [INSTALL.md](./INSTALL.md) (한글) · [INSTALL.en.md](./INSTALL.en.md) (English)
-> — 요구사항·설치 모드·단계별 구성요소·문제 해결까지 상세.
-
-**풀 설치 흐름 (3단계)**
+> 전체 매뉴얼: [INSTALL.md](./INSTALL.md) (한글) · [INSTALL.en.md](./INSTALL.en.md) (English) — 요구사항·모드·문제 해결까지.
 
 ```bash
-npx carve-harness              # 1. 대화형 선택 설치 (탐지 → 추천 → 선택)
-npx carve-harness init-claude  # 2. CLAUDE.md 베이스라인 + 언어 스택 규칙 생성
-npx carve-harness doctor       # 3. 설치 점검 (구성·훅 문법)
+npx carve-harness              # 1. 설치 — 탐지 → 추천 → 선택 (대화형, 일괄 설치 없음)
+npx carve-harness init-claude  # 2. 첫 셋업 — CLAUDE.md 베이스라인 + 언어 스택 규칙 생성
+npx carve-harness doctor       # 3. 점검 — 구성·훅 문법 확인
 ```
 
-다른 프로젝트에 설치할 땐 **`npx carve-harness`가 표준**이다(설치할 폴더에서 실행). `install.sh`는 npm 패키지에 포함되지 않으므로, 이 리포를 clone했거나 `curl`로 받은 경우에만 쓰는 편의 래퍼다(내부적으로 `npx carve-harness@latest`를 호출).
-세션 안에서는 **"이 프로젝트에 맞는 하네스 구성해줘"** 로 harness-architect 스킬이 같은 흐름을 안내한다.
+설치는 여기까지가 전부다. 이후엔 그 프로젝트에서 **Claude Code를 열기만 하면** 훅·MCP(codesight·LSP)는 자동으로 켜지고, 스킬·Squad는 아래처럼 부른다. (`npx carve-harness`가 설치 표준 — 설치할 폴더에서 실행. `install.sh`는 repo clone·`curl` 사용자용 편의 래퍼다.)
 
-**명령 레퍼런스**
+## 일상 워크플로우 — 세션에서 자연어로
+
+매일 쓰는 건 네 개면 충분하다. 자연어로 부르거나 `/carve-<이름>`, 둘 다 된다.
+
+| 하고 싶은 것 | 부르는 법 | 무엇이 |
+|---|---|---|
+| 커밋 메시지 | "커밋 메시지 만들어" · `/carve-commit` | Conventional Commit 생성 |
+| 코드 리뷰 | "리뷰해줘" · `/carve-review` | squad-review 위임 리뷰 |
+| 세션 인계 | "핸드오프" · `/carve-handoff` | 진행·결정·다음 할 일을 남겨 다음 세션이 이음 |
+| 결정 기억 | "기억해둬" · `/carve-memory` | 프로젝트 지속 메모리 |
+
+그리고 **차단·보호·포맷 훅은 부를 필요 없이 자동**이다 — 위험 명령(`rm -rf /`·포크밤)·비밀 파일(`.env`·키)은 `exit 2`로 막고(권고가 아님), 저장하면 포매터가 돌고, 커밋·푸시 전 린트·테스트가 강제된다.
+
+> 여기까지가 "쉬운 carve"다 — 기본적으로 강력한 제어를 기반으로 모델이 하네스 구조안에서 돌도록 제어하며, 간단한 명령어로 구성되어 사용하기 쉽다. 좀 더 깊게 쓰고 싶을 때만 아래로 내려가면 된다.
+
+## 더 깊게 — 시나리오별 명령 (쓸수록 고급 사용자)
+
+필요할 때 하나씩 더하면 된다. 전부 설치에 포함(레벨에 따라)되고, 안 부르면 컨텍스트도 차지하지 않는다(on-demand 로딩). 호출법은 둘 — **스킬**은 자연어 또는 `/carve-<이름>`, **Squad 전문가**는 `/squad <멤버>` 또는 `/squad-<멤버>`(아래 목록의 `squad-…`가 그 멤버다).
+
+**코드 품질·검증**
+- `verify` — `build→lint→test→typecheck`를 한 번에 ("검증 루프 돌려")
+- `iterate` — 테스트가 green일 때까지 진단→수정→재실행, 최종 결과만 보고 ("통과할 때까지 고쳐")
+- `squad-refactor` 추출·단순화 · `squad-debug` 근본 원인 · `squad-evaluator` 완료 기준 독립 평가(Self-Eval Blindspot 대응)
+
+**테스트**
+- `test-gen` UAT 기준 테스트 생성 · `tdd` red-green-refactor 우선 · `squad-qa` 테스트 실행·QA 리포트
+
+**보안**
+- `security-scan` 보안 게이트(squad-audit 위임) · `squad-audit` 보안 감사·취약점 스캔
+
+**릴리스·협업**
+- `pr` PR 본문 · `changelog` CHANGELOG 갱신 · `squad-gitops` 커밋·PR·체인지로그 · `squad-docs` 문서 생성·갱신 · `squad-plan` 기획·유저스토리
+
+**문서·시각물 (anti-slop)**
+- HTML·SVG·카드뉴스·리포트·슬라이드 생성 시 AI 슬롭(그라데이션·글로우·워터마크 등)을 제거하고 `check-slop`이 결정적으로 게이트 ("슬롭 없는 html 만들어")
+
+**멀티에이전트·비용 최적화**
+- `parallel-agents` 3~4 병렬 + git worktree 격리 · `coordinator` 메일박스/TeamCreate 조율 · `model-route` Haiku/Sonnet/Opus 라우팅 · `evaluator-tuning` 평가자 few-shot 보정
+
+**그 외 도우미** — `caveman` 초압축(토큰 ~75%↓) · `write-a-skill` 스킬 스캐폴딩 · `zoom-out` 시스템 조망. *(tdd·caveman·write-a-skill·zoom-out은 [mattpocock/skills](https://github.com/mattpocock/skills), MIT 패턴 재작성)*
+
+**Squad 전문가 9종** — `/squad <멤버> [작업]`(예: `/squad review`) 또는 직접 `/squad-<멤버>`(예: `/squad-refactor src/`)로 부른다. 키워드 자동 위임도 지원. 멤버: review · plan · refactor · qa · debug · docs · gitops · audit · evaluator (실제 에이전트명은 `squad-<멤버>`).
+
+**자동 훅 (이벤트 기반 · 부를 필요 없음)** — 차단형은 권고가 아니라 `exit 2` 결정적 차단:
+`block-destructive`(위험 명령) · `protect-secrets`(.env·키) · `pre-commit-lint`(커밋 전) · `pre-push-test`(푸시 전) · `auto-format`(저장 후) · `precompact-handoff`(압축 직전 상태 보존) · `slack-notify`(종료 시·웹훅 설정 시) · `auto-commit`(선택, 기본 OFF).
+
+### 하네스 수명주기 관리 (CLI)
+
+설치 이후 하네스 자체를 관리하는 명령. 평소엔 몰라도 되고, 새 carve가 나왔거나 설치를 점검할 때만 쓴다.
 
 ```bash
-carve              # = carve install — 대화형 선택 설치 (일괄 설치 없음)
-carve install --level full        # 레벨 강제(minimal|standard|full). full=멀티에이전트 병렬·조율 포함
-carve install --only commit,handoff,block-destructive   # 비대화형 명시 선택
-carve install --lsp-servers       # LSP 언어서버 자동설치
-carve init-claude  # CLAUDE.md 베이스라인 + .claude/rules/* 생성 (언어 스택 기준)
-carve list         # 설치 가능/설치된 구성요소 목록
-carve doctor       # 설치된 하네스 점검 (구성 + 훅 셸 문법)
-carve uninstall    # 클린 제거(.bak 복원)
-carve diff         # 설치본과 현 carve 자산을 3-way 비교 (읽기 전용)
-carve update       # 사용자 수정 보존하며 carve 자산만 갱신 (--force·--yes)
-carve migrate      # carve-manifest 스키마 v1→v2 승격
-carve report       # 설치 훅의 로컬 효과 텔레메트리 집계 (opt-in)
+carve list      # 설치 가능/설치된 구성요소 목록
+carve diff      # 설치본 vs 현재 carve 자산 3-way 비교 (읽기 전용)
+carve update    # carve 갱신분만 제자리 갱신, 내 수정은 .bak 후 보존 (--force·--yes)
+carve migrate   # carve-manifest 스키마 v1→v2 승격
+carve report    # 설치 훅이 실제로 무엇을 막았는지 집계 (opt-in, 네트워크 전송 없음)
+carve uninstall # 클린 제거 — carve 설치분만 제거·.bak 복원·사용자 settings 보존
 ```
 
-> **v1.2.0 신규** `diff`·`update`·`migrate`·`report` — 동작·원리는 [CHANGELOG](CHANGELOG.md) 참고.
+세션 안에서는 `harness-audit` 스킬이 설치 정합성(훅 등록·셸 문법·자산)을 점검한다.
 
-**설치 레벨** (프로필로 자동 결정, `--level`로 강제 가능). 코어 스킬·Squad 9 에이전트·anti-slop은 *모든 레벨* 기본 추천이고, 레벨로 달라지는 건 **훅 개수·추가 스킬**이다:
-- `minimal` — 소형 CLI/라이브러리/배치: 코어 스킬 + Squad 9 에이전트 + anti-slop + **필수 훅 3종**(차단·보호·핸드오프)
-- `standard` (기본) — 일반 앱: minimal + **나머지 코어 훅(총 7개:** +린트·테스트·포맷·Slack)
-- `full` — standard + **추가 스킬**(verify·security-scan·test-gen·parallel-agents·coordinator 등)
+## 설치 레벨 (프로필로 자동 결정, `--level`로 강제)
 
-**제거**: `carve uninstall` (= `bash install.sh --uninstall`). `carve-manifest.json` 기준으로 carve 설치 파일만 제거하고
-`.bak`가 있으면 원본을 복원한다. `settings.json`의 carve 훅·MCP 항목만 정확히 제거(사용자 항목 보존). 자세히는 [INSTALL.md](./INSTALL.md#11-제거-uninstall).
+코어 스킬·Squad 9 에이전트·anti-slop은 *모든 레벨* 기본 추천. 레벨로 달라지는 건 **훅 개수·추가 스킬**이다.
+- `minimal` — 소형 CLI/라이브러리/배치: 코어 + Squad 9 + anti-slop + **필수 훅 3종**(차단·보호·핸드오프)
+- `standard` (기본) — 일반 앱: minimal + **나머지 코어 훅**(총 7개: +린트·테스트·포맷·Slack)
+- `full` — standard + **추가 스킬**(verify·iterate·security-scan·test-gen·parallel-agents·coordinator 등)
 
-## 무엇을 설치하나 — 구성요소 카탈로그 (역할·사용법)
+```bash
+carve install --level full                   # 레벨 강제 (minimal|standard|full)
+carve install --only commit,handoff,review   # 비대화형 명시 선택 (일괄 설치 없음)
+carve install --lsp-servers                  # LSP 언어서버 자동설치
+```
 
-호출 방식 4종: **스킬**=자연어 또는 `/carve-<이름>` · **훅**=자동(이벤트) · **Squad**=`/squad <멤버> [작업]` 또는 키워드 위임 · **MCP**=자동.
-설치 후 그 프로젝트에서 **Claude Code를 열면** 훅·MCP는 즉시 활성, 스킬·Squad는 아래 방식으로 부른다.
-
-**토큰 효율 (MCP · 자동, 기본 탑재)**
-
-| 구성요소 | 역할 | 사용법 |
-|----------|------|--------|
-| codesight | 프로젝트 구조 맵 MCP — grep 재탐색 대신 구조 질의(대형 코드베이스 탐색 토큰 ~11배↓) | 자동. git commit 시 `.codesight/` 갱신 |
-| lsp (cclsp) | `findReferences`·`getDiagnostics` 등 정확한 코드 네비게이션 MCP | 자동. 언어서버는 `--lsp-servers`로 설치 |
-
-**핵심 스킬 (자연어 또는 `/carve-<이름>`)**
-
-| 스킬 | 역할 | 사용법 |
-|------|------|--------|
-| handoff | 세션 인계 — 진행·결정·다음 할 일을 남겨 다음 세션이 이음 | "핸드오프" / `/carve-handoff` |
-| memory | 프로젝트 지속 메모리 — 결정·맥락 영속화 | "기억해둬" / `/carve-memory` |
-| commit | Conventional Commit 메시지 생성 | "커밋 메시지 만들어" / `/carve-commit` |
-| changelog | CHANGELOG 생성·갱신 | "체인지로그 갱신" / `/carve-changelog` |
-| review | 코드 리뷰(squad-review 위임) | "리뷰해줘" / `/carve-review` |
-| pr | PR 본문 생성 | "PR 본문 써줘" / `/carve-pr` |
-| harness-architect (진입) | 분석 → 추천 → 선택 설치 안내 | "이 프로젝트에 맞는 하네스 구성해줘" |
-
-**훅 (자동 · 이벤트)** — 차단형은 권고가 아니라 `exit 2`로 결정적 차단
-
-| 훅 | 이벤트 | 역할 |
-|----|--------|------|
-| block-destructive | PreToolUse(Bash) | `rm -rf /`·포크밤 등 위험 명령 차단 |
-| protect-secrets | PreToolUse(Read/Edit/Write) | `.env`·키·credentials 접근 차단 |
-| pre-commit-lint | PreToolUse(Bash) | `git commit` 전 린트, 실패 시 차단 |
-| pre-push-test | PreToolUse(Bash) | `git push` 전 테스트, 실패 시 차단 |
-| auto-format | PostToolUse(Edit/Write) | 저장 후 포매터 실행(비차단) |
-| slack-notify | Stop | 세션 종료 시 Slack 알림(웹훅 설정 시) |
-| precompact-handoff | PreCompact | 압축 직전 상태 영속화 |
-| auto-commit *(선택, OFF)* | Stop | 세션 종료 시 자동 커밋. 대화형에서 직접 켤 때만 |
-
-**Squad 서브에이전트 9종 (`/squad <멤버> [작업]` 또는 `/squad-<멤버>`)**
-
-| 멤버 | 역할 |
-|------|------|
-| squad-review | 코드 리뷰(보안·성능·스타일) |
-| squad-plan | 기능 기획·유저스토리·와이어프레임 |
-| squad-refactor | 추출·단순화·이름변경·제거 |
-| squad-qa | 테스트 실행·QA 리포트 |
-| squad-debug | 에러 분석·근본 원인 |
-| squad-docs | 문서 생성·갱신 |
-| squad-gitops | 커밋 메시지·PR·체인지로그 |
-| squad-audit | 보안 감사·취약점 스캔 |
-| squad-evaluator | 완료 기준·Sprint Contract 대비 **독립 평가**(Self-Eval Blindspot 대응) |
-
-**추가 스킬 (`full` 레벨 · 자연어 또는 `/carve-<이름>`)**
-
-| 스킬 | 역할 |
-|------|------|
-| verify | `build→lint→test→typecheck` 검증 루프 |
-| security-scan | squad-audit 위임 보안 게이트 |
-| test-gen | UAT 기준 테스트 생성 |
-| tdd | red-green-refactor 테스트 우선 *(mattpocock/skills, MIT)* |
-| caveman | 토큰 ~75%↓ 초압축 커뮤니케이션 *(MIT)* |
-| write-a-skill | 재사용 `SKILL.md` 스캐폴딩 *(MIT)* |
-| zoom-out | 시스템 수준 시야로 모듈·호출 매핑 *(MIT)* |
-| model-route | 작업 → Haiku/Sonnet/Opus 3-Tier 라우팅(비용 최적화) |
-| parallel-agents | 3~4 에이전트 최소 병렬화 + git worktree 격리 |
-| evaluator-tuning | 평가자 오판 수집 → few-shot 보정 |
-| harness-audit | 설치 하네스 자기 점검(doctor + 등록·문법·정합) |
-| coordinator | 멀티에이전트 메일박스/TeamCreate 조율 가이드 |
-
-> 어떤 레벨에서 무엇이 기본 추천되는지는 위 **설치 레벨** 표 참고. 점수(`carve list`의 괄호 숫자, ≥75)는 carve의 내부 유용성 평가다.
-
+> 점수(`carve list`의 괄호 숫자, ≥75)는 carve의 내부 유용성 평가다. 레벨별 기본 추천·전체 구성요소 상세는 [INSTALL.md](./INSTALL.md) 참고.
 
 지원 프로젝트: CLI · 웹 · 모바일 · 반응형 · 데스크탑 · 배치.
 

@@ -96,7 +96,6 @@ const HOOK_ASSETS: Record<string, string> = {
 export function generate(profile: ProjectProfile, design: HarnessDesign): Artifact[] {
   const artifacts: Artifact[] = [];
   const antiSlop = design.recommended.includes('anti-ai-slop');
-  const has = (id: string): boolean => design.recommended.includes(id);
 
   const vars: Record<string, string> = {
     PROJECT_TYPE: profile.type,
@@ -115,7 +114,7 @@ export function generate(profile: ProjectProfile, design: HarnessDesign): Artifa
     ANTI_SLOP_CLAUDE: antiSlop
       ? '- 시각·문서 산출물(HTML·SVG·문서)은 **anti-ai-slop** 표준 — `check-slop`이 게이트한다.'
       : '',
-    ITERATE_SECTION: has('iterate')
+    ITERATE_SECTION: design.recommended.includes('iterate')
       ? '## 자율 수렴 루프 (iterate)\n"통과할 때까지 네가 직접 돌려서 고쳐" 류 요청은 `iterate` 스킬이 처리한다 — green까지 실행→진단→수정→재실행, **최종 결과만** 보고(최대 N회·무진전 시 중단). 위험·대형 변경은 git worktree에서 돌릴 수 있다. opt-in 텔레메트리는 루프 pass/fail만 기록한다.\n\n'
       : '',
     COMPONENT_LIST: design.recommended
