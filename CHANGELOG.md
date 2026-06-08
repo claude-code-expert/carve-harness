@@ -33,6 +33,8 @@ init-claude 공용 규칙 추가 + README 가이드 재편 + 내부 정리.
 - **라이선스 정합**: `LICENSE` 파일이 Apache-2.0인데 `package.json`·README(한/영)는 MIT여서 GitHub가 Apache-2.0로 인식하던 불일치 → `LICENSE`를 MIT로 교체(의도=MIT 확정).
 - **INSTALL 끊긴 링크**: 명령어 가이드 재편으로 사라진 README "구성요소 카탈로그" 앵커를 가리키던 `INSTALL.md` 링크를 현행 절("일상 워크플로우"·"더 깊게 — 시나리오별 명령")로 수정.
 - **벤치 측정 버전 명시**: README(한/영) 정량 평가가 v1.1.0 측정값이며 이후 버전 미재측정임을 명시(측정 축은 아키텍처 수준이라 대체로 유효).
+- **(중요) npx 환경 명령 안내 정합**: `update`/`doctor`/`diff`/`migrate`/`install` 안내가 글로벌 `carve`를 가정해, npx 사용자에겐 `carve migrate`가 "command not found"로 막히던 문제. 모든 안내를 `cmdHint`로 통일 — `npx carve-harness@latest <cmd>`(글로벌 설치 시 `carve <cmd>`). 특히 v1 매니페스트 `update` 차단 메시지가 캐시된 옛 버전(`migrate` 없음)이 아닌 `@latest`를 안내한다.
+- **글로벌 설치 문서화**: README(한/영) 빠른 시작에 `npm i -g carve-harness`(영구 `carve` 명령) 옵션 + "npx는 일회성이라 PATH에 `carve`가 안 남는다"는 주의 추가(`bin.carve` 제공).
 
 ### Notes
 - **204 테스트 / 커버리지 ~95.7%**. tsc strict clean, auditor·`bash -n`·shellcheck 통과, 런타임 의존성 불변(`@clack/prompts`).
