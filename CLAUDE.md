@@ -87,7 +87,6 @@ Before sending, self-verify:
 
 코드를 짤 때 "지금 만지는 게 A인가 B의 템플릿인가"를 항상 분명히 한다.
 
-
 > `vendor/`(openharness·subagents)는 분석·원본 소스였고 **삭제 대상**이다. 런타임 의존을 없애기 위해
 > 필요한 자산(Squad·anti-slop)은 `assets/`로 녹여넣었다(100% melt-in). carve는 vendor 없이 동작한다.
 
@@ -123,6 +122,7 @@ Each project defines these in its own `.claude/rules/` and references them here:
 @.claude/rules/code-style.md
 @.claude/rules/safety.md
 @.claude/rules/gotchas.md
+@.claude/rules/anti-ai-slop.md
 
 ## Project-References
 

@@ -8,6 +8,7 @@
 
 ## Update
 > **Changelog** — full history in [CHANGELOG.md](CHANGELOG.md)
+> - `2026-06-08` **v1.3.1** — `anti-ai-slop` shared rule in `init-claude` · progressive command guide in README · release script (`scripts/release.sh`)
 > - `2026-06-06` **v1.3.0** — Autonomous fix loop (`iterate`) · plan separation/verification · context diet + full audit patch (critical: `update` deadlock fixed)
 > - `2026-06-05` **v1.2.0** — Lifecycle (`diff`/`update`/`migrate`) · smarter analysis (monorepo/container weighting) · opt-in local telemetry (`carve report`)
 > - `2026-06-02` **v1.1.0** — Project-tailored harness install CLI (MVP): analyze → design → generate → audit → idempotent install
@@ -18,7 +19,7 @@
 
 > A CLI that analyzes a project and interactively selects and installs a harness (skills, hooks, subagents) tailored to that project.
 
-**v1.3.0** · TypeScript (ESM, no build step) · Node >=22.18 · 204 tests / ~95.7% coverage
+**v1.3.1** · TypeScript (ESM, no build step) · Node >=22.18 · 204 tests / ~95.7% coverage
 
 `carve` reads the codebase to detect the project type and tooling, then recommends suitable components.
 It installs only what the user selects into `.claude/`. carve = carving general-purpose assets down to fit a project.
@@ -55,6 +56,8 @@ npx carve-harness doctor       # 3. Inspect — config + hook syntax
 ```
 
 That's the whole install. After that, just **open Claude Code** in the project: hooks and MCP (codesight·LSP) turn on automatically, and skills/Squad are called as shown below. (`npx carve-harness` is the install standard — run it in the target folder; `install.sh` is a convenience wrapper for repo-clone/`curl` users.)
+
+> **Global install (optional)**: if `npx` every time is tedious, `npm i -g carve-harness` makes `carve` a permanent command (`carve install` · `carve update` · `carve doctor`). `npx` is one-shot, so it leaves no `carve` on your PATH — run subcommands like `update`/`uninstall` either after a global install or via `npx carve-harness <cmd>`.
 
 ## Daily workflow — natural language in a session
 
@@ -139,7 +142,7 @@ Supported projects: CLI · web · mobile · responsive · desktop · batch.
 After installation, running `carve init-claude` carves out a working-guideline baseline and per-language stack rules.
 
 - `.claude/CLAUDE.md` — stack-agnostic baseline: think before coding, simplicity, surgical changes, TDD, commit discipline, response control, hallucination guard, safety guardrails.
-- `.claude/rules/*.md` — 6 best-practice rules for the detected language: `techstack`, `project-structure`, `commands`, `code-style`, `safety`, `gotchas`.
+- `.claude/rules/*.md` — 6 best-practice rules for the detected language (`techstack`, `project-structure`, `commands`, `code-style`, `safety`, `gotchas`) + a stack-agnostic `anti-ai-slop` rule (visual/document slop prevention).
 - The root `CLAUDE.md` is automatically wired to `@import` these (idempotent). They are loaded together each session.
 
 The stack is auto-selected by the detected language (TypeScript/JavaScript, Python, Go, Rust, Java, Dart; otherwise `_default`). Package manager and test/lint commands are substituted with values detected from the project. Within a session, the harness-architect skill guides the same flow as the "CLAUDE.md setup" step.
@@ -202,7 +205,7 @@ For the full order (develop development → main promotion → tag publishing), 
 ## Quantitative evaluation (internal measurement)
 
 Internally measured against 6 axes ([carve-harness-benchmark-criteria.md](./docs/guide/carve-harness-benchmark-criteria.md)).
-Deterministic items are reproduced via `node bench/run.mjs`. Measured 2026-05-31 · v1.1.0.
+Deterministic items are reproduced via `node bench/run.mjs`. Measured 2026-05-31 · **at v1.1.0** (not yet re-measured for later versions; the measured axes are architecture-level, so largely still valid — figure re-validation is planned).
 
 **Evaluation axes**
 

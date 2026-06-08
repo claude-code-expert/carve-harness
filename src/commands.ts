@@ -57,6 +57,15 @@ function isUnmigrated(m: Manifest): boolean {
   return m.files.some((f) => f.hash === '' && f.path !== ROOT_CLAUDE);
 }
 
+/**
+ * 사용자에게 보여줄 carve 서브커맨드 실행법.
+ * carve는 보통 npx 일회성으로 실행돼 PATH에 `carve`가 없다 → npx 형태를 우선 안내한다.
+ * `@latest`를 붙여 캐시된 옛 버전(예: 1.1.x엔 migrate/update 없음)으로 해석되는 것을 막는다.
+ */
+function cmdHint(sub: string): string {
+  return `\`npx carve-harness@latest ${sub}\`(글로벌 설치 시 \`carve ${sub}\`)`;
+}
+
 /** 생성물 감사 — ERROR가 있으면 출력하고 true(차단)를 반환한다. */
 function auditGate(findings: AuditFinding[], io: IO, verb: string): boolean {
   const errs = errorsOf(findings);
@@ -125,7 +134,7 @@ export async function interactiveInstall(root: string, io: IO, level?: HarnessLe
 export function cmdDoctor(root: string, io: IO): number {
   const m = readManifest(root);
   if (!m) {
-    io.log('carve 설치 없음. `carve install`로 설치하세요.');
+    io.log(`carve 설치 없음 — ${cmdHint('install')}로 설치하세요.`);
     return 0;
   }
   io.log(`carve 설치됨 (v${m.version}): 파일 ${m.files.length} · 훅 ${m.hooks.length} · 백업 ${m.backups.length}`);
@@ -133,7 +142,7 @@ export function cmdDoctor(root: string, io: IO): number {
   for (const { path } of m.files) io.log(`  · ${path}`);
   // v1/미마이그레이션(해시 빈 문자열) 매니페스트 안내 (CLAUDE.md append-merge 센티넬은 제외)
   if (isUnmigrated(m)) {
-    io.log('미마이그레이션 매니페스트 — `carve migrate` 권장');
+    io.log(`미마이그레이션 매니페스트 — ${cmdHint('migrate')} 권장`);
   }
   // 설치된 셸 훅 문법 점검 (harness-audit) — v2 파일 객체에서 .path 사용
   const hookArts = m.files
@@ -202,7 +211,7 @@ export function classify(root: string, m: Manifest | null, artifacts: Artifact[]
 export function cmdDiff(root: string, io: IO): number {
   const m = readManifest(root);
   if (!m) {
-    io.log('carve 설치 없음. `carve install`로 설치하세요.');
+    io.log(`carve 설치 없음 — ${cmdHint('install')}로 설치하세요.`);
     return 0;
   }
   const profile = analyze(root);
@@ -223,7 +232,7 @@ export function cmdDiff(root: string, io: IO): number {
     for (const e of group) io.log(`  · ${e.path}`);
   }
   if (entries.some((e) => e.unmigrated)) {
-    io.log('미마이그레이션 항목 있음 — `carve migrate` 권장');
+    io.log(`미마이그레이션 항목 있음 — ${cmdHint('migrate')} 권장`);
   }
   io.log(`총 ${entries.length}개 자산 비교 완료.`);
   return 0;
@@ -255,13 +264,13 @@ function writeUpdatedArtifact(root: string, a: Artifact): ManifestFile {
 export function cmdUpdate(root: string, io: IO, opts: { yes?: boolean; force?: boolean } = {}): number {
   const m = readManifest(root);
   if (!m) {
-    io.log('carve 설치 없음 — `carve install`을 먼저 실행하세요.');
+    io.log(`carve 설치 없음 — ${cmdHint('install')}을 먼저 실행하세요.`);
     return 0;
   }
   // 미마이그레이션 v1(해시 빈 문자열) — 보수적으로 중단(모든 파일을 user-modified로 오분류해 강제 덮어쓸 위험 회피).
   // CLAUDE.md append-merge 센티넬은 정상 v2의 합법 항목이므로 제외(init-claude 후 update 차단 방지).
   if (isUnmigrated(m)) {
-    io.error('manifest v1(미마이그레이션) — `carve migrate`를 먼저 실행하세요.');
+    io.error(`manifest v1(미마이그레이션) — 1회 마이그레이션이 필요합니다. 먼저 ${cmdHint('migrate')}를 실행하세요.`);
     return 1;
   }
 
@@ -309,7 +318,7 @@ export function cmdUpdate(root: string, io: IO, opts: { yes?: boolean; force?: b
 
   // new-recommended: 절대 자동 설치하지 않고 제안만.
   for (const e of newRecommended) {
-    io.log(`신규 추천: ${e.path} — \`carve install\`로 추가할 수 있습니다.`);
+    io.log(`신규 추천: ${e.path} — ${cmdHint('install')}로 추가할 수 있습니다.`);
   }
   // user-modified: 기본 보존, 건너뜀 안내(+ --force 힌트). force면 위에서 덮어썼으므로 안내 문구를 달리한다.
   for (const e of userModified) {
@@ -329,7 +338,7 @@ export function cmdUpdate(root: string, io: IO, opts: { yes?: boolean; force?: b
 export function cmdMigrate(root: string, io: IO): number {
   const r = migrateManifest(root);
   if (r.from === 0) {
-    io.log('carve 설치 없음 — `carve install`을 먼저 실행하세요.');
+    io.log(`carve 설치 없음 — ${cmdHint('install')}을 먼저 실행하세요.`);
     return 0;
   }
   if (!r.migrated) {
