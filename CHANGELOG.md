@@ -15,6 +15,30 @@
 
 ---
 
+## [1.3.1] — 2026-06-08
+
+init-claude 공용 규칙 추가 + README 가이드 재편 + 내부 정리.
+
+### Added
+- **`init-claude` anti-ai-slop 공용 규칙**: `carve init-claude`가 스택 무관 `.claude/rules/anti-ai-slop.md`(시각·문서 산출물 슬롭 방지)를 함께 생성하고 루트 `CLAUDE.md` `@import`에 연결한다. 스택별 6규칙과 달리 **단일 소스**(`assets/claude-base/rules/anti-ai-slop.md`)에서 모든 언어 공통 설치(`SHARED_RULES`).
+- **릴리스 스크립트 `scripts/release.sh`**: main에서 `package.json` 버전으로 `vX.Y.Z` 태그를 만들어 push(게시 트리거). 가드 — main 브랜치·클린 트리·원격 동기·태그/npm 중복·로컬 게이트(`check`+`test`), `--dry-run`·`--yes`.
+
+### Changed
+- **README 명령어 가이드 단계형 재편(한/영)**: 빠른 시작(설치 3줄) → 일상 워크플로우 → 시나리오별 고급 → 설치 레벨. 누락됐던 `iterate` 스킬 추가, Squad 호출법(`/squad <멤버>`·`/squad-<멤버>`, 에이전트명 `squad-<멤버>`) 명시.
+
+### Internal
+- `manifest.level`을 `string`→`HarnessLevel`로 끝까지 타입화하고 `normalizeManifest`에서 union 검증(불안전 `as HarnessLevel` 캐스트 2곳 제거). `generator`의 1회용 `has()` 클로저 인라인.
+
+### Fixed
+- **라이선스 정합**: `LICENSE` 파일이 Apache-2.0인데 `package.json`·README(한/영)는 MIT여서 GitHub가 Apache-2.0로 인식하던 불일치 → `LICENSE`를 MIT로 교체(의도=MIT 확정).
+- **INSTALL 끊긴 링크**: 명령어 가이드 재편으로 사라진 README "구성요소 카탈로그" 앵커를 가리키던 `INSTALL.md` 링크를 현행 절("일상 워크플로우"·"더 깊게 — 시나리오별 명령")로 수정.
+- **벤치 측정 버전 명시**: README(한/영) 정량 평가가 v1.1.0 측정값이며 이후 버전 미재측정임을 명시(측정 축은 아키텍처 수준이라 대체로 유효).
+
+### Notes
+- **204 테스트 / 커버리지 ~95.7%**. tsc strict clean, auditor·`bash -n`·shellcheck 통과, 런타임 의존성 불변(`@clack/prompts`).
+
+---
+
 ## [1.3.0] — 2026-06-06
 
 운용 3대 조건(샌드박스 피드백 루프·계획 분리/검증·컨텍스트 다이어트) 보강 + 전수 감사 기반 결함 패치.
