@@ -133,7 +133,7 @@ carve init-claude
 
 Outputs:
 - **`.claude/CLAUDE.md`** — stack-agnostic baseline: think before coding · simplicity · surgical changes · TDD · commit discipline · response control · hallucination guards · safety guardrails.
-- **`.claude/rules/*.md`** — 6 best-practice files for the detected language: `techstack` · `project-structure` · `commands` · `code-style` · `safety` · `gotchas`.
+- **`.claude/rules/*.md`** — 6 best-practice files for the detected language (`techstack` · `project-structure` · `commands` · `code-style` · `safety` · `gotchas`) + a stack-agnostic `anti-ai-slop` rule (visual/document slop prevention).
 - Automatically links the root `CLAUDE.md` to **`@import`** the above files (idempotent). They are loaded together each session.
 
 Automatic stack selection:
@@ -167,7 +167,7 @@ Package manager and test/lint/format commands are substituted with values detect
 └── .claude/
     ├── settings.json          # 훅·MCP 병합(carve 마커)
     ├── CLAUDE.md              # (init-claude) 베이스라인
-    ├── rules/*.md             # (init-claude) 스택 규칙 6종
+    ├── rules/*.md             # (init-claude) 스택 규칙 6종 + 공용 anti-ai-slop
     ├── skills/                # 선택 스킬 + 커맨드 shim
     ├── hooks/                 # 선택 훅 스크립트
     ├── agents/                # Squad 서브에이전트

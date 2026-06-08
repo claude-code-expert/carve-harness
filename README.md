@@ -9,6 +9,7 @@
 
 ## Update
 > **변경 이력 (Changelog)** — 전체 [CHANGELOG.md](CHANGELOG.md)
+> - `2026-06-08` **v1.3.1** — `init-claude`에 `anti-ai-slop` 공용 규칙 추가 · README 명령어 가이드 단계형 재편 · 릴리스 스크립트(`scripts/release.sh`)
 > - `2026-06-06` **v1.3.0** — 자율 수렴 루프(`iterate`)·계획 분리·검증·컨텍스트 다이어트 보강 + 전수 감사 패치(치명: `update` 데드락 해소)
 > - `2026-06-05` **v1.2.0** — 라이프사이클(`diff`/`update`/`migrate`) · 분석·추천 지능화(모노레포·컨테이너 가중) · opt-in 로컬 텔레메트리(`carve report`)
 > - `2026-06-02` **v1.1.0** — 프로젝트 맞춤 하네스 설치 CLI(MVP): 분석→설계→생성→audit→멱등 설치
@@ -19,7 +20,7 @@
 
 > 프로젝트를 분석해 그 프로젝트에 맞는 하네스(스킬·훅·서브에이전트)를 대화형으로 선택해 설치하는 CLI.
 
-**v1.3.0** · TypeScript(ESM, 빌드 단계 없음) · Node >=22.18 · 테스트 204 / 커버리지 약 95.7%
+**v1.3.1** · TypeScript(ESM, 빌드 단계 없음) · Node >=22.18 · 테스트 204 / 커버리지 약 95.7%
 
 `carve`는 코드베이스를 읽어 프로젝트 타입과 도구를 탐지하고, 적합한 구성요소를 추천한다.
 사용자가 고른 것만 `.claude/`에 설치한다. carve = 범용 자산을 프로젝트에 맞게 깎아냄.
@@ -140,7 +141,7 @@ carve install --lsp-servers                  # LSP 언어서버 자동설치
 설치 후 `carve init-claude`를 실행하면 작업 지침 베이스라인과 언어 스택별 규칙을 깎아 생성한다.
 
 - `.claude/CLAUDE.md` — 스택 무관 베이스라인: 짜기 전 사고·단순함·외과적 변경·TDD·커밋 규율·응답 제어·할루시네이션 가드·안전 가드레일.
-- `.claude/rules/*.md` — 탐지 언어의 베스트 프랙티스 6종: `techstack`·`project-structure`·`commands`·`code-style`·`safety`·`gotchas`.
+- `.claude/rules/*.md` — 탐지 언어 베스트 프랙티스 6종(`techstack`·`project-structure`·`commands`·`code-style`·`safety`·`gotchas`) + 스택 무관 `anti-ai-slop`(시각·문서 산출물 슬롭 방지).
 - 루트 `CLAUDE.md`가 이들을 `@import`하도록 자동 연결(멱등). 세션마다 함께 로드된다.
 
 스택은 탐지 언어로 자동 선택된다(TypeScript/JavaScript·Python·Go·Rust·Java·Dart, 그 외 `_default`). 패키지매니저·테스트/린트 명령은 프로젝트에서 탐지한 값으로 치환된다. 세션 안에서는 harness-architect 스킬이 "CLAUDE.md 셋업" 단계로 같은 흐름을 안내한다.
@@ -203,7 +204,7 @@ npm run build     # 배포용 컴파일 (tsconfig.build.json, in-place .js)
 ## 정량 평가 (내부 측정)
 
 6축 기준([carve-harness-benchmark-criteria.md](./docs/guide/carve-harness-benchmark-criteria.md))으로 내부 측정.
-결정론적 항목은 `node bench/run.mjs`로 재현된다. 측정일 2026-05-31 · v1.1.0.
+결정론적 항목은 `node bench/run.mjs`로 재현된다. 측정일 2026-05-31 · **v1.1.0 기준**(이후 버전 재측정 전 — 측정 축은 아키텍처 수준이라 대체로 유효, 수치 재검증은 예정).
 
 **평가 축**
 

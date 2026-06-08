@@ -88,7 +88,7 @@ node bin/carve.ts install <대상-프로젝트-경로>
 
 ## 6. 단계별 구성요소 (무엇을 고르나)
 
-대화형 설치에서 제시되는 그룹과 선택 가이드. **각 구성요소의 역할·사용법(트리거)은 → [README.md의 구성요소 카탈로그](./README.md#무엇을-설치하나--구성요소-카탈로그-역할사용법).**
+대화형 설치에서 제시되는 그룹과 선택 가이드. **각 구성요소의 역할·호출법(트리거)은 → [README.md](./README.md)의 "일상 워크플로우" · "더 깊게 — 시나리오별 명령" 절 참고.**
 
 ### 토큰 효율 (기본 추천)
 - **codesight** — 프로젝트 구조 맵 MCP. grep 재탐색 비용 제거(대형 코드베이스 실측 평균 약 11배).
@@ -137,7 +137,7 @@ carve init-claude
 
 생성물:
 - **`.claude/CLAUDE.md`** — 스택 무관 베이스라인: 짜기 전 사고 · 단순함 · 외과적 변경 · TDD · 커밋 규율 · 응답 제어 · 할루시네이션 가드 · 안전 가드레일.
-- **`.claude/rules/*.md`** — 탐지 언어의 베스트 프랙티스 6종: `techstack` · `project-structure` · `commands` · `code-style` · `safety` · `gotchas`.
+- **`.claude/rules/*.md`** — 탐지 언어 베스트 프랙티스 6종(`techstack` · `project-structure` · `commands` · `code-style` · `safety` · `gotchas`) + 스택 무관 `anti-ai-slop`(시각·문서 산출물 슬롭 방지).
 - 루트 `CLAUDE.md`가 위 파일들을 **`@import`** 하도록 자동 연결(멱등). 세션마다 함께 로드된다.
 
 스택 자동 선택:
@@ -171,7 +171,7 @@ carve init-claude
 └── .claude/
     ├── settings.json          # 훅·MCP 병합(carve 마커)
     ├── CLAUDE.md              # (init-claude) 베이스라인
-    ├── rules/*.md             # (init-claude) 스택 규칙 6종
+    ├── rules/*.md             # (init-claude) 스택 규칙 6종 + 공용 anti-ai-slop
     ├── skills/                # 선택 스킬 + 커맨드 shim
     ├── hooks/                 # 선택 훅 스크립트
     ├── agents/                # Squad 서브에이전트
