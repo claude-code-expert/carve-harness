@@ -7,8 +7,11 @@ import { render, readAsset, type Artifact } from './generator.ts';
 // assets/claude-base/ 기준 자산을 generator의 readAsset(assets/ 기준)으로 읽는다.
 const read = (rel: string): string => readAsset(`claude-base/${rel}`);
 
-// .claude/rules/ 를 채우는 6개 규칙 파일
+// .claude/rules/ 를 채우는 스택별(언어 의존) 규칙 6개
 const RULE_FILES = ['techstack', 'project-structure', 'commands', 'code-style', 'safety', 'gotchas'] as const;
+
+// 스택 무관 공용 규칙 — 모든 언어 동일(단일 소스 assets/claude-base/rules/<name>.md). 시각·문서 산출물 anti-slop.
+const SHARED_RULES = ['anti-ai-slop'] as const;
 
 // 다중 언어일 때 대표 스택 우선순위 (js는 typescript 번들로 매핑)
 const STACK_PRIORITY = ['typescript', 'python', 'go', 'rust', 'java', 'dart'] as const;
@@ -53,6 +56,10 @@ export function generateClaudeBase(p: ProjectProfile): Artifact[] {
   for (const f of RULE_FILES) {
     arts.push({ path: `.claude/rules/${f}.md`, content: render(read(`rules/${stack}/${f}.md`), vars), executable: false });
   }
+  // 스택 무관 공용 규칙 — stack 디렉토리 없이 단일 소스에서 읽는다(변수 없음).
+  for (const f of SHARED_RULES) {
+    arts.push({ path: `.claude/rules/${f}.md`, content: read(`rules/${f}.md`), executable: false });
+  }
   return arts;
 }
 
@@ -63,5 +70,5 @@ ${ROOT_IMPORT_MARKER}
 ## 작업 지침 (베이스라인 + 스택 규칙)
 > carve가 연결. 베이스라인·스택 규칙은 \`.claude/\` 아래 파일을 수정해 조정한다.
 @.claude/CLAUDE.md
-${RULE_FILES.map((f) => `@.claude/rules/${f}.md`).join('\n')}
+${[...RULE_FILES, ...SHARED_RULES].map((f) => `@.claude/rules/${f}.md`).join('\n')}
 `;

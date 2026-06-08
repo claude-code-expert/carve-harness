@@ -34,13 +34,14 @@ test('selectStack: 언어별 번들 선택 + js→typescript + 우선순위 + �
   assert.equal(selectStack(profile({ languages: [] })), '_default');
 });
 
-test('generateClaudeBase: 베이스라인 + 6 rules, 변수 치환', () => {
+test('generateClaudeBase: 베이스라인 + 6 stack rules + 공용 anti-ai-slop, 변수 치환', () => {
   const arts = generateClaudeBase(profile({ type: 'cli', languages: ['typescript'], packageManager: 'pnpm' }));
   const paths = arts.map((a) => a.path);
   assert.ok(paths.includes('.claude/CLAUDE.md'));
   for (const f of ['techstack', 'project-structure', 'commands', 'code-style', 'safety', 'gotchas']) {
     assert.ok(paths.includes(`.claude/rules/${f}.md`), `${f} 누락`);
   }
+  assert.ok(paths.includes('.claude/rules/anti-ai-slop.md'), '공용 anti-ai-slop 규칙 누락');
   const commands = arts.find((a) => a.path === '.claude/rules/commands.md')!;
   assert.match(commands.content, /pnpm/); // {{PKG_MANAGER}} 치환됨
   assert.doesNotMatch(commands.content, /\{\{PKG_MANAGER\}\}/); // 미치환 잔여 없음
@@ -55,11 +56,13 @@ test('init-claude: .claude/CLAUDE.md + rules 생성, 루트 CLAUDE.md @import �
     assert.equal(run(['init-claude', root], io), 0);
     assert.ok(existsSync(join(root, '.claude/CLAUDE.md')));
     assert.ok(existsSync(join(root, '.claude/rules/safety.md')));
+    assert.ok(existsSync(join(root, '.claude/rules/anti-ai-slop.md')));
     assert.match(out.log, /stack=typescript/);
     // 루트 CLAUDE.md가 생성되고 @import 블록을 포함
     const rootClaude = readFileSync(join(root, 'CLAUDE.md'), 'utf8');
     assert.match(rootClaude, /@\.claude\/CLAUDE\.md/);
     assert.match(rootClaude, /@\.claude\/rules\/techstack\.md/);
+    assert.match(rootClaude, /@\.claude\/rules\/anti-ai-slop\.md/);
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
@@ -76,6 +79,8 @@ test('init-claude: 멱등 — 두 번 실행해도 import 블록은 1회', () =>
     assert.equal(markers, 1);
     // python 프로젝트 → python 번들 (commands에 pytest)
     assert.match(readFileSync(join(root, '.claude/rules/commands.md'), 'utf8'), /pytest/);
+    // anti-ai-slop은 스택 무관 — python에서도 동일하게 설치된다
+    assert.ok(existsSync(join(root, '.claude/rules/anti-ai-slop.md')));
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
