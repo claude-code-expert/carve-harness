@@ -20,12 +20,13 @@ The install targets are the **`.claude/` of the current directory** and the guid
 
 ---
 
-## 2. Quick Start — full install flow (3 steps)
+## 2. Quick Start — full install flow (global install recommended)
 
 ```bash
-npx carve-harness              # 1. 대화형 선택 설치 (탐지 → 추천 → 선택)
-npx carve-harness init-claude  # 2. CLAUDE.md 베이스라인 + 언어 스택 규칙 생성
-npx carve-harness doctor       # 3. 설치 점검 (구성·훅 문법)
+npm i -g carve-harness         # install the carve CLI (recommended for full features)
+carve install                  # 1. interactive selective install (detect → recommend → select)
+carve init-claude              # 2. CLAUDE.md baseline + language stack rules
+carve doctor                   # 3. inspect install (config, hook syntax)
 ```
 
 Inside a session (Claude Code), a single phrase — **"set up a harness that fits this project"** — lets the `harness-architect` skill
@@ -35,11 +36,12 @@ walk you through the same steps 1–3.
 
 ## 3. Install methods
 
-### 3.1 npx (recommended)
+### 3.1 Global install (recommended — full features)
 ```bash
-npx carve-harness            # = carve install (대화형)
+npm i -g carve-harness       # then carve install · update · diff · doctor as permanent commands
 ```
-Runs the latest version without a separate global install.
+`carve` stays on PATH, so recurring CLI (`update`/`diff`/`doctor`) is convenient. The `carve <cmd>` examples in these docs assume this install.
+For a one-off / CI run without a global install, use `npx carve-harness@latest <cmd>` (e.g. `npx carve-harness@latest install`).
 
 ### 3.2 bash
 ```bash

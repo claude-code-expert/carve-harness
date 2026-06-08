@@ -20,12 +20,13 @@
 
 ---
 
-## 2. 빠른 시작 — 풀 설치 흐름 (3단계)
+## 2. 빠른 시작 — 풀 설치 흐름 (글로벌 설치 권장)
 
 ```bash
-npx carve-harness              # 1. 대화형 선택 설치 (탐지 → 추천 → 선택)
-npx carve-harness init-claude  # 2. CLAUDE.md 베이스라인 + 언어 스택 규칙 생성
-npx carve-harness doctor       # 3. 설치 점검 (구성·훅 문법)
+npm i -g carve-harness         # carve CLI 설치 (전체 기능 권장)
+carve install                  # 1. 대화형 선택 설치 (탐지 → 추천 → 선택)
+carve init-claude              # 2. CLAUDE.md 베이스라인 + 언어 스택 규칙 생성
+carve doctor                   # 3. 설치 점검 (구성·훅 문법)
 ```
 
 세션(Claude Code) 안에서는 **"이 프로젝트에 맞는 하네스 구성해줘"** 한마디로 `harness-architect` 스킬이
@@ -35,11 +36,12 @@ npx carve-harness doctor       # 3. 설치 점검 (구성·훅 문법)
 
 ## 3. 설치 방식
 
-### 3.1 npx (권장)
+### 3.1 글로벌 설치 (권장 — 전체 기능)
 ```bash
-npx carve-harness            # = carve install (대화형)
+npm i -g carve-harness       # 이후 carve install · update · diff · doctor 를 영구 명령으로
 ```
-별도 전역 설치 없이 최신 버전을 실행한다.
+`carve`가 PATH에 남아 반복 CLI(`update`·`diff`·`doctor`)까지 편하게 쓴다. 이 문서의 `carve <명령>`은 이 설치 기준이다.
+글로벌 없이 한 번만/CI에서는 `npx carve-harness@latest <명령>`(예: `npx carve-harness@latest install`)으로 일회성 실행한다.
 
 ### 3.2 bash 래퍼 (리포 clone 또는 curl 시에만)
 `install.sh`는 **npm 패키지에 포함되지 않는다.** 이 리포를 clone했거나 `curl`로 받았을 때만 존재하는 편의 래퍼이며,

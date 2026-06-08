@@ -8,6 +8,7 @@
 
 ## Update
 > **Changelog** — full history in [CHANGELOG.md](CHANGELOG.md)
+> - `2026-06-08` **v1.3.2** — install guide switched to global-install-first (`npm i -g`) across README · INSTALL
 > - `2026-06-08` **v1.3.1** — `anti-ai-slop` shared rule in `init-claude` · progressive command guide in README · release script (`scripts/release.sh`)
 > - `2026-06-06` **v1.3.0** — Autonomous fix loop (`iterate`) · plan separation/verification · context diet + full audit patch (critical: `update` deadlock fixed)
 > - `2026-06-05` **v1.2.0** — Lifecycle (`diff`/`update`/`migrate`) · smarter analysis (monorepo/container weighting) · opt-in local telemetry (`carve report`)
@@ -19,7 +20,7 @@
 
 > A CLI that analyzes a project and interactively selects and installs a harness (skills, hooks, subagents) tailored to that project.
 
-**v1.3.1** · TypeScript (ESM, no build step) · Node >=22.18 · 204 tests / ~95.7% coverage
+**v1.3.2** · TypeScript (ESM, no build step) · Node >=22.18 · 204 tests / ~95.7% coverage
 
 `carve` reads the codebase to detect the project type and tooling, then recommends suitable components.
 It installs only what the user selects into `.claude/`. carve = carving general-purpose assets down to fit a project.
@@ -45,19 +46,22 @@ carve install → stack detection → (component selection) → generate assets 
 - Self-verification: before installing, the auditor scans generated assets for secrets, excessive permissions, hook injection, and shell syntax.
 - Zero build: runs `.ts` directly. Distributed via both npx and bash.
 
-## Quick start — these 3 lines are all it takes
+## Quick start — global install recommended
 
 > Full manual: [INSTALL.md](./INSTALL.md) (Korean) · [INSTALL.en.md](./INSTALL.en.md) (English) — requirements, modes, troubleshooting.
 
+Install `carve` as a permanent command and every `carve …` in these docs (especially the recurring `update`/`diff`/`doctor`) works as written. **For the full feature set, a global install is recommended.**
+
 ```bash
-npx carve-harness              # 1. Install — detect → recommend → select (interactive, no bulk install)
-npx carve-harness init-claude  # 2. First setup — CLAUDE.md baseline + language stack rules
-npx carve-harness doctor       # 3. Inspect — config + hook syntax
+npm i -g carve-harness         # install the carve CLI (recommended for full features)
+carve install                  # 1. interactive selective install (detect → recommend → select)
+carve init-claude              # 2. CLAUDE.md baseline + language stack rules
+carve doctor                   # 3. inspect install (config, hook syntax)
 ```
 
-That's the whole install. After that, just **open Claude Code** in the project: hooks and MCP (codesight·LSP) turn on automatically, and skills/Squad are called as shown below. (`npx carve-harness` is the install standard — run it in the target folder; `install.sh` is a convenience wrapper for repo-clone/`curl` users.)
+After install, just **open Claude Code** in the project: hooks and MCP (codesight·LSP) turn on automatically, and skills/Squad are invoked as shown below.
 
-> **Global install (optional)**: if `npx` every time is tedious, `npm i -g carve-harness` makes `carve` a permanent command (`carve install` · `carve update` · `carve doctor`). `npx` is one-shot, so it leaves no `carve` on your PATH — run subcommands like `update`/`uninstall` either after a global install or via `npx carve-harness <cmd>`.
+> **Just trying it once (no global)**: `npx carve-harness@latest install` (prefix every run with `npx carve-harness@latest <cmd>`). But `npx` is one-shot — it leaves no `carve` on PATH, which is awkward for recurring commands like `update`/`uninstall`, so **`npm i -g` is recommended for full use**. (repo-clone/`curl` users can use the `install.sh` wrapper — see [INSTALL.md](./INSTALL.md).)
 
 ## Daily workflow — natural language in a session
 

@@ -9,6 +9,7 @@
 
 ## Update
 > **변경 이력 (Changelog)** — 전체 [CHANGELOG.md](CHANGELOG.md)
+> - `2026-06-08` **v1.3.2** — 설치 가이드를 글로벌 설치(`npm i -g`) 기준으로 정리 (README·INSTALL 한/영)
 > - `2026-06-08` **v1.3.1** — `init-claude`에 `anti-ai-slop` 공용 규칙 추가 · README 명령어 가이드 단계형 재편 · 릴리스 스크립트(`scripts/release.sh`)
 > - `2026-06-06` **v1.3.0** — 자율 수렴 루프(`iterate`)·계획 분리·검증·컨텍스트 다이어트 보강 + 전수 감사 패치(치명: `update` 데드락 해소)
 > - `2026-06-05` **v1.2.0** — 라이프사이클(`diff`/`update`/`migrate`) · 분석·추천 지능화(모노레포·컨테이너 가중) · opt-in 로컬 텔레메트리(`carve report`)
@@ -20,7 +21,7 @@
 
 > 프로젝트를 분석해 그 프로젝트에 맞는 하네스(스킬·훅·서브에이전트)를 대화형으로 선택해 설치하는 CLI.
 
-**v1.3.1** · TypeScript(ESM, 빌드 단계 없음) · Node >=22.18 · 테스트 204 / 커버리지 약 95.7%
+**v1.3.2** · TypeScript(ESM, 빌드 단계 없음) · Node >=22.18 · 테스트 204 / 커버리지 약 95.7%
 
 `carve`는 코드베이스를 읽어 프로젝트 타입과 도구를 탐지하고, 적합한 구성요소를 추천한다.
 사용자가 고른 것만 `.claude/`에 설치한다. carve = 범용 자산을 프로젝트에 맞게 깎아냄.
@@ -46,19 +47,22 @@ carve install → 스택 탐지 → (구성요소 선택) → .claude/에 자산
 - 자기검증: 설치 전 auditor가 생성물의 secret·과도 권한·훅 주입·셸 문법을 스캔한다.
 - 빌드 0: `.ts` 직접 실행. npx + bash 양쪽 배포.
 
-## 빠른 시작 — 이 3줄이면 끝
+## 빠른 시작 — 글로벌 설치 권장
 
 > 전체 매뉴얼: [INSTALL.md](./INSTALL.md) (한글) · [INSTALL.en.md](./INSTALL.en.md) (English) — 요구사항·모드·문제 해결까지.
 
+`carve`를 영구 명령으로 설치하면 이 문서의 모든 `carve …`(특히 반복 쓰는 `update`·`diff`·`doctor`)가 그대로 동작한다. **전체 기능을 쓰려면 글로벌 설치를 권장한다.**
+
 ```bash
-npx carve-harness              # 1. 설치 — 탐지 → 추천 → 선택 (대화형, 일괄 설치 없음)
-npx carve-harness init-claude  # 2. 첫 셋업 — CLAUDE.md 베이스라인 + 언어 스택 규칙 생성
-npx carve-harness doctor       # 3. 점검 — 구성·훅 문법 확인
+npm i -g carve-harness         # carve CLI 설치 (전체 기능 권장)
+carve install                  # 1. 대화형 선택 설치 (탐지 → 추천 → 선택, 일괄 없음)
+carve init-claude              # 2. CLAUDE.md 베이스라인 + 언어 스택 규칙 생성
+carve doctor                   # 3. 설치 점검 (구성·훅 문법)
 ```
 
-설치는 여기까지가 전부다. 이후엔 그 프로젝트에서 **Claude Code를 열기만 하면** 훅·MCP(codesight·LSP)는 자동으로 켜지고, 스킬·Squad는 아래처럼 부른다. (`npx carve-harness`가 설치 표준 — 설치할 폴더에서 실행. `install.sh`는 repo clone·`curl` 사용자용 편의 래퍼다.)
+설치 후엔 그 프로젝트에서 **Claude Code를 열기만 하면** 훅·MCP(codesight·LSP)는 자동으로 켜지고, 스킬·Squad는 아래처럼 부른다.
 
-> **글로벌 설치(선택)**: 매번 `npx`가 번거로우면 `npm i -g carve-harness` 후 `carve install` · `carve update` · `carve doctor`처럼 영구 명령으로 쓸 수 있다. `npx`는 일회성 실행이라 `carve` 명령이 PATH에 남지 않는다 — 글로벌 설치했거나 `npx carve-harness <명령>`으로 실행해야 `update`·`uninstall` 등이 동작한다.
+> **글로벌 없이 한 번만 써보려면**: `npx carve-harness@latest install` (매 실행 `npx carve-harness@latest <명령>`). 단 `npx`는 일회성이라 `carve`가 PATH에 안 남아 `update`·`uninstall` 같은 반복 CLI엔 불편하다 — **전체 기능 사용엔 `npm i -g`가 권장**이다. (repo clone·`curl` 사용자는 `install.sh` 래퍼 — [INSTALL.md](./INSTALL.md) 참고.)
 
 ## 일상 워크플로우 — 세션에서 자연어로
 
