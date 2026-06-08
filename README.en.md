@@ -57,6 +57,8 @@ npx carve-harness doctor       # 3. Inspect — config + hook syntax
 
 That's the whole install. After that, just **open Claude Code** in the project: hooks and MCP (codesight·LSP) turn on automatically, and skills/Squad are called as shown below. (`npx carve-harness` is the install standard — run it in the target folder; `install.sh` is a convenience wrapper for repo-clone/`curl` users.)
 
+> **Global install (optional)**: if `npx` every time is tedious, `npm i -g carve-harness` makes `carve` a permanent command (`carve install` · `carve update` · `carve doctor`). `npx` is one-shot, so it leaves no `carve` on your PATH — run subcommands like `update`/`uninstall` either after a global install or via `npx carve-harness <cmd>`.
+
 ## Daily workflow — natural language in a session
 
 Four commands cover everyday use. Call them in natural language or via `/carve-<name>`.

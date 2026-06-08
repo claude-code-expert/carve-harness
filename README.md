@@ -58,6 +58,8 @@ npx carve-harness doctor       # 3. 점검 — 구성·훅 문법 확인
 
 설치는 여기까지가 전부다. 이후엔 그 프로젝트에서 **Claude Code를 열기만 하면** 훅·MCP(codesight·LSP)는 자동으로 켜지고, 스킬·Squad는 아래처럼 부른다. (`npx carve-harness`가 설치 표준 — 설치할 폴더에서 실행. `install.sh`는 repo clone·`curl` 사용자용 편의 래퍼다.)
 
+> **글로벌 설치(선택)**: 매번 `npx`가 번거로우면 `npm i -g carve-harness` 후 `carve install` · `carve update` · `carve doctor`처럼 영구 명령으로 쓸 수 있다. `npx`는 일회성 실행이라 `carve` 명령이 PATH에 남지 않는다 — 글로벌 설치했거나 `npx carve-harness <명령>`으로 실행해야 `update`·`uninstall` 등이 동작한다.
+
 ## 일상 워크플로우 — 세션에서 자연어로
 
 매일 쓰는 건 네 개면 충분하다. 자연어로 부르거나 `/carve-<이름>`, 둘 다 된다.
