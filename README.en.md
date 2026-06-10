@@ -8,6 +8,7 @@
 
 ## Update
 > **Changelog** — full history in [CHANGELOG.md](CHANGELOG.md)
+> - `2026-06-10` **v1.3.3** — Quick start restructured into 4 stages (first install · install options · update · removal), distinguishing CLI (tool) vs harness install (README KR/EN)
 > - `2026-06-08` **v1.3.2** — install guide switched to global-install-first (`npm i -g`) across README · INSTALL
 > - `2026-06-08` **v1.3.1** — `anti-ai-slop` shared rule in `init-claude` · progressive command guide in README · release script (`scripts/release.sh`)
 > - `2026-06-06` **v1.3.0** — Autonomous fix loop (`iterate`) · plan separation/verification · context diet + full audit patch (critical: `update` deadlock fixed)
@@ -20,7 +21,7 @@
 
 > A CLI that analyzes a project and interactively selects and installs a harness (skills, hooks, subagents) tailored to that project.
 
-**v1.3.2** · TypeScript (ESM, no build step) · Node >=22.18 · 204 tests / ~95.7% coverage
+**v1.3.3** · TypeScript (ESM, no build step) · Node >=22.18 · 204 tests / ~95.7% coverage
 
 `carve` reads the codebase to detect the project type and tooling, then recommends suitable components.
 It installs only what the user selects into `.claude/`. carve = carving general-purpose assets down to fit a project.
@@ -52,16 +53,49 @@ carve install → stack detection → (component selection) → generate assets 
 
 Install `carve` as a permanent command and every `carve …` in these docs (especially the recurring `update`/`diff`/`doctor`) works as written. **For the full feature set, a global install is recommended.**
 
+> **Two distinct installs**: `npm i -g carve-harness` installs the **carve CLI (the tool)** on your system once; `carve install` uses that CLI to install the **harness into the current project** (`.claude/`). The former is once per machine; the latter is per project.
+
+### 1. First install
+
 ```bash
-npm i -g carve-harness         # install the carve CLI (recommended for full features)
-carve install                  # 1. interactive selective install (detect → recommend → select)
-carve init-claude              # 2. CLAUDE.md baseline + language stack rules
-carve doctor                   # 3. inspect install (config, hook syntax)
+npm i -g carve-harness         # install the carve CLI (the tool) — once per machine
+carve install                  # interactive selective install into the current project (detect → recommend → select)
+carve init-claude              # CLAUDE.md baseline + language stack rules
+carve doctor                   # inspect install (config, hook syntax)
 ```
 
-After install, just **open Claude Code** in the project: hooks and MCP (codesight·LSP) turn on automatically, and skills/Squad are invoked as shown below.
+After install, just **open Claude Code** in the project: hooks and MCP (codesight·LSP) turn on automatically, and skills/Squad are called via natural language or `/carve-<name>`.
 
 > **Just trying it once (no global)**: `npx carve-harness@latest install` (prefix every run with `npx carve-harness@latest <cmd>`). But `npx` is one-shot — it leaves no `carve` on PATH, which is awkward for recurring commands like `update`/`uninstall`, so **`npm i -g` is recommended for full use**. (repo-clone/`curl` users can use the `install.sh` wrapper — see [INSTALL.md](./INSTALL.md).)
+
+### 2. Install options (non-interactive · forced selection)
+
+Skip the wizard and pin the level/components with flags. (For what the levels mean, see **Install levels** below.)
+
+```bash
+carve install --level full                   # Force level (minimal|standard|full)
+carve install --only commit,handoff,review   # Explicit selection (no bulk install)
+carve install --lsp-servers                  # Auto-install LSP language servers
+```
+
+### 3. Update
+
+The CLI (the tool) and the project harness are updated separately.
+
+```bash
+npm i -g carve-harness@latest   # 1. update the carve CLI (the tool)
+carve diff                      # 2. (optional) 3-way compare installed vs latest assets (read-only)
+carve update                    # 3. update the project harness — carve-updated files only, your edits kept as .bak (--force · --yes)
+```
+
+### 4. Removal
+
+Remove just the harness, or the CLI (the tool) too.
+
+```bash
+carve uninstall                 # 1. remove the project harness — carve files only · restore .bak · preserve your settings
+npm uninstall -g carve-harness  # 2. (optional) remove the carve CLI (the tool)
+```
 
 ## Daily workflow — natural language in a session
 
@@ -131,11 +165,7 @@ Core skills, the 9 Squad agents, and anti-slop are recommended at *every level*;
 - `standard` (default) — general apps: minimal + **the remaining core hooks** (7 total: +lint, test, format, Slack)
 - `full` — standard + **additional skills** (verify, iterate, security-scan, test-gen, parallel-agents, coordinator, etc.)
 
-```bash
-carve install --level full                   # Force level (minimal|standard|full)
-carve install --only commit,handoff,review   # Non-interactive explicit selection (no bulk install)
-carve install --lsp-servers                  # Auto-install LSP language servers
-```
+For the force-level (`--level`), explicit-selection (`--only`), and LSP-auto-install commands, see **Quick start → Install options** above.
 
 > The score (the number in parentheses in `carve list`, ≥75) is carve's internal usefulness assessment. For per-level defaults and the full component list, see [INSTALL.en.md](./INSTALL.en.md).
 
