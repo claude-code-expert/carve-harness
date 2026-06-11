@@ -9,6 +9,7 @@
 
 ## Update
 > **변경 이력 (Changelog)** — 전체 [CHANGELOG.md](CHANGELOG.md)
+> - `2026-06-11` **v1.3.4** — 치명 수정: 설치 훅 명령을 `$CLAUDE_PROJECT_DIR` 절대경로로 등록(상대경로라 `No such file`로 훅 전부 실패하던 문제) + `carve update`에 기존 설치 1회 자동 교정 추가 → [기존 사용자 조치](#기존-사용자-조치-v134-훅-경로-수정)
 > - `2026-06-10` **v1.3.3** — 빠른 시작(설치)을 4단계(첫 설치·설치 후 옵션·업데이트·삭제)로 재구성, CLI(도구)/하네스 설치 구분 (README 한/영)
 > - `2026-06-08` **v1.3.2** — 설치 가이드를 글로벌 설치(`npm i -g`) 기준으로 정리 (README·INSTALL 한/영)
 > - `2026-06-08` **v1.3.1** — `init-claude`에 `anti-ai-slop` 공용 규칙 추가 · README 명령어 가이드 단계형 재편 · 릴리스 스크립트(`scripts/release.sh`)
@@ -22,7 +23,7 @@
 
 > 프로젝트를 분석해 그 프로젝트에 맞는 하네스(스킬·훅·서브에이전트)를 대화형으로 선택해 설치하는 CLI.
 
-**v1.3.3** · TypeScript(ESM, 빌드 단계 없음) · Node >=22.18 · 테스트 204 / 커버리지 약 95.7%
+**v1.3.4** · TypeScript(ESM, 빌드 단계 없음) · Node >=22.18 · 테스트 206 / 커버리지 약 95.8%
 
 `carve`는 코드베이스를 읽어 프로젝트 타입과 도구를 탐지하고, 적합한 구성요소를 추천한다.
 사용자가 고른 것만 `.claude/`에 설치한다. carve = 범용 자산을 프로젝트에 맞게 깎아냄.
@@ -87,6 +88,21 @@ CLI(도구)와 프로젝트 하네스는 따로 갱신한다.
 npm i -g carve-harness@latest   # 1. carve CLI(도구) 최신화
 carve diff                      # 2. (선택) 설치본 vs 최신 자산 3-way 비교 (읽기 전용)
 carve update                    # 3. 프로젝트 하네스 갱신 — carve 갱신분만, 내 수정은 .bak 보존 (--force·--yes)
+```
+
+#### 기존 사용자 조치 (v1.3.4 훅 경로 수정)
+
+v1.3.3 이하로 설치한 프로젝트는 settings.json의 훅 명령이 **상대경로**(`bash .claude/hooks/carve-*.sh`)로 박혀, Claude Code가 프로젝트 루트가 아닌 디렉터리에서 훅을 실행하면 `No such file or directory`로 실패한다. v1.3.4부터는 절대경로(`$CLAUDE_PROJECT_DIR`)로 등록한다.
+
+이미 설치한 사용자는 둘 중 하나로 해소한다:
+
+```bash
+# 권장 — 재설치 없이 자동 교정
+npm i -g carve-harness@latest   # 1. 고친 carve CLI 받기 (이 단계 없이는 교정 안 됨)
+carve update                    # 2. settings.json의 carve 훅을 절대경로로 1회 자동 치환 (멱등·사용자 훅 불가침)
+
+# 또는 — 깨끗이 재설치
+carve uninstall && carve install
 ```
 
 ### 4. 삭제
