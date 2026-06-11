@@ -128,5 +128,6 @@ Before sending, self-verify:
 
 This baseline stays stack-agnostic. Concrete tooling, layout, commands, and idioms live in `.claude/rules/`:
 `techstack.md` · `project-structure.md` · `commands.md` · `code-style.md` · `safety.md` · `gotchas.md`,
-plus the stack-agnostic `anti-ai-slop.md` (visual/document output standard).
+plus `project-type.md` (architectural concerns for this project type — web/cli/mobile/…) and the
+stack-agnostic `anti-ai-slop.md` (visual/document output standard).
 The project-root `CLAUDE.md` imports this file and those rules so they load every session.
