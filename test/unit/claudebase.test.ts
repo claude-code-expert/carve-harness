@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, rmSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { selectStack, generateClaudeBase } from '../../src/claudebase.ts';
+import { selectStack, selectTypeOverlay, generateClaudeBase } from '../../src/claudebase.ts';
 import { run, type IO } from '../../src/cli.ts';
 import type { ProjectProfile } from '../../src/types.ts';
 
@@ -45,6 +45,72 @@ test('generateClaudeBase: 베이스라인 + 6 stack rules + 공용 anti-ai-slop,
   const commands = arts.find((a) => a.path === '.claude/rules/commands.md')!;
   assert.match(commands.content, /pnpm/); // {{PKG_MANAGER}} 치환됨
   assert.doesNotMatch(commands.content, /\{\{PKG_MANAGER\}\}/); // 미치환 잔여 없음
+});
+
+test('selectTypeOverlay: p.type별 오버레이 선택 + unknown/미매핑은 _default', () => {
+  for (const t of ['cli', 'web', 'mobile', 'desktop', 'batch', 'library'] as const) {
+    assert.equal(selectTypeOverlay(profile({ type: t })), t);
+  }
+  assert.equal(selectTypeOverlay(profile({ type: 'unknown' })), '_default');
+});
+
+test('generateClaudeBase: 프로젝트 타입 오버레이(project-type.md) 생성 + 타입별 내용', () => {
+  const web = generateClaudeBase(profile({ type: 'web', languages: ['typescript'] }));
+  const overlay = web.find((a) => a.path === '.claude/rules/project-type.md');
+  assert.ok(overlay, 'project-type.md 누락');
+  assert.match(overlay!.content, /Web/); // web 오버레이 내용
+  // unknown 타입 → _default 오버레이(General)
+  const unk = generateClaudeBase(profile({ type: 'unknown', languages: [] }));
+  const unkOverlay = unk.find((a) => a.path === '.claude/rules/project-type.md');
+  assert.match(unkOverlay!.content, /General/);
+});
+
+test('generateClaudeBase: _default 폴백(미지원 언어)도 모든 rule이 비어있지 않고 미치환 변수 없음', () => {
+  const arts = generateClaudeBase(profile({ type: 'cli', languages: ['kotlin'] })); // 미지원 → _default
+  const rules = arts.filter((a) => a.path.startsWith('.claude/rules/'));
+  assert.ok(rules.length >= 7, 'rule 수 부족');
+  for (const a of rules) {
+    assert.ok(a.content.trim().length > 0, `${a.path} 비어있음`);
+    assert.doesNotMatch(a.content, /\{\{\w+\}\}/, `${a.path} 미치환 변수 잔여`);
+  }
+});
+
+test('generateClaudeBase: 전 스택(+_default) 모든 rule 비어있지 않음 · 미치환 변수 없음', () => {
+  const cases: Array<[string, string[]]> = [
+    ['typescript', ['typescript']], ['python', ['python']], ['go', ['go']],
+    ['rust', ['rust']], ['java', ['java']], ['dart', ['dart']], ['_default', []],
+  ];
+  for (const [label, languages] of cases) {
+    const arts = generateClaudeBase(profile({ type: 'cli', languages }));
+    for (const a of arts.filter((x) => x.path.startsWith('.claude/rules/'))) {
+      assert.ok(a.content.trim().length > 0, `${label}: ${a.path} 비어있음`);
+      assert.doesNotMatch(a.content, /\{\{\w+\}\}/, `${label}: ${a.path} 미치환 변수`);
+    }
+  }
+});
+
+test('generateClaudeBase: 변수 폴백 — packageManager 미탐지 시 스택 기본값 사용', () => {
+  const arts = generateClaudeBase(profile({ type: 'cli', languages: ['typescript'], packageManager: null }));
+  const commands = arts.find((a) => a.path === '.claude/rules/commands.md')!;
+  assert.match(commands.content, /npm/); // typescript 기본값
+});
+
+test('init-claude: 생성된 모든 rule 파일이 루트 @import 블록과 1:1 (project-type 포함)', () => {
+  const root = mkdtempSync(join(tmpdir(), 'carve-claude-sync-'));
+  try {
+    writeFileSync(join(root, 'package.json'), JSON.stringify({ name: 't' }));
+    writeFileSync(join(root, 'tsconfig.json'), '{}');
+    run(['init-claude', root], capture().io);
+    const rootClaude = readFileSync(join(root, 'CLAUDE.md'), 'utf8');
+    assert.match(rootClaude, /@\.claude\/rules\/project-type\.md/);
+    // 생성된 각 rules 파일이 @import에 존재해야 함(생성 목록 ↔ 블록 정합)
+    for (const f of ['techstack', 'project-structure', 'commands', 'code-style', 'safety', 'gotchas', 'project-type', 'anti-ai-slop']) {
+      assert.ok(existsSync(join(root, `.claude/rules/${f}.md`)), `${f}.md 미생성`);
+      assert.ok(rootClaude.includes(`@.claude/rules/${f}.md`), `${f}.md @import 누락`);
+    }
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
 });
 
 test('init-claude: .claude/CLAUDE.md + rules 생성, 루트 CLAUDE.md @import 연결', () => {

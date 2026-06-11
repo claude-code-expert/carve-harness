@@ -13,6 +13,11 @@ const RULE_FILES = ['techstack', 'project-structure', 'commands', 'code-style', 
 // 스택 무관 공용 규칙 — 모든 언어 동일(단일 소스 assets/claude-base/rules/<name>.md). 시각·문서 산출물 anti-slop.
 const SHARED_RULES = ['anti-ai-slop'] as const;
 
+// 프로젝트 타입 오버레이 — 언어가 아니라 p.type(웹/cli/모바일…)로 고르는 타입별 아키텍처 관심사.
+// assets/claude-base/types/<type>.md → .claude/rules/project-type.md (언어 축과 직교).
+const TYPE_OVERLAY = 'project-type';
+const TYPE_OVERLAYS = ['cli', 'web', 'mobile', 'desktop', 'batch', 'library'] as const;
+
 // 다중 언어일 때 대표 스택 우선순위 (js는 typescript 번들로 매핑)
 const STACK_PRIORITY = ['typescript', 'python', 'go', 'rust', 'java', 'dart'] as const;
 
@@ -21,6 +26,11 @@ export function selectStack(p: ProjectProfile): string {
   for (const s of STACK_PRIORITY) if (p.languages.includes(s)) return s;
   if (p.languages.includes('javascript')) return 'typescript';
   return '_default';
+}
+
+/** 프로필 타입으로 오버레이 파일을 고른다. 미매핑/unknown은 _default. */
+export function selectTypeOverlay(p: ProjectProfile): string {
+  return (TYPE_OVERLAYS as readonly string[]).includes(p.type) ? p.type : '_default';
 }
 
 // 스택별 명령/패키지매니저 기본값 (profile에 명령이 없을 때 fallback)
@@ -56,6 +66,9 @@ export function generateClaudeBase(p: ProjectProfile): Artifact[] {
   for (const f of RULE_FILES) {
     arts.push({ path: `.claude/rules/${f}.md`, content: render(read(`rules/${stack}/${f}.md`), vars), executable: false });
   }
+  // 프로젝트 타입 오버레이 — 언어 축과 직교(p.type로 선택). render는 변수 없으면 무해.
+  const overlay = selectTypeOverlay(p);
+  arts.push({ path: `.claude/rules/${TYPE_OVERLAY}.md`, content: render(read(`types/${overlay}.md`), vars), executable: false });
   // 스택 무관 공용 규칙 — stack 디렉토리 없이 단일 소스에서 읽는다(변수 없음).
   for (const f of SHARED_RULES) {
     arts.push({ path: `.claude/rules/${f}.md`, content: read(`rules/${f}.md`), executable: false });
@@ -70,5 +83,5 @@ ${ROOT_IMPORT_MARKER}
 ## 작업 지침 (베이스라인 + 스택 규칙)
 > carve가 연결. 베이스라인·스택 규칙은 \`.claude/\` 아래 파일을 수정해 조정한다.
 @.claude/CLAUDE.md
-${[...RULE_FILES, ...SHARED_RULES].map((f) => `@.claude/rules/${f}.md`).join('\n')}
+${[...RULE_FILES, TYPE_OVERLAY, ...SHARED_RULES].map((f) => `@.claude/rules/${f}.md`).join('\n')}
 `;

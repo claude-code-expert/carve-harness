@@ -15,6 +15,21 @@
 
 ---
 
+## [1.3.5] — 2026-06-11
+
+`init-claude`(CLAUDE.md 베이스라인 생성)를 미지원 언어·프로젝트 타입 축까지 보강.
+
+### Added
+- **프로젝트 타입 오버레이(`project-type.md`)**: 언어 축과 직교하게 `p.type`(cli·web·mobile·desktop·batch·library, 그 외 `_default`)로 타입별 아키텍처 관심사 규칙을 골라 `.claude/rules/project-type.md`로 생성하고 루트 `CLAUDE.md` @import 블록에 연결한다(`claudebase.selectTypeOverlay`, `assets/claude-base/types/<type>.md`).
+
+### Changed
+- **미지원 언어 `_default` 규칙 강화**: 탐지 언어가 번들에 없을 때(예: kotlin) 폴백하는 `_default` rules(`techstack`·`commands`)를 보강해, 모든 rule이 비어있지 않고 미치환 변수(`{{...}}`)가 남지 않도록 했다. 베이스라인 `CLAUDE.md`도 `project-type.md` 참조를 추가.
+
+### Notes
+- 테스트 212개 통과(신규 가드: 타입 오버레이 선택·생성, `_default` 폴백 정합, @import 1:1), 커버리지 약 95.8%. 런타임 의존성 불변(@clack 하나).
+
+---
+
 ## [1.3.4] — 2026-06-11
 
 설치된 훅이 실행되지 않던 치명 버그 수정 + 기존 설치 자동 교정.
