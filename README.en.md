@@ -8,7 +8,7 @@
 
 ## Update
 > **Changelog** — full history in [CHANGELOG.md](CHANGELOG.md)
-> - `2026-06-11` **v1.3.4** — Critical fix: installed hook commands now registered with `$CLAUDE_PROJECT_DIR` absolute paths (relative paths failed with `No such file` for every hook) + `carve update` now auto-migrates existing installs → [Existing users](#existing-users-v134-hook-path-fix)
+> - `2026-06-11` **v1.3.4** — Path bug fix: installed hook commands now registered with `$CLAUDE_PROJECT_DIR` absolute paths (relative paths failed with `No such file` for every hook) + `carve update` now auto-migrates existing installs → [Existing users](#existing-users-v134-hook-path-fix)
 > - `2026-06-10` **v1.3.3** — Quick start restructured into 4 stages (first install · install options · update · removal), distinguishing CLI (tool) vs harness install (README KR/EN)
 > - `2026-06-08` **v1.3.2** — install guide switched to global-install-first (`npm i -g`) across README · INSTALL
 > - `2026-06-08` **v1.3.1** — `anti-ai-slop` shared rule in `init-claude` · progressive command guide in README · release script (`scripts/release.sh`)
