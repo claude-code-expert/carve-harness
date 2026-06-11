@@ -48,21 +48,21 @@ export function hookRegsFor(design: HarnessDesign): { event: string; command: st
   for (const id of design.recommended) {
     const c = byId(id);
     if (c?.kind === 'hook' && HOOK_ASSETS[id]) {
-      regs.push({ event: c.event ?? 'PreToolUse', command: `bash .claude/hooks/carve-${id}.sh`, matcher: HOOK_MATCHER[id] ?? '' });
+      regs.push({ event: c.event ?? 'PreToolUse', command: `bash "$CLAUDE_PROJECT_DIR"/.claude/hooks/carve-${id}.sh`, matcher: HOOK_MATCHER[id] ?? '' });
     }
   }
   if (design.recommended.includes('anti-ai-slop')) {
-    regs.push({ event: 'PostToolUse', command: 'bash .claude/hooks/carve-anti-slop.sh', matcher: 'Write|Edit' });
+    regs.push({ event: 'PostToolUse', command: 'bash "$CLAUDE_PROJECT_DIR"/.claude/hooks/carve-anti-slop.sh', matcher: 'Write|Edit' });
   }
   // codesight refresh: git commit 시 .codesight/ 갱신
   if (design.recommended.includes('codesight')) {
-    regs.push({ event: 'PreToolUse', command: 'bash .claude/hooks/carve-codesight-refresh.sh', matcher: 'Bash' });
+    regs.push({ event: 'PreToolUse', command: 'bash "$CLAUDE_PROJECT_DIR"/.claude/hooks/carve-codesight-refresh.sh', matcher: 'Bash' });
   }
   // Squad 라우터(키워드 위임) + 체이닝(알림): 에이전트 추천 시
   if (design.recommended.some((id) => byId(id)?.kind === 'agent')) {
-    regs.push({ event: 'UserPromptSubmit', command: 'bash .claude/hooks/squad-router.sh' });
-    regs.push({ event: 'SubagentStart', command: 'bash .claude/hooks/subagent-chain.sh' });
-    regs.push({ event: 'SubagentStop', command: 'bash .claude/hooks/subagent-chain.sh' });
+    regs.push({ event: 'UserPromptSubmit', command: 'bash "$CLAUDE_PROJECT_DIR"/.claude/hooks/squad-router.sh' });
+    regs.push({ event: 'SubagentStart', command: 'bash "$CLAUDE_PROJECT_DIR"/.claude/hooks/subagent-chain.sh' });
+    regs.push({ event: 'SubagentStop', command: 'bash "$CLAUDE_PROJECT_DIR"/.claude/hooks/subagent-chain.sh' });
   }
   return regs;
 }

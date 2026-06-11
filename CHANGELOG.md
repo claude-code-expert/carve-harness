@@ -15,6 +15,22 @@
 
 ---
 
+## [1.3.4] — 2026-06-11
+
+설치된 훅이 실행되지 않던 치명 버그 수정 + 기존 설치 자동 교정.
+
+### Fixed
+- **생성 훅 명령을 `$CLAUDE_PROJECT_DIR` 절대경로로 등록(치명)**: `generator.ts`의 `hookRegsFor()`가 settings.json 훅 `command`를 상대경로(`bash .claude/hooks/carve-*.sh`)로 기록해, Claude Code가 프로젝트 루트가 아닌 cwd에서 훅을 실행하면 `No such file or directory`로 전부 실패하던 문제를 수정. 모든 훅(generic·anti-slop·codesight-refresh·squad-router·subagent-chain)을 `bash "$CLAUDE_PROJECT_DIR"/.claude/hooks/...`로 등록한다(리포 자신의 settings.json·설치 스크립트가 이미 쓰던 규약과 일치).
+
+### Added
+- **`carve update`에 훅 경로 1회 자동 교정(마이그레이션)**: 구버전으로 이미 설치한 프로젝트도 재설치 없이 `carve update`만으로 settings.json의 `_carve` 훅을 상대→절대경로로 제자리 교정한다(`installer.migrateHookPaths`). 멱등이며 사용자 훅은 건드리지 않고, manifest의 훅 기록도 함께 동기화한다.
+
+### Notes
+- 테스트 206개 통과(신규 회귀 가드 2개: 절대경로 등록·마이그레이션 왕복), 커버리지 약 95.8%. 런타임 의존성 불변(@clack 하나). 자산 `.sh` 내용은 변경 없음 — settings.json의 명령 등록만 수정.
+- 기존 사용자 조치: ① **CLI 갱신** `npm i -g carve-harness@latest` → ② 프로젝트 루트에서 `carve update`(권장) 또는 `carve uninstall && carve install` 재설치.
+
+---
+
 ## [1.3.3] — 2026-06-10
 
 빠른 시작(설치)을 라이프사이클 4단계로 재구성.

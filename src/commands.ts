@@ -9,7 +9,7 @@ import type { ProjectProfile } from './types.ts';
 import { design, type HarnessLevel } from './designer.ts';
 import { generate, hookRegsFor, mcpRegsFor, type Artifact } from './generator.ts';
 import { audit, auditShellSyntax, errorsOf, type AuditFinding } from './auditor.ts';
-import { install, uninstall, installClaudeBase, ROOT_CLAUDE } from './installer.ts';
+import { install, uninstall, installClaudeBase, migrateHookPaths, ROOT_CLAUDE } from './installer.ts';
 import { generateClaudeBase, selectStack, ROOT_IMPORT_BLOCK, ROOT_IMPORT_MARKER } from './claudebase.ts';
 import {
   readManifest, writeManifest, migrateManifest, hashContent, CARVE_VERSION,
@@ -315,6 +315,11 @@ export function cmdUpdate(root: string, io: IO, opts: { yes?: boolean; force?: b
   // 매니페스트는 완전한 기록을 유지: 기존 files를 보존하되 갱신 항목만 새 해시로 교체(manifest-last).
   const updatedFiles: ManifestFile[] = m.files.map((f) => updatedByPath.get(f.path) ?? f);
   writeManifest(root, { ...m, schemaVersion: 2, files: updatedFiles });
+
+  // 구버전 설치 교정: settings.json의 상대경로 _carve 훅을 $CLAUDE_PROJECT_DIR 절대경로로 1회 치환.
+  // (재설치 없이 `carve update`만으로 "No such file" 훅 실패가 해소된다 — gotchas 참조.)
+  const fixedHooks = migrateHookPaths(root);
+  if (fixedHooks > 0) io.log(`훅 경로 교정: 상대→$CLAUDE_PROJECT_DIR 절대경로 ${fixedHooks}건 (settings.json·manifest 동기화).`);
 
   // new-recommended: 절대 자동 설치하지 않고 제안만.
   for (const e of newRecommended) {

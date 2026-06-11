@@ -8,6 +8,7 @@
 
 ## Update
 > **Changelog** — full history in [CHANGELOG.md](CHANGELOG.md)
+> - `2026-06-11` **v1.3.4** — Critical fix: installed hook commands now registered with `$CLAUDE_PROJECT_DIR` absolute paths (relative paths failed with `No such file` for every hook) + `carve update` now auto-migrates existing installs → [Existing users](#existing-users-v134-hook-path-fix)
 > - `2026-06-10` **v1.3.3** — Quick start restructured into 4 stages (first install · install options · update · removal), distinguishing CLI (tool) vs harness install (README KR/EN)
 > - `2026-06-08` **v1.3.2** — install guide switched to global-install-first (`npm i -g`) across README · INSTALL
 > - `2026-06-08` **v1.3.1** — `anti-ai-slop` shared rule in `init-claude` · progressive command guide in README · release script (`scripts/release.sh`)
@@ -21,7 +22,7 @@
 
 > A CLI that analyzes a project and interactively selects and installs a harness (skills, hooks, subagents) tailored to that project.
 
-**v1.3.3** · TypeScript (ESM, no build step) · Node >=22.18 · 204 tests / ~95.7% coverage
+**v1.3.4** · TypeScript (ESM, no build step) · Node >=22.18 · 206 tests / ~95.8% coverage
 
 `carve` reads the codebase to detect the project type and tooling, then recommends suitable components.
 It installs only what the user selects into `.claude/`. carve = carving general-purpose assets down to fit a project.
@@ -86,6 +87,21 @@ The CLI (the tool) and the project harness are updated separately.
 npm i -g carve-harness@latest   # 1. update the carve CLI (the tool)
 carve diff                      # 2. (optional) 3-way compare installed vs latest assets (read-only)
 carve update                    # 3. update the project harness — carve-updated files only, your edits kept as .bak (--force · --yes)
+```
+
+#### Existing users (v1.3.4 hook-path fix)
+
+Projects installed with v1.3.3 or earlier have hook commands written as **relative paths** (`bash .claude/hooks/carve-*.sh`) in settings.json. When Claude Code runs a hook from a directory other than the project root, they fail with `No such file or directory`. From v1.3.4 they are registered with absolute paths (`$CLAUDE_PROJECT_DIR`).
+
+If you already installed, fix it either way:
+
+```bash
+# Recommended — auto-migrate, no reinstall
+npm i -g carve-harness@latest   # 1. get the fixed carve CLI (migration won't run without this)
+carve update                    # 2. one-time in-place rewrite of carve hooks to absolute paths (idempotent · user hooks untouched)
+
+# Or — clean reinstall
+carve uninstall && carve install
 ```
 
 ### 4. Removal

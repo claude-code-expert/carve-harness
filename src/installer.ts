@@ -145,6 +145,55 @@ function stripCarveHooks(root: string): void {
   writeSettings(root, s);
 }
 
+// 구버전 carve가 settings.json에 박은 상대경로 훅 명령 → $CLAUDE_PROJECT_DIR 절대경로.
+// cwd≠프로젝트 루트일 때 상대경로 훅이 "No such file"로 죽는 문제를 1회 교정한다(gotchas 참조).
+const REL_HOOK_PREFIX = 'bash .claude/hooks/';
+const ABS_HOOK_PREFIX = 'bash "$CLAUDE_PROJECT_DIR"/.claude/hooks/';
+
+/**
+ * 기존 설치의 상대경로 _carve 훅을 $CLAUDE_PROJECT_DIR 절대경로로 제자리 교정한다(멱등).
+ * settings.json과 manifest.hooks의 command를 함께 갱신 — uninstall은 _carve 플래그로 제거하므로
+ * manifest 갱신은 제거 정확성이 아니라 기록 정합성(설치 내역이 실제 settings와 일치)을 위한 것. 이미 절대경로면 no-op.
+ * @returns 교정한 settings.json 훅 항목 수.
+ */
+export function migrateHookPaths(root: string): number {
+  let changed = 0;
+
+  // 1) settings.json — _carve 마커가 붙은 carve 훅만 건드린다(사용자 훅 불가침).
+  if (existsSync(join(root, SETTINGS_REL))) {
+    const s = readSettings(root);
+    if (s.hooks) {
+      for (const event of Object.keys(s.hooks)) {
+        for (const g of s.hooks[event] ?? []) {
+          for (const h of g.hooks) {
+            if (h._carve && h.command.startsWith(REL_HOOK_PREFIX)) {
+              h.command = ABS_HOOK_PREFIX + h.command.slice(REL_HOOK_PREFIX.length);
+              changed += 1;
+            }
+          }
+        }
+      }
+      if (changed > 0) writeSettings(root, s);
+    }
+  }
+
+  // 2) manifest.hooks — carve가 기록한 훅뿐이라 _carve 검사 없이 prefix만으로 안전.
+  const m = readManifest(root);
+  if (m?.hooks?.length) {
+    let mChanged = false;
+    const hooks = m.hooks.map((h) => {
+      if (h.command.startsWith(REL_HOOK_PREFIX)) {
+        mChanged = true;
+        return { ...h, command: ABS_HOOK_PREFIX + h.command.slice(REL_HOOK_PREFIX.length) };
+      }
+      return h;
+    });
+    if (mChanged) writeManifest(root, { ...m, hooks });
+  }
+
+  return changed;
+}
+
 /** 자산을 멱등 설치한다. level=적용 레벨(update/diff 재현용으로 영속). */
 export function install(root: string, artifacts: Artifact[], hooks: HookReg[] = [], mcps: McpReg[] = [], level?: HarnessLevel): InstallResult {
   const prev = readManifest(root);

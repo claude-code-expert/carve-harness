@@ -37,6 +37,12 @@
 - 수정: **Granular Access Token**(Read and write + All packages) 또는 classic **Automation**. CI는 GitHub Secret `NPM_TOKEN`으로만.
 - 날짜: 2026-06-02
 
+### 생성 훅 명령은 상대경로면 설치 후 실행 실패
+- 증상: `carve install` 후 대상 프로젝트에서 훅이 `bash: .claude/hooks/carve-*.sh: No such file or directory`로 죽음. 파일은 정상 설치돼 있음.
+- 근본원인: `generator.ts`의 `hookRegsFor()`가 settings.json 훅 `command`를 상대경로(`bash .claude/hooks/...`)로 기록. Claude Code가 훅을 실행하는 cwd가 프로젝트 루트라는 보장이 없어 bash가 스크립트를 못 찾음.
+- 수정: 모든 훅 `command`를 `bash "$CLAUDE_PROJECT_DIR"/.claude/hooks/...` 절대경로로 등록(리포 자신의 `.claude/settings.json` 규약과 동일, 설치 스크립트도 `${CLAUDE_PROJECT_DIR:-.}` 전제). artifact의 **파일 경로**는 루트 기준 상대경로가 맞으니 그대로 둠 — "실행 명령"과 "파일 경로"는 다른 축. 회귀 테스트는 `test/unit/generator.test.ts`의 `hookRegsFor: $CLAUDE_PROJECT_DIR` 케이스. 기존 피해 설치는 `uninstall→install` 재설치 필요(멱등 병합이 command 문자열 일치로만 중복 제거).
+- 날짜: 2026-06-11
+
 ### `git add a b c` — 누락 pathspec이면 전체 스테이징 중단
 - 증상: 여러 파일을 add했는데 일부만(또는 아무것도) 스테이징됨 → 커밋에 본문 변경이 빠짐.
 - 근본원인: pathspec 중 하나라도 매치 안 되면 `git add`가 fatal로 멈춰 유효 파일도 스테이징 안 됨.

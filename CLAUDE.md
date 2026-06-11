@@ -27,9 +27,9 @@ Before sending, self-verify:
 - When error output or quoted English text appears, add a brief Korean note for that part only.
 
 **On task completion**, the Korean conclusion covers, in one block, once:
-1. What changed (무엇을 변경했는지)
-2. Why (왜 그렇게 했는지)
-3. Caveats (주의할 점)
+1. 무엇을 변경했는지
+2. 왜 그렇게 했는지
+3. 주의할 점
 
 
 ## 작업 원칙 (behavioral guidelines)
@@ -105,6 +105,7 @@ Before sending, self-verify:
 - 서브에이전트: frontmatter(`name`·`description`·`tools`·`model`·`maxTurns`) + 시스템 프롬프트(페르소나·절차·출력 형식)
 - 스킬: SKILL.md 본문이 길면 `references/`로 분리
 - 훅: 결정적 차단은 `PreToolUse`, 포맷·린트는 `PostToolUse`, 핸드오프는 `PreCompact`+`SessionStart`
+- 훅 명령(settings.json)은 **반드시 `bash "$CLAUDE_PROJECT_DIR"/.claude/hooks/...` 절대경로**로 등록. 상대경로(`bash .claude/hooks/...`)는 cwd≠루트일 때 "No such file"로 죽는다(gotchas 참조). artifact의 *파일 경로*는 루트 기준 상대경로가 맞다 — 둘은 다른 축.
 - 커맨드: `/carve-*` 네이밍, `allowed-tools` 제한
 
 ## 자주 쓰는 명령

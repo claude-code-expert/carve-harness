@@ -6,7 +6,7 @@ import {
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { install, uninstall, type HookReg, type McpReg } from '../../src/installer.ts';
+import { install, uninstall, migrateHookPaths, type HookReg, type McpReg } from '../../src/installer.ts';
 import { readManifest, CARVE_VERSION } from '../../src/manifest.ts';
 import type { Artifact } from '../../src/generator.ts';
 
@@ -109,6 +109,39 @@ test('MCP 서버 병합·멱등·uninstall 제거 (codesight/cclsp)', () => {
     uninstall(root);
     s = JSON.parse(readFileSync(join(root, '.claude/settings.json'), 'utf8'));
     assert.ok(!s.mcpServers?.codesight && !s.mcpServers?.cclsp);
+  });
+});
+
+test('migrateHookPaths: 구버전 상대경로 _carve 훅을 $CLAUDE_PROJECT_DIR 절대경로로 교정(멱등·사용자훅 불가침·manifest 동기화)', () => {
+  withTemp((root) => {
+    // 사용자 훅 사전 존재 — 교정 대상이 아니어야 함
+    mkdirSync(join(root, '.claude'), { recursive: true });
+    writeFileSync(
+      join(root, '.claude/settings.json'),
+      JSON.stringify({ hooks: { PreToolUse: [{ matcher: 'Edit', hooks: [{ type: 'command', command: 'bash .claude/hooks/user.sh' }] }] } }, null, 2),
+    );
+    // 구버전 carve 설치 재현 — HOOKS가 상대경로 'bash .claude/hooks/carve-x.sh'
+    install(root, ARTIFACTS, HOOKS);
+
+    const fixed = migrateHookPaths(root);
+    assert.equal(fixed, 1, '교정 건수');
+
+    const s = JSON.parse(readFileSync(join(root, '.claude/settings.json'), 'utf8'));
+    const cmds = s.hooks.PreToolUse.flatMap((g: { hooks: { command: string }[] }) => g.hooks.map((h) => h.command));
+    assert.ok(cmds.includes('bash "$CLAUDE_PROJECT_DIR"/.claude/hooks/carve-x.sh'), 'carve 훅 절대경로 미교정');
+    assert.ok(cmds.includes('bash .claude/hooks/user.sh'), '사용자 훅이 변형됨(불가침 위반)');
+    // manifest도 동기화돼야 함
+    assert.equal(readManifest(root)!.hooks[0]!.command, 'bash "$CLAUDE_PROJECT_DIR"/.claude/hooks/carve-x.sh');
+
+    // 멱등: 두 번째 호출은 0건
+    assert.equal(migrateHookPaths(root), 0, '멱등 위반');
+
+    // 교정 후에도 uninstall이 _carve 플래그로 carve 훅을 제거(절대경로로 바뀌어도 제거됨)
+    uninstall(root);
+    const s2 = JSON.parse(readFileSync(join(root, '.claude/settings.json'), 'utf8'));
+    const cmds2 = s2.hooks.PreToolUse.flatMap((g: { hooks: { command: string }[] }) => g.hooks.map((h) => h.command));
+    assert.ok(!cmds2.includes('bash "$CLAUDE_PROJECT_DIR"/.claude/hooks/carve-x.sh'), '교정된 carve 훅이 uninstall로 안 지워짐');
+    assert.ok(cmds2.includes('bash .claude/hooks/user.sh'), '사용자 훅이 uninstall로 지워짐');
   });
 });
 
