@@ -8,7 +8,8 @@ printf '%s' "$cmd" | grep -Eq 'git[[:space:]]+commit' || exit 0
 LINT="{{HOOK_LINT_CMD}}"
 LINT="${CARVE_LINT_CMD:-$LINT}"
 [ -z "$LINT" ] && exit 0
-if ! eval "$LINT" >/dev/null 2>&1; then
+# eval 대신 bash -c — 명령이 훅 셸 상태를 변경하지 못하게 격리
+if ! bash -c "$LINT" >/dev/null 2>&1; then
   echo "[carve:pre-commit-lint] 린트 실패 — 커밋 차단: $LINT" >&2
   carve_metric pre-commit-lint block
   exit 2

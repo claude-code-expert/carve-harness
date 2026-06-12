@@ -22,15 +22,6 @@ function assetExists(rel: string): boolean {
   return existsSync(new URL(rel, ASSETS));
 }
 
-// 훅 id → matcher (Stop/PreCompact는 matcher 불필요)
-const HOOK_MATCHER: Record<string, string> = {
-  'block-destructive': 'Bash',
-  'protect-secrets': 'Read|Edit|Write',
-  'pre-commit-lint': 'Bash',
-  'pre-push-test': 'Bash',
-  'auto-format': 'Edit|Write',
-};
-
 // anti-slop 팩: assets/antislop → 대상 .claude/skills (대상 레이아웃 그대로)
 const ANTI_SLOP_PACK: [string, string][] = [
   ['antislop/SKILL.md', '.claude/skills/SKILL.md'],
@@ -38,17 +29,18 @@ const ANTI_SLOP_PACK: [string, string][] = [
   ['antislop/card-news.md', '.claude/skills/card-news.md'],
   ['antislop/html-report.md', '.claude/skills/html-report.md'],
   ['antislop/html-presentation.md', '.claude/skills/html-presentation.md'],
+  ['antislop/ui-component.md', '.claude/skills/ui-component.md'],
   ['antislop/clean-html/SKILL.md', '.claude/skills/clean-html/SKILL.md'],
   ['antislop/clean-html/scripts/check-slop.mjs', '.claude/skills/clean-html/scripts/check-slop.mjs'],
 ];
 
-/** 추천 설계에 대응하는 settings.json 훅 등록 목록 */
+/** 추천 설계에 대응하는 settings.json 훅 등록 목록. matcher는 카탈로그 단일 출처. */
 export function hookRegsFor(design: HarnessDesign): { event: string; command: string; matcher?: string }[] {
   const regs: { event: string; command: string; matcher?: string }[] = [];
   for (const id of design.recommended) {
     const c = byId(id);
-    if (c?.kind === 'hook' && HOOK_ASSETS[id]) {
-      regs.push({ event: c.event ?? 'PreToolUse', command: `bash "$CLAUDE_PROJECT_DIR"/.claude/hooks/carve-${id}.sh`, matcher: HOOK_MATCHER[id] ?? '' });
+    if (c?.kind === 'hook' && assetExists(`hooks/${id}.sh`)) {
+      regs.push({ event: c.event ?? 'PreToolUse', command: `bash "$CLAUDE_PROJECT_DIR"/.claude/hooks/carve-${id}.sh`, matcher: c.matcher ?? '' });
     }
   }
   if (design.recommended.includes('anti-ai-slop')) {
@@ -80,18 +72,6 @@ export function render(tmpl: string, vars: Record<string, string>): string {
   return tmpl.replace(/\{\{(\w+)\}\}/g, (_, k: string) => vars[k] ?? '');
 }
 
-// 훅 id → assets 스크립트 경로 (결정적 차단/경고 훅)
-const HOOK_ASSETS: Record<string, string> = {
-  'block-destructive': 'hooks/block-destructive.sh',
-  'protect-secrets': 'hooks/protect-secrets.sh',
-  'pre-commit-lint': 'hooks/pre-commit-lint.sh',
-  'pre-push-test': 'hooks/pre-push-test.sh',
-  'auto-format': 'hooks/auto-format.sh',
-  'slack-notify': 'hooks/slack-notify.sh',
-  'precompact-handoff': 'hooks/precompact-handoff.sh',
-  'auto-commit': 'hooks/auto-commit.sh',
-};
-
 /** 설계+프로필로부터 생성 산출물 목록을 만든다. */
 export function generate(profile: ProjectProfile, design: HarnessDesign): Artifact[] {
   const artifacts: Artifact[] = [];
@@ -105,7 +85,8 @@ export function generate(profile: ProjectProfile, design: HarnessDesign): Artifa
       ? '- `any` 타입 금지 — 명시적 타입을 쓴다.'
       : '',
     ANTI_SLOP_SECTION: antiSlop ? readAsset('templates/_flight-rules-antislop.md') : '',
-    ANTI_SLOP_EVAL: antiSlop ? '- [ ] 생성 HTML/SVG/문서 `check-slop` 0 ERROR' : '',
+    // 채점표 행 주입 — 합계가 100이 되도록 기본 6행(90점) + anti-slop 10점. 미설치면 만점 처리(템플릿 채점 규칙).
+    ANTI_SLOP_EVAL: antiSlop ? '| 7 | anti-slop | 10 | `check-slop.mjs` 산출물 검사 | 0 ERROR=10 / 1+ ERROR=0 |' : '',
     // 훅 템플릿용 (미탐지 시 빈 문자열 → 훅이 스킵; 'npm test' 하드코딩 금지 — 비Node/무스크립트 프로젝트의 푸시 전면 차단 방지)
     HOOK_LINT_CMD: profile.lintCmd ?? '',
     HOOK_TEST_CMD: profile.testCmd ?? '',
@@ -156,13 +137,13 @@ export function generate(profile: ProjectProfile, design: HarnessDesign): Artifa
     executable: false,
   });
 
-  // 추천된 훅 중 자산이 있는 것 → 훅 스크립트 생성 (템플릿 변수 치환)
+  // 추천된 훅 중 자산이 있는 것 → 훅 스크립트 생성 (템플릿 변수 치환).
+  // 컨벤션: 카탈로그 hook id ↔ assets/hooks/<id>.sh (assets 테스트가 가드).
   for (const id of design.recommended) {
-    const asset = HOOK_ASSETS[id];
-    if (asset) {
+    if (byId(id)?.kind === 'hook' && assetExists(`hooks/${id}.sh`)) {
       artifacts.push({
         path: `.claude/hooks/carve-${id}.sh`,
-        content: render(readAsset(asset), vars),
+        content: render(readAsset(`hooks/${id}.sh`), vars),
         executable: true,
       });
     }

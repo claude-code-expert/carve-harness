@@ -1,7 +1,7 @@
 // src/designer.ts — ProjectProfile + catalog → 추천 슬롯 설계 (레이어 A, M2).
 // 추천만 한다. 실제 설치는 wizard 선택 + installer가 한다 (일괄 설치 없음).
 import type { ProjectProfile, ProjectType } from './types.ts';
-import { forType, type CatalogComponent } from './catalog.ts';
+import { CATALOG, forType, statusOf, type CatalogComponent } from './catalog.ts';
 
 export type HarnessLevel = 'minimal' | 'standard' | 'full';
 
@@ -28,15 +28,11 @@ export function harnessLevel(p: ProjectProfile): HarnessLevel {
   return 'standard';
 }
 
-// 모노레포/CI 시그널이 있을 때 가중하는 조정 컴포넌트 id (INTEL-03).
-// 단 2개뿐이라 catalog 메타(boostOn) 대신 designer에 명시 유지 (over-design 회피).
-const COORDINATION_IDS = ['parallel-agents', 'coordinator'];
-
 /**
  * 시그널 가중 스코어링 (INTEL-03, 순수 함수).
  * 모노레포(workspaces 비어있지 않음) 또는 CI(ci !== null) 시그널이 있으면
- * 조정 컴포넌트를 추천 목록에 가중한다 — 단 `available`에 있는 id만, 중복 없이.
- * 입력을 변형하지 않고 새 배열을 반환한다.
+ * 조정 컴포넌트(카탈로그 coordination 메타, active만)를 추천 목록에 가중한다
+ * — 단 `available`에 있는 id만, 중복 없이. 입력을 변형하지 않고 새 배열을 반환한다.
  */
 export function applySignalWeights(
   p: ProjectProfile,
@@ -47,8 +43,8 @@ export function applySignalWeights(
   const isMonorepo = p.workspaces.length > 0;
   const hasCi = p.ci !== null;
   if (isMonorepo || hasCi) {
-    for (const id of COORDINATION_IDS) {
-      if (available.includes(id)) result.add(id);
+    for (const c of CATALOG) {
+      if (c.coordination === true && statusOf(c) === 'active' && available.includes(c.id)) result.add(c.id);
     }
   }
   return [...result];
@@ -57,25 +53,26 @@ export function applySignalWeights(
 /** ProjectProfile → 추천 슬롯 설계. levelOverride로 자동 레벨을 덮어쓸 수 있다(--level). */
 export function design(p: ProjectProfile, levelOverride?: HarnessLevel): HarnessDesign {
   const level = levelOverride ?? harnessLevel(p);
-  const available = forType(p.type);
+  // hidden은 목록·wizard에서 완전히 제외(설치 불가). deprecated는 선택 가능하되 추천 안 함.
+  const available = forType(p.type).filter((c) => statusOf(c) !== 'hidden');
   const rec = new Set<string>();
   const rationale: string[] = [];
 
-  // 코어 스킬·에이전트는 항상 추천
+  // 코어 스킬·에이전트는 항상 추천 (active만 — deprecated는 추천에서 제외)
   for (const c of available) {
-    if (c.core && (c.kind === 'skill' || c.kind === 'agent')) rec.add(c.id);
+    if (c.core && statusOf(c) === 'active' && (c.kind === 'skill' || c.kind === 'agent')) rec.add(c.id);
   }
   rationale.push('코어 스킬·서브에이전트 기본 포함');
 
   // anti-slop 팩은 타입 무관 기본 추천 (모든 프로젝트가 문서·다이어그램을 만든다)
-  if (available.some((c) => c.id === 'anti-ai-slop')) {
+  if (available.some((c) => c.id === 'anti-ai-slop' && statusOf(c) === 'active')) {
     rec.add('anti-ai-slop');
     rationale.push('anti-ai-slop: 문서·SVG·HTML 슬롭 제거 (타입 무관)');
   }
 
-  // 훅: minimal은 필수 훅만, standard 이상은 모든 코어 훅
+  // 훅: minimal은 필수 훅만, standard 이상은 모든 코어 훅 (active만)
   for (const c of available) {
-    if (c.kind !== 'hook' || !c.core) continue;
+    if (c.kind !== 'hook' || !c.core || statusOf(c) !== 'active') continue;
     if (level === 'minimal') {
       if (ESSENTIAL_HOOKS.has(c.id)) rec.add(c.id);
     } else {
@@ -86,12 +83,12 @@ export function design(p: ProjectProfile, levelOverride?: HarnessLevel): Harness
     level === 'minimal' ? '필수 훅(차단·보호·핸드오프)만 기본 추천' : '7개 필수 훅 기본 추천',
   );
 
-  // full: 추가 스킬(verify/security-scan/test-gen)까지 추천
+  // full: 추가 스킬(verify/iterate/test-gen 등)까지 추천 (active만)
   if (level === 'full') {
     for (const c of available) {
-      if (!c.core && !c.optional && c.id !== 'anti-ai-slop') rec.add(c.id);
+      if (!c.core && !c.optional && statusOf(c) === 'active' && c.id !== 'anti-ai-slop') rec.add(c.id);
     }
-    rationale.push('full 레벨: 추가 스킬(verify·security-scan·test-gen) 포함');
+    rationale.push('full 레벨: 추가 스킬(verify·iterate·test-gen 등) 포함');
   }
 
   // 시그널 가중 (INTEL-03): 모노레포/CI 시그널 → 조정 컴포넌트 가중 (ADDITIVE).

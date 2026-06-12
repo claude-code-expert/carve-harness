@@ -15,3 +15,8 @@
 ## UX & permissions
 - **Request permissions in context, just before use**, and degrade gracefully when denied.
 - **Design for variable screens** (size, density, safe areas, orientation) and platform back/gesture conventions.
+
+## Accessibility & release
+- **Touch targets ≥ 44pt** and support OS font scaling — layouts must not break at larger text sizes.
+- **Roll out risky changes gradually** (feature flag / staged rollout) — a bad mobile release can't be hotfixed like a server.
+- **Crash reporting without PII**: capture stack traces and device context, never user content or identifiers.

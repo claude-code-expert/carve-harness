@@ -56,12 +56,41 @@ function varsFor(p: ProjectProfile, stack: string): Record<string, string> {
   };
 }
 
+/** 응답 언어 정책 프리셋 — 베이스라인 {{RESPONSE_POLICY}} 치환. 기본 en-ko(기존 동작 유지). */
+export type ResponseLang = 'en-ko' | 'en' | 'ko';
+export const RESPONSE_LANGS: readonly ResponseLang[] = ['en-ko', 'en', 'ko'];
+const POLICY_TABLE_HEAD = `| Target | Language |
+|--------|----------|
+| Internal reasoning & planning | English |
+| Code, variable names, comments, logs, error messages | English |
+| Git commit messages | English (Conventional Commits) |`;
+const POLICY_PRESETS: Record<ResponseLang, string> = {
+  'en-ko': `${POLICY_TABLE_HEAD}
+| User-facing response (explanation · summary · question) | English summary → Korean conclusion |
+
+**Response format (always):**
+- Write the working summary / explanation in **English first**.
+- Then state the **final conclusion in Korean** (한글로 최종 결론).
+- Order is fixed: **English summary → Korean conclusion**, each exactly once (see R2).
+
+**On task completion**, the Korean conclusion covers, in one block, once: what changed / why / caveats.`,
+  en: `${POLICY_TABLE_HEAD}
+| User-facing response | English |
+
+**On task completion**, the summary covers, in one block, once: what changed / why / caveats.`,
+  ko: `${POLICY_TABLE_HEAD}
+| User-facing response (설명 · 요약 · 질문) | 한국어 |
+
+**작업 완료 시** 응답은 한 블록에 한 번만: 무엇을 변경했는지 / 왜 그렇게 했는지 / 주의할 점.`,
+};
+
 /** 베이스라인 CLAUDE.md(.claude/) + 스택별 rules 산출물. installer가 쓴다. */
-export function generateClaudeBase(p: ProjectProfile): Artifact[] {
+export function generateClaudeBase(p: ProjectProfile, opts: { lang?: ResponseLang } = {}): Artifact[] {
   const stack = selectStack(p);
   const vars = varsFor(p, stack);
   const arts: Artifact[] = [
-    { path: '.claude/CLAUDE.md', content: read('CLAUDE.md'), executable: false },
+    // 베이스라인도 render — {{RESPONSE_POLICY}} 치환 (그 외 변수 없음, 미정의 키는 무해)
+    { path: '.claude/CLAUDE.md', content: render(read('CLAUDE.md'), { ...vars, RESPONSE_POLICY: POLICY_PRESETS[opts.lang ?? 'en-ko'] }), executable: false },
   ];
   for (const f of RULE_FILES) {
     arts.push({ path: `.claude/rules/${f}.md`, content: render(read(`rules/${stack}/${f}.md`), vars), executable: false });

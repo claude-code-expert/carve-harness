@@ -145,6 +145,82 @@ test('migrateHookPaths: 구버전 상대경로 _carve 훅을 $CLAUDE_PROJECT_DIR
   });
 });
 
+test('손상 settings.json: install 중단(throw) — 사용자 settings 바이트 보존(데이터 손실 회귀)', () => {
+  withTemp((root) => {
+    mkdirSync(join(root, '.claude'), { recursive: true });
+    const corrupt = '{invalid json';
+    writeFileSync(join(root, '.claude/settings.json'), corrupt);
+    assert.throws(() => install(root, ARTIFACTS, HOOKS), /settings\.json 파싱 실패/);
+    // 손상 파일이 carve 항목으로 덮어써지지 않고 그대로 남아야 한다
+    assert.equal(readFileSync(join(root, '.claude/settings.json'), 'utf8'), corrupt);
+    // manifest-last: settings 단계에서 중단됐으므로 매니페스트도 기록되지 않아야 한다
+    assert.equal(existsSync(join(root, 'carve-manifest.json')), false);
+  });
+});
+
+test('손상 settings.json: uninstall 중단(throw) — 파일·매니페스트 보존', () => {
+  withTemp((root) => {
+    install(root, ARTIFACTS, HOOKS);
+    writeFileSync(join(root, '.claude/settings.json'), '{broken');
+    assert.throws(() => uninstall(root), /settings\.json 파싱 실패/);
+    assert.ok(existsSync(join(root, 'carve-manifest.json')), '매니페스트가 지워짐');
+  });
+});
+
+test('재설치: 훅 명령 경로 rel→abs 변경 시 그룹 중복 없이 제자리 갱신(이중 발화 회귀)', () => {
+  withTemp((root) => {
+    install(root, ARTIFACTS, HOOKS); // rel: bash .claude/hooks/carve-x.sh
+    const absHooks: HookReg[] = [
+      { event: 'PreToolUse', command: 'bash "$CLAUDE_PROJECT_DIR"/.claude/hooks/carve-x.sh', matcher: 'Bash' },
+    ];
+    install(root, ARTIFACTS, absHooks);
+    const s = JSON.parse(readFileSync(join(root, '.claude/settings.json'), 'utf8'));
+    assert.equal(s.hooks.PreToolUse.length, 1, '그룹이 중복 생성됨');
+    assert.equal(s.hooks.PreToolUse[0].hooks[0].command, 'bash "$CLAUDE_PROJECT_DIR"/.claude/hooks/carve-x.sh');
+  });
+});
+
+test('재설치: matcher 변경 시 carve 전용 그룹의 matcher 제자리 갱신(스테일 금지)', () => {
+  withTemp((root) => {
+    install(root, ARTIFACTS, HOOKS); // matcher: 'Bash'
+    const changed: HookReg[] = [
+      { event: 'PreToolUse', command: 'bash .claude/hooks/carve-x.sh', matcher: 'Bash|Edit' },
+    ];
+    install(root, ARTIFACTS, changed);
+    const s = JSON.parse(readFileSync(join(root, '.claude/settings.json'), 'utf8'));
+    assert.equal(s.hooks.PreToolUse.length, 1);
+    assert.equal(s.hooks.PreToolUse[0].matcher, 'Bash|Edit');
+  });
+});
+
+test('과거 버그로 이중 등록된 중복 _carve 그룹은 재설치가 자가 수리한다', () => {
+  withTemp((root) => {
+    mkdirSync(join(root, '.claude'), { recursive: true });
+    // rel·abs 두 그룹이 공존하는 손상 상태(이중 발화) 재현
+    writeFileSync(join(root, '.claude/settings.json'), JSON.stringify({
+      hooks: {
+        PreToolUse: [
+          { matcher: 'Bash', hooks: [{ type: 'command', command: 'bash .claude/hooks/carve-x.sh', _carve: true }] },
+          { matcher: 'Bash', hooks: [{ type: 'command', command: 'bash "$CLAUDE_PROJECT_DIR"/.claude/hooks/carve-x.sh', _carve: true }] },
+        ],
+      },
+    }, null, 2));
+    install(root, ARTIFACTS, HOOKS);
+    const s = JSON.parse(readFileSync(join(root, '.claude/settings.json'), 'utf8'));
+    assert.equal(s.hooks.PreToolUse.length, 1, '중복 그룹이 수리되지 않음');
+  });
+});
+
+test('hooks[event]가 배열이 아니면 맥락 있는 에러로 중단(사용자 settings 불가침)', () => {
+  withTemp((root) => {
+    mkdirSync(join(root, '.claude'), { recursive: true });
+    const raw = JSON.stringify({ hooks: { PreToolUse: 'not-an-array' } }, null, 2);
+    writeFileSync(join(root, '.claude/settings.json'), raw);
+    assert.throws(() => install(root, ARTIFACTS, HOOKS), /배열이 아닙니다/);
+    assert.equal(readFileSync(join(root, '.claude/settings.json'), 'utf8'), raw);
+  });
+});
+
 test('manifest 없는 곳에서 uninstall은 무해', () => {
   withTemp((root) => {
     const r = uninstall(root);

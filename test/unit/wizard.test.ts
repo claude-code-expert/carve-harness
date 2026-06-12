@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { buildChoices } from '../../src/wizard.ts';
 import { design } from '../../src/designer.ts';
-import { parseOnly, parseLevel, run, type IO } from '../../src/cli.ts';
+import { parseOnly, parseLevel, parseLang, run, type IO } from '../../src/cli.ts';
 import type { ProjectProfile } from '../../src/types.ts';
 
 function profile(over: Partial<ProjectProfile>): ProjectProfile {
@@ -62,7 +62,17 @@ test('parseLevel: 유효/무효/부재', () => {
   assert.equal(parseLevel(['install']), undefined);
 });
 
-test('install --level full: 단일언어 프로젝트도 병렬 에이전트 가이드 설치', () => {
+test('parseLang: 유효/무효/부재 + init-claude --lang 무효값 → exit 1', () => {
+  assert.equal(parseLang(['init-claude', '--lang', 'ko']), 'ko');
+  assert.equal(parseLang(['init-claude', '--lang=en-ko']), 'en-ko');
+  assert.equal(parseLang(['init-claude', '--lang', 'fr']), 'invalid');
+  assert.equal(parseLang(['init-claude']), undefined);
+  const { io, out } = capture();
+  assert.equal(run(['init-claude', '/tmp/nope', '--lang', 'fr'], io), 1);
+  assert.match(out.error, /--lang 값은/);
+});
+
+test('install --level full: 단일언어 프로젝트도 병렬 에이전트 가이드 설치 (deprecated coordinator 제외)', () => {
   const root = mkdtempSync(join(tmpdir(), 'carve-lvl-'));
   try {
     const { io } = capture();
@@ -70,13 +80,25 @@ test('install --level full: 단일언어 프로젝트도 병렬 에이전트 가
     run(['install', root], io);
     assert.ok(!existsSync(join(root, '.claude/skills/parallel-agents/SKILL.md')));
     run(['uninstall', root], capture().io);
-    // --level full → parallel-agents·coordinator 설치
+    // --level full → parallel-agents 설치, coordinator는 wave-1 deprecated라 자동 미설치
     assert.equal(run(['install', root, '--level', 'full'], capture().io), 0);
     assert.ok(existsSync(join(root, '.claude/skills/parallel-agents/SKILL.md')));
-    assert.ok(existsSync(join(root, '.claude/skills/coordinator/SKILL.md')));
+    assert.ok(!existsSync(join(root, '.claude/skills/coordinator/SKILL.md')));
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
+});
+
+test('buildChoices: deprecated는 [비추천→대체] 힌트 + 기본 미체크, prefs로 켜면 체크 유지', () => {
+  const d = design(profile({ type: 'web' }));
+  const choices = buildChoices(d);
+  const review = choices.find((c) => c.value === 'review');
+  assert.ok(review, 'deprecated도 available(선택 가능)에는 있어야 함');
+  assert.ok(!review.selected, 'deprecated가 기본 체크됨');
+  assert.match(review.hint ?? '', /\[비추천→ squad-review\]/);
+  // 사용자가 prefs로 명시 선택한 deprecated는 체크 유지
+  const withPrefs = buildChoices(d, { deselected: [], selected: ['review'], updatedAt: 't' });
+  assert.ok(withPrefs.find((c) => c.value === 'review')?.selected);
 });
 
 test('install --level 무효값 → exit 1', () => {

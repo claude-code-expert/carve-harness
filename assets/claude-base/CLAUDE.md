@@ -26,6 +26,7 @@
 
 - Implement only what was asked. No speculative features, abstractions, or "flexibility."
 - No error handling for impossible scenarios.
+- If you write 200 lines and it could be 50, rewrite it.
 - "Would a senior engineer call this overcomplicated?" If yes, simplify.
 
 ## 3. Surgical Changes
@@ -39,7 +40,9 @@
 
 - **TDD cycle**: Red (failing test) → Green (minimum code to pass) → Refactor.
 - Write the simplest failing test first. Implement just enough to pass.
-- Bug fix: first write a test that reproduces the defect, then make it pass.
+- One test at a time: make it run, then improve structure. Run all tests (except long-running ones) each time.
+- Test names describe behavior (e.g. `shouldRejectExpiredToken`); failures must be informative.
+- Bug fix: first write an API-level failing test, then the smallest test reproducing the defect; make both pass.
 - **Tidy First**: separate structural changes (rename / extract / move — behavior unchanged) from behavioral changes (add / modify functionality). Never mix the two in one commit; make structural changes first, with tests green before and after.
 
 ## 5. Goal-Driven Execution
@@ -85,21 +88,9 @@ Before sending, self-verify:
 
 ## Language & Response Policy
 
-| Target | Language |
-|--------|----------|
-| Internal reasoning & planning | English |
-| Code, variable names, comments, logs, error messages | English |
-| Git commit messages | English (Conventional Commits) |
-| User-facing response (explanation · summary · question) | English summary → Korean conclusion |
+{{RESPONSE_POLICY}}
 
-**Response format (always):**
-- Write the working summary / explanation in **English first**.
-- Then state the **final conclusion in Korean** (한글로 최종 결론).
-- Order is fixed: **English summary → Korean conclusion**, each exactly once (see R2).
-
-**On task completion**, the Korean conclusion covers, in one block, once: what changed / why / caveats.
-
-> Adjust this table to your team's language if different.
+> Adjust this policy to your team's language if different. (`carve init-claude --lang en|ko|en-ko`)
 
 ---
 

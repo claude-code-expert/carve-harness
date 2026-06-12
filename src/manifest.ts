@@ -104,8 +104,10 @@ export function readManifest(root: string): Manifest | null {
   try {
     const parsed: unknown = JSON.parse(readFileSync(p, 'utf8'));
     return normalizeManifest(parsed);
-  } catch {
-    return null;
+  } catch (e) {
+    // 손상 manifest를 null("설치 없음")로 삼키면 재설치가 새 manifest를 써 기존 추적 파일이 고아가 된다.
+    // 조용히 진행하지 않고 중단 — cli.run()의 에러 경계가 사유 + exit 1로 보고.
+    throw new Error(`carve-manifest.json 파싱 실패(손상) — 수동 복구 또는 삭제 후 재설치: ${(e as Error).message}`);
   }
 }
 

@@ -10,6 +10,7 @@ import {
   normalizeManifest,
   migrateManifest,
   manifestPath,
+  readManifest,
   SCHEMA_VERSION,
   type Manifest,
   type ManifestFile,
@@ -29,6 +30,20 @@ function writeFile(root: string, rel: string, content: string): void {
   mkdirSync(dirname(full), { recursive: true });
   writeFileSync(full, content);
 }
+
+// ── readManifest: 손상 vs 부재 구분 ──
+test('readManifest: 파일 없음 → null (기존 동작 유지)', () => {
+  withTemp((root) => {
+    assert.equal(readManifest(root), null);
+  });
+});
+
+test('readManifest: 손상 JSON → 맥락 있는 throw (조용한 null 금지 — 재설치 고아화 방지)', () => {
+  withTemp((root) => {
+    writeFileSync(manifestPath(root), '{corrupt');
+    assert.throws(() => readManifest(root), /carve-manifest\.json 파싱 실패/);
+  });
+});
 
 // ── hashContent ──
 

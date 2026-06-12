@@ -36,6 +36,10 @@ allowed-tools: Read, Write, Edit, Bash(node:*), Bash(ls:*), Bash(mkdir:*), Bash(
 | 그림자/광택 | 색이 들어간 `box-shadow`, blur/offset ≥ 20px, inset 광택 링, `backdrop-filter:blur` | `colored-shadow`, `big-shadow`, `gloss-ring`, `glassmorphism` |
 | 모션 장식 | `@keyframes`(pulse/shimmer/float/glow/fade…), hover 시 `transform: translate/scale`, 150ms 초과 transition | `keyframes`, `hover-transform`, `motion-decor`, `slow-transition` |
 | 배경 장식 | 거대 반투명 워터마크, 닷·그리드 배경, 페이드 마스크 | `watermark`, `fade-mask` |
+| 타이포 | font-size < 10px, 본문 행간 < 1.4, 헤딩 레벨 건너뛰기·h1 다중 | `tiny-font`, `line-height-body`, `heading-skip`, `multi-h1` |
+| 대비 | 본문 텍스트/배경 대비 < 4.5:1 (3.0 미만은 ERROR, 대형 텍스트는 3:1) | `contrast-aa` |
+| 레이아웃 | `border-radius` > 8px, 동일 radius 남발, 만능 중앙정렬, 유채색 3종+ | `radius-cap`, `pill`, `uniform-radius`, `centered-everything`, `multi-accent` |
+| 카피 톤 | 느낌표 남발, 최상급/주관 수식어, "단순한 X가 아니라 Y" 문형, AI 상투어구, 무공백 em-dash | `exclamation`, `superlative`, `ai-contrast`, `ai-stock-phrase`, `em-dash` |
 | 기타 | 카드 상단 컬러 액센트 바, 이모지 불릿/장식, 마케팅 보일러플레이트 | `accent-bar`, `emoji`, `marketing` |
 
 transition은 색·투명도 등 **기능적 상태 변화**에만, **150ms 이하**로 한정.

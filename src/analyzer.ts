@@ -226,7 +226,10 @@ function detectContainer(
  */
 export function analyze(root: string): ProjectProfile {
   const signals: string[] = [];
-  const pkg = parsePackageJson(readIf(root, 'package.json'));
+  const rawPkg = readIf(root, 'package.json');
+  const pkg = parsePackageJson(rawPkg);
+  // graceful degrade는 유지하되 조용히 삼키지 않는다 — doctor/디버깅용 signals에 기록.
+  if (rawPkg !== null && pkg === null) signals.push('package.json 파싱 실패 — 무시하고 진행');
   const deps = allDeps(pkg);
 
   const type = detectType(root, pkg, deps, signals);

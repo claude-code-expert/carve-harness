@@ -16,3 +16,8 @@
 - **Config & secrets from validated env**, never hardcoded; fail fast at startup if a required value is missing.
 - **Structured logs with a request/correlation id**; emit health and readiness endpoints.
 - **CORS is an allowlist**, not `*`, for credentialed/cross-origin APIs.
+
+## Frontend (if this service ships UI)
+- **Semantic HTML + visible focus.** Use real `<button>`/`<label>`/heading hierarchy; never remove `:focus-visible` outlines.
+- **Text contrast ≥ 4.5:1** for body text (3:1 for large text) — the anti-ai-slop linter's `contrast-aa` rule enforces this statically.
+- **Client-side validation is UX only.** Always re-validate on the server; the browser is an untrusted client.

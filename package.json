@@ -1,6 +1,6 @@
 {
   "name": "carve-harness",
-  "version": "1.3.5",
+  "version": "1.4.0",
   "description": "범용 하네스 자산을 프로젝트에 맞게 깎아 설치하는 CLI (carve = 깎아서 만들다, a.k.a. 하네스 깎는 개발자)",
   "author": "villainscode <villainscode@gmail.com>",
   "repository": {
@@ -29,8 +29,9 @@
     "clean": "rm -f bin/*.js src/*.js",
     "test": "node --test 'test/**/*.test.ts'",
     "test:cov": "node --test --experimental-test-coverage --test-coverage-lines=0.8 --test-coverage-functions=0.8 'test/**/*.test.ts'",
+    "score": "node scripts/score.mjs",
     "prepack": "npm run clean && npm run build",
-    "prepublishOnly": "npm run check && npm test"
+    "prepublishOnly": "npm run check && npm test && npm run score -- --axes audit,antislop,redundancy,template --min 50"
   },
   "dependencies": {
     "@clack/prompts": "^0.7.0"

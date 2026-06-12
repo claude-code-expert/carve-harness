@@ -66,6 +66,19 @@ bash -n assets/hooks/*.sh              # Shell 문법
 npm test                               # 전체 테스트
 ```
 
+## 품질 점수 (90점 수렴 루프)
+
+리포 자체 품질은 6축 100점으로 자기 채점한다(테스트 25 · 품질 20 · audit 15 · anti-slop 자기검사 15 · 중복지수 15 · 템플릿 완전성 10). 절차:
+
+```bash
+npm run score              # 총점 < 90 이면 exit 1
+npm run score -- --json    # 축별 손실·지목 파일(슬롭 ERROR·중복쌍·잔여 변수) 확인
+# 손실 큰 축부터 수정 → 재채점 → 90+ 까지 반복
+```
+
+PR(→main)·develop 푸시에는 CI(`.github/workflows/ci.yml`)가 `check`·`test:cov`·score 게이트를 자동 실행한다.
+PR 전 로컬 최소선: `npm run check && npm run test:cov && npm run score`.
+
 ## 커밋 컨벤션
 
 Conventional Commits를 따른다.

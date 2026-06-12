@@ -9,6 +9,7 @@ command -v git >/dev/null 2>&1 || exit 0
 git rev-parse --is-inside-work-tree >/dev/null 2>&1 || exit 0
 # 변경이 없으면 아무것도 하지 않는다
 if git diff --quiet && git diff --cached --quiet; then exit 0; fi
-git add -A >/dev/null 2>&1 || exit 0
+# tracked 파일만 스테이징(-u) — untracked(.env·빌드 산출물 등) 의도치 않은 포함 방지
+git add -u >/dev/null 2>&1 || exit 0
 git commit -m "chore: auto-commit (carve session end)" >/dev/null 2>&1 || true
 exit 0

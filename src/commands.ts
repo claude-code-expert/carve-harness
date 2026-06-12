@@ -1,6 +1,6 @@
 // src/commands.ts — CLI 명령 핸들러 (레이어 A). 파이프라인 와이어링.
 import {
-  readFileSync, writeFileSync, existsSync, mkdirSync, chmodSync, copyFileSync,
+  readFileSync, writeFileSync, existsSync, mkdirSync, chmodSync,
 } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -9,23 +9,40 @@ import type { ProjectProfile } from './types.ts';
 import { design, type HarnessLevel } from './designer.ts';
 import { generate, hookRegsFor, mcpRegsFor, type Artifact } from './generator.ts';
 import { audit, auditShellSyntax, errorsOf, type AuditFinding } from './auditor.ts';
-import { install, uninstall, installClaudeBase, migrateHookPaths, ROOT_CLAUDE } from './installer.ts';
-import { generateClaudeBase, selectStack, ROOT_IMPORT_BLOCK, ROOT_IMPORT_MARKER } from './claudebase.ts';
+import { install, uninstall, installClaudeBase, migrateHookPaths, backupOnce, ROOT_CLAUDE } from './installer.ts';
+import { generateClaudeBase, selectStack, ROOT_IMPORT_BLOCK, ROOT_IMPORT_MARKER, type ResponseLang } from './claudebase.ts';
 import {
   readManifest, writeManifest, migrateManifest, hashContent, CARVE_VERSION,
   type Manifest, type ManifestFile,
 } from './manifest.ts';
-import { CATALOG } from './catalog.ts';
+import { CATALOG, statusOf } from './catalog.ts';
+import { deprecationNotices, type LifecycleNotice } from './lifecycle.ts';
 import type { IO } from './cli.ts';
 
-/** 설치 가능 구성요소 목록 */
+/** 설치 가능 구성요소 목록 (hidden 제외, deprecated는 태그 표시) */
 export function cmdList(io: IO): number {
   io.log('설치 가능 구성요소 (점수 ≥75):');
   for (const c of CATALOG) {
-    const tags = [c.core ? '코어' : null, c.optional ? '선택' : null].filter(Boolean).join('·');
+    if (statusOf(c) === 'hidden') continue;
+    const dep = statusOf(c) === 'deprecated' ? `비추천${c.replacedBy ? `→${c.replacedBy}` : ''}` : null;
+    const tags = [c.core ? '코어' : null, c.optional ? '선택' : null, dep].filter(Boolean).join('·');
     io.log(`  [${c.kind}] ${c.id} (${c.score})${tags ? ` {${tags}}` : ''} — ${c.description}`);
   }
   return 0;
+}
+
+/** deprecated/hidden 설치분 안내 출력 (doctor·update 공용). 에러 아님 — 안내만. */
+function printLifecycleNotices(notices: LifecycleNotice[], io: IO, frozen: boolean): void {
+  for (const n of notices) {
+    if (n.status === 'deprecated') {
+      const repl = n.replacedBy ? ` — ${n.replacedBy} 권장` : '';
+      io.log(frozen
+        ? `갱신 동결(비추천): ${n.id}${repl} (현재 설치 상태로 유지·uninstall 가능)`
+        : `비추천 컴포넌트 설치됨: ${n.id}${repl} (계속 동작·uninstall 가능)`);
+    } else {
+      io.log(`제공 종료 컴포넌트 설치됨: ${n.id} — 갱신되지 않으며 uninstall 시 제거됩니다`);
+    }
+  }
 }
 
 // npm 설치 가능한 언어서버 (그 외 언어는 lsp 스킬이 수동 안내)
@@ -81,6 +98,9 @@ export function cmdInstall(root: string, io: IO, selected?: string[], lspServers
   let d = design(profile, level);
   if (selected) {
     const avail = new Set(d.available);
+    // 미등재(오타)·hidden(제공 종료) id는 조용히 버리지 않고 안내한다
+    const ignored = selected.filter((id) => !avail.has(id));
+    if (ignored.length > 0) io.log(`무시된 id(미등재/제공종료): ${ignored.join(', ')}`);
     d = { ...d, recommended: selected.filter((id) => avail.has(id)) };
   }
   const artifacts = generate(profile, d);
@@ -102,9 +122,9 @@ export function cmdInstall(root: string, io: IO, selected?: string[], lspServers
  * CLAUDE.md 베이스라인 + .claude/rules/* 생성 (carve init-claude).
  * 탐지된 언어 스택으로 깎고, 루트 CLAUDE.md가 @import하도록 연결한다. 멱등.
  */
-export function cmdInitClaude(root: string, io: IO): number {
+export function cmdInitClaude(root: string, io: IO, lang?: ResponseLang): number {
   const profile = analyze(root);
-  const artifacts = generateClaudeBase(profile);
+  const artifacts = generateClaudeBase(profile, { lang });
 
   if (auditGate(audit(artifacts), io, '생성')) return 1;
 
@@ -127,7 +147,13 @@ export async function interactiveInstall(root: string, io: IO, level?: HarnessLe
     io.log('선택된 구성요소가 없어 설치를 건너뜁니다.');
     return 0;
   }
-  return cmdInstall(root, io, selected, true, level); // 대화형 설치 → LSP 자동설치 + --level 전달
+  // 에러 경계: wizard 경로는 run()의 try/catch를 거치지 않으므로 여기서 직접 감싼다.
+  try {
+    return cmdInstall(root, io, selected, true, level); // 대화형 설치 → LSP 자동설치 + --level 전달
+  } catch (e) {
+    io.error(`오류: ${(e as Error).message}`);
+    return 1;
+  }
 }
 
 /** 설치된 하네스 점검 */
@@ -144,6 +170,8 @@ export function cmdDoctor(root: string, io: IO): number {
   if (isUnmigrated(m)) {
     io.log(`미마이그레이션 매니페스트 — ${cmdHint('migrate')} 권장`);
   }
+  // 라이프사이클 안내: deprecated/hidden 설치분 (안내만 — exit code 영향 없음)
+  printLifecycleNotices(deprecationNotices(m), io, false);
   // 설치된 셸 훅 문법 점검 (harness-audit) — v2 파일 객체에서 .path 사용
   const hookArts = m.files
     .filter((f) => f.path.endsWith('.sh') && existsSync(join(root, f.path)))
@@ -247,10 +275,7 @@ export function cmdDiff(root: string, io: IO): number {
 function writeUpdatedArtifact(root: string, a: Artifact): ManifestFile {
   const full = join(root, a.path);
   mkdirSync(dirname(full), { recursive: true });
-  if (existsSync(full)) {
-    const bak = full + '.bak';
-    if (!existsSync(bak)) copyFileSync(full, bak);
-  }
+  if (existsSync(full)) backupOnce(full);
   writeFileSync(full, a.content);
   if (a.executable) chmodSync(full, 0o755);
   return { path: a.path, hash: hashContent(a.content), assetVersion: CARVE_VERSION };
@@ -332,6 +357,8 @@ export function cmdUpdate(root: string, io: IO, opts: { yes?: boolean; force?: b
   }
 
   io.log(`업데이트 완료: 갱신 ${carveUpdated.length} · 보존(사용자수정) ${opts.force ? 0 : userModified.length} · 신규 제안 ${newRecommended.length}`);
+  // deprecated 설치분은 generate()에서 자연 탈락해 갱신 대상이 아니다 — 암묵 동결을 사용자에게 명시한다.
+  printLifecycleNotices(deprecationNotices(m), io, true);
   return 0;
 }
 

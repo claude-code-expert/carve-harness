@@ -15,6 +15,40 @@
 
 ---
 
+## [1.4.0] — 2026-06-12
+
+"측정기 먼저" 구조 개선 릴리스 — 6축 100점 자기 채점기를 먼저 깔고, 버그 하드닝 → 컴포넌트
+라이프사이클(단계적 fade-out) → anti-slop 고도화 → 템플릿 정량화 순으로 점수를 90+(실측 100/100)까지 수렴.
+
+### Added
+- **품질 점수 측정기 `scripts/score.mjs`** (`npm run score`): 6축 100점(테스트 25 · 코드품질 20 · audit 청결 15 · anti-slop 자기검사 15 · 카탈로그 중복지수 15 · 템플릿 완전성 10), `--json`/`--min`/`--axes` 지원, 총점 < min이면 exit 1. `prepublishOnly`에 cheap 축 게이트(--min 50) 추가. 수렴 루프 절차는 CONTRIBUTING에 문서화.
+- **컴포넌트 라이프사이클**: 카탈로그에 `status`(`active`/`deprecated`/`hidden`)·`replacedBy`·`matcher`·`coordination` 메타 도입(단일 출처 — generator의 `HOOK_MATCHER`/`HOOK_ASSETS` 테이블·designer의 `COORDINATION_IDS` 하드코딩 흡수). deprecated는 추천 제외·`[비추천→대체]` 태그·update 갱신 동결(안내), hidden은 목록 제외 — uninstall은 manifest 기반이라 영구 동작. 신규 `src/lifecycle.ts`(설치본 역매핑·안내), `carve doctor`/`update`가 비추천 설치분을 안내, `--only` 미등재 id는 무시 안내. 정책·케이던스는 `docs/lifecycle.md`.
+- **anti-slop 린터 룰 12종 고도화** (`check-slop.mjs`): 타이포(`tiny-font`·`line-height-body`·`heading-skip`·`multi-h1`), WCAG 대비(`contrast-aa` — 같은 블록에 fg·bg 리터럴이 있을 때 정적 판정, <3.0 ERROR·<4.5 WARN), 카피 톤(`superlative` 연성 목록·`ai-contrast` "단순한 X가 아니라 Y" 문형·`ai-stock-phrase`·`exclamation` 밀도·무공백 `em-dash` — 한국어 `용어 — 설명` 관례는 비발화), 레이아웃(`radius-cap` >8px ERROR·`pill`·`uniform-radius`·`centered-everything`·`multi-accent`). 기존 clean 픽스처·포맷 문서 GOOD 예시(11px 라벨·헤딩 행간 1.12)와 충돌하지 않게 보정.
+- **신규 포맷 가이드 `assets/antislop/ui-component.md`**: 앱 UI 크롬 전용 — 인터랙티브 상태 5종(default/hover/focus-visible/disabled/error) 명시, `:focus-visible` 제거 금지, 터치 타깃 ≥44px, skeleton shimmer·라벨 없는 아이콘 버튼 금지, empty/error/loading 콘텐츠 정의. anti-slop 팩에 vendoring.
+- **`carve init-claude --lang <en-ko|en|ko>`**: 베이스라인 CLAUDE.md의 언어 정책을 `{{RESPONSE_POLICY}}` 치환 변수 + 3프리셋으로 — 기본 `en-ko`(기존 동작 불변).
+- **anti-slop 디자인 표준 §6**: 마스터 SKILL.md에 타이포 스케일(본문 16–18px/1.5–1.7)·4/8px 간격 그리드·색 역할 토큰(대비 4.5:1 하한)·카피 톤(수치+단위, 느낌표·최상급 금지) 전역 MUST 추가. 포맷 문서 4종에 카피라이팅 do/don't 섹션.
+- **PR CI 게이트 `.github/workflows/ci.yml`**: PR(→main)·develop 푸시마다 `check` + `test:cov` + score cheap 축(--min 45, 총점 ≥90 게이트와 등가)을 자동 실행 — 기존엔 태그 push 릴리스 워크플로만 있어 머지 전 게이트가 로컬 수동뿐이었다.
+
+### Changed
+- **wave-1 단계적 fade-out**: `review`(→squad-review)·`changelog`(→squad-gitops)·`security-scan`(→squad-audit)·`coordinator`(→parallel-agents) 4종 deprecated(설치 가능·추천 제외), `evaluator-tuning`은 optional 강등, `commit`은 "빠른 인라인 메시지 생성"으로 범위 명확화. 기존 설치는 그대로 동작하며 doctor/update가 안내한다.
+- **evaluation-criteria 템플릿 정량화**: 체크박스 → 100점 채점표(빌드 25·테스트 25·안전 15는 게이트, 린트 10·회귀 10·커버리지 5 + anti-slop 설치 시 10점 행 주입), **총점 ≥ 90 = PASS**, 미적용 항목 만점 처리 규칙 명문화. sprint-contract의 "Plan Quality Score 3/3"을 검증가능성·범위 명확성·위험·롤백 3기준 표로 정의.
+- **베이스라인 CLAUDE.md 레퍼런스 정합**(docs/references Beck·Karpathy): "200줄이 50줄로 되면 다시 짠다", Beck 템포(one test at a time)·테스트 네이밍(`shouldRejectExpiredToken`)·버그픽스 2-테스트 형식(API-level + 최소 재현) 추가.
+- **타입 오버레이 6종 보강**: cli(실패 UX·시그널 정리·exit code 문서화), web(시맨틱 HTML·`:focus-visible`·대비 4.5:1·서버 재검증), mobile(터치 44pt·폰트 스케일링·단계 롤아웃), desktop(IPC 격리·메시지 검증), library(실행되는 예제·런타임 매트릭스), batch(중복 실행 락·타임존·보존 정책).
+- **손상 JSON 실패 모드 변경(의도적)**: 손상 `.claude/settings.json`·`carve-manifest.json`을 만나면 조용한 진행(기존: `{}`/"설치 없음" 간주) 대신 **사유 출력 + exit 1**로 중단한다 — 손상 settings를 carve 항목만으로 덮어쓰던 데이터 손실 경로 차단.
+
+### Fixed
+- **settings.json 훅 병합 identity를 스크립트 파일명으로**: command 문자열 전체 일치로만 멱등이라 rel→abs 경로 변경 시 같은 훅이 이중 등록(이중 발화)되던 버그 수정 — 제자리 갱신(matcher 포함) + 과거 중복 그룹 자가 수리 + `hooks[event]` 비배열 검증.
+- **훅 우회 패턴 차단**: block-destructive — 인용부호 우회(`rm -rf "/"`)·chmod 변형(`0777`·멀티플래그·플래그 없음); protect-secrets — 대소문자(`.ENV`)·구분자 변형(`.env-local`·`.env_ci`) 차단 + allowlist(`.example/.sample/.template/.dist`) 선행.
+- **훅 스크립트 하드닝**: pre-commit-lint/pre-push-test의 `eval` → `bash -c`(셸 상태 격리), auto-commit `git add -A` → `-u`(untracked 비밀 파일 staging 방지).
+- **auditor 정규식**: password 인용부호 backreference(불일치 FP 제거), chmod `0?777` 변형 탐지, curl|bash 룰을 `.sh` 비주석 줄로 스코프(문서 언급 FP 제거).
+- **`.bak` TOCTOU 제거**: `backupOnce()`(`COPYFILE_EXCL`)로 존재 검사·복사 원자화(installer 2개소 + update 1개소).
+- analyzer가 손상 package.json을 조용히 삼키지 않고 `signals`에 진단 기록(graceful degrade 유지).
+
+### Notes
+- 테스트 262개 통과, 커버리지 약 88.15%(게이트 ≥80), `npm run score` **100/100**(게이트 90 PASS), `bench/run.mjs` 측정 축 전부 100. 린터 사본 2벌(assets ↔ .claude)은 byte-identical 테스트로, anti-slop 규칙 2벌(SKILL.md ↔ claude-base 요약본)은 키워드 패리티 테스트로 드리프트를 봉인. 런타임 의존성 불변(@clack 하나).
+
+---
+
 ## [1.3.5] — 2026-06-11
 
 `init-claude`(CLAUDE.md 베이스라인 생성)를 미지원 언어·프로젝트 타입 축까지 보강.

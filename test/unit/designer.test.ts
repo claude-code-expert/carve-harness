@@ -1,7 +1,7 @@
 // test/unit/designer.test.ts — catalog + designer 검증 (Milestone 2 게이트)
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { CATALOG, applicableTo, forType, byId, type CatalogComponent } from '../../src/catalog.ts';
+import { CATALOG, applicableTo, forType, byId, statusOf, type CatalogComponent } from '../../src/catalog.ts';
 import { design, harnessLevel, applySignalWeights } from '../../src/designer.ts';
 import type { ProjectProfile, ProjectType } from '../../src/types.ts';
 
@@ -34,6 +34,32 @@ test('Squad 9종(+evaluator) + anti-ai-slop 팩 존재', () => {
   assert.equal(CATALOG.filter((c) => c.kind === 'agent').length, 9);
   assert.ok(byId('squad-evaluator'));
   assert.ok(byId('anti-ai-slop'));
+});
+
+// ── 라이프사이클 (wave-1 fade-out) ──
+test('wave-1: deprecated 4종은 available 포함(선택 가능)·recommended 제외', () => {
+  const WAVE1 = ['review', 'changelog', 'security-scan', 'coordinator'];
+  for (const id of WAVE1) {
+    const c = byId(id);
+    assert.ok(c, `${id} 카탈로그 부재`);
+    assert.equal(statusOf(c), 'deprecated', `${id} 상태`);
+    assert.ok(c.replacedBy, `${id} replacedBy 부재`);
+  }
+  const d = design(profile({ type: 'web', ci: 'github-actions', languages: ['ts', 'js'] })); // full
+  for (const id of WAVE1) {
+    assert.ok(d.available.includes(id), `${id}가 available에서 빠짐(hidden 아님)`);
+    assert.ok(!d.recommended.includes(id), `${id}가 추천됨(deprecated 위반)`);
+  }
+});
+
+test('훅 카탈로그: PreToolUse/PostToolUse 훅은 matcher 메타 보유(단일 출처), Stop/PreCompact는 불필요', () => {
+  for (const c of CATALOG.filter((x) => x.kind === 'hook')) {
+    if (c.event === 'Stop' || c.event === 'PreCompact') {
+      assert.equal(c.matcher, undefined, `${c.id}: Stop/PreCompact에 matcher 불필요`);
+    } else {
+      assert.ok(c.matcher, `${c.id}: matcher 메타 누락`);
+    }
+  }
 });
 
 // ── applicableTo 두 분기 ──
@@ -80,11 +106,13 @@ test('standard(web): 7 필수 훅 + Squad 추천, 추가 스킬은 미추천', (
   assert.ok(!d.recommended.includes('auto-commit'));
 });
 
-test('full: 추가 스킬(verify 등) 포함', () => {
+test('full: 추가 스킬(verify 등) 포함 — deprecated·optional은 미추천', () => {
   const d = design(profile({ type: 'web', ci: 'github-actions', languages: ['ts', 'js'] }));
   assert.equal(d.level, 'full');
   assert.ok(d.recommended.includes('verify'));
-  assert.ok(d.recommended.includes('security-scan'));
+  assert.ok(d.recommended.includes('iterate'));
+  assert.ok(!d.recommended.includes('security-scan')); // wave-1 deprecated → 추천 제외
+  assert.ok(!d.recommended.includes('evaluator-tuning')); // optional 강등 → 직접 선택만
 });
 
 test('recommended ⊆ available, auto-commit은 어떤 레벨에서도 미추천', () => {
@@ -98,13 +126,13 @@ test('recommended ⊆ available, auto-commit은 어떤 레벨에서도 미추천
 // ── applySignalWeights (시그널 가중, INTEL-03) ──
 const COORD_IDS = ['parallel-agents', 'coordinator'];
 
-test('applySignalWeights: 모노레포 시그널 → 조정 컴포넌트 가중', () => {
-  // 워크스페이스 비어있지 않음(monorepo) + available에 두 id 존재 → 둘 다 추가
+test('applySignalWeights: 모노레포 시그널 → 조정 컴포넌트 가중 (coordination 메타 단일 출처, active만)', () => {
+  // 워크스페이스 비어있지 않음(monorepo) → coordination 메타의 active 컴포넌트만 추가
   const base = ['commit', 'review'];
   const available = [...base, ...COORD_IDS];
   const out = applySignalWeights(profile({ workspaces: ['pnpm-workspace'], ci: null }), base, available);
   assert.ok(out.includes('parallel-agents'));
-  assert.ok(out.includes('coordinator'));
+  assert.ok(!out.includes('coordinator')); // wave-1 deprecated → 가중 안 함
   // base 멤버십 보존
   assert.ok(base.every((id) => out.includes(id)));
 });
@@ -114,7 +142,7 @@ test('applySignalWeights: CI 시그널만으로도 가중', () => {
   const available = [...base, ...COORD_IDS];
   const out = applySignalWeights(profile({ workspaces: [], ci: 'github-actions' }), base, available);
   assert.ok(out.includes('parallel-agents'));
-  assert.ok(out.includes('coordinator'));
+  assert.ok(!out.includes('coordinator')); // deprecated 미가중
 });
 
 test('applySignalWeights: 시그널 없으면 base 멤버십 불변', () => {
@@ -146,7 +174,7 @@ test('applySignalWeights: 멱등 — 이미 있으면 중복 없음', () => {
 test('design: 모노레포+CI → 조정 컴포넌트 추천 (single-package의 strict superset)', () => {
   const mono = design(profile({ type: 'web', workspaces: ['turbo'], ci: 'github-actions', languages: ['ts', 'js'] }));
   assert.ok(mono.recommended.includes('parallel-agents'));
-  assert.ok(mono.recommended.includes('coordinator'));
+  assert.ok(!mono.recommended.includes('coordinator')); // deprecated — 가중 대상에서 자동 탈락
 });
 
 test('design: single-package(web) → 조정 컴포넌트 미추천 (회귀 가드)', () => {
