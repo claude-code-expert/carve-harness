@@ -8,6 +8,7 @@
 
 ## Update
 > **Changelog** — full history in [CHANGELOG.md](CHANGELOG.md)
+> - `2026-06-12` **v1.4.0** — 6-axis 100-point self-scoring (`npm run score`) · component lifecycle (wave-1 fade-out: review·changelog·security-scan·coordinator deprecated) · 12 new anti-slop linter rules (typography · WCAG contrast · copy tone) + `ui-component.md` · evaluation-criteria 100-point rubric (PASS ≥ 90) · `init-claude --lang` · 11 hook-merge/bypass hardening fixes
 > - `2026-06-11` **v1.3.5** — `init-claude` enhanced: richer `_default` rules for unlisted languages + project-type overlay (`project-type.md`, orthogonal to the language axis)
 > - `2026-06-11` **v1.3.4** — Hook path fix: installed hooks now use `$CLAUDE_PROJECT_DIR` absolute paths (relative paths failed with `No such file`) + `carve update` auto-migration → [Existing users](#existing-users-v134-hook-path-fix)
 > - `2026-06-10` **v1.3.3** — Quick start restructured into 4 stages (first install · install options · update · removal), distinguishing CLI (tool) vs harness install (README KR/EN)
@@ -23,7 +24,7 @@
 
 > A CLI that analyzes a project and interactively selects and installs a harness (skills, hooks, subagents) tailored to that project.
 
-**v1.3.5** · TypeScript (ESM, no build step) · Node >=22.18 · 212 tests / ~95.8% coverage
+**v1.4.0** · TypeScript (ESM, no build step) · Node >=22.18 · 262 tests / ~88.2% coverage
 
 `carve` reads the codebase to detect the project type and tooling, then recommends suitable components.
 It installs only what the user selects into `.claude/`. carve = carving general-purpose assets down to fit a project.
@@ -120,8 +121,8 @@ Four commands cover everyday use. Call them in natural language or via `/carve-<
 
 | What you want | How to call | What it does |
 |---|---|---|
-| Commit message | "write a commit message" · `/carve-commit` | Generates a Conventional Commit |
-| Code review | "review this" · `/carve-review` | Review delegated to squad-review |
+| Commit message | "write a commit message" · `/carve-commit` | Generates a Conventional Commit (quick inline) |
+| Code review | "review this" · `/squad review` | Keyword auto-delegation → squad-review |
 | Session handoff | "handoff" · `/carve-handoff` | Leaves progress/decisions/next steps for the next session |
 | Remember a decision | "remember this" · `/carve-memory` | Persistent project memory |
 
@@ -142,16 +143,16 @@ Add them one at a time as needed. All are part of the install (by level) and cos
 - `test-gen` tests from UAT criteria · `tdd` red-green-refactor first · `squad-qa` test execution & QA report
 
 **Security**
-- `security-scan` security gate (delegates to squad-audit) · `squad-audit` security audit & vulnerability scan
+- `squad-audit` security audit & vulnerability scan *(the `security-scan` skill is deprecated as of v1.4.0 — consolidated into squad-audit)*
 
 **Release & collaboration**
-- `pr` PR body · `changelog` CHANGELOG updates · `squad-gitops` commits/PRs/changelog · `squad-docs` docs · `squad-plan` planning/user stories
+- `pr` PR body · `squad-gitops` commits/PRs/changelog · `squad-docs` docs · `squad-plan` planning/user stories *(the `changelog` skill is deprecated — squad-gitops covers it)*
 
 **Docs & visuals (anti-slop)**
 - When generating HTML, SVG, card news, reports, and slides, AI slop (gradients, glow, watermarks, etc.) is removed and `check-slop` gates deterministically ("make a slop-free html")
 
 **Multi-agent & cost**
-- `parallel-agents` 3–4 in parallel + git worktree isolation · `coordinator` mailbox/TeamCreate orchestration · `model-route` Haiku/Sonnet/Opus routing · `evaluator-tuning` few-shot evaluator correction
+- `parallel-agents` 3–4 in parallel + git worktree isolation · `model-route` Haiku/Sonnet/Opus routing · `evaluator-tuning` few-shot evaluator correction (optional — install by explicit selection) *(`coordinator` is deprecated — parallel-agents suffices)*
 
 **Other helpers** — `caveman` ultra-compression (~75% fewer tokens) · `write-a-skill` skill scaffolding · `zoom-out` system-level view. *(tdd, caveman, write-a-skill, zoom-out are rewrites of [mattpocock/skills](https://github.com/mattpocock/skills) patterns, MIT)*
 
@@ -180,7 +181,7 @@ Within a session, the `harness-audit` skill checks install integrity (hook regis
 Core skills, the 9 Squad agents, and anti-slop are recommended at *every level*; what changes by level is the **number of hooks and additional skills**.
 - `minimal` — small CLI/library/batch: core + 9 Squad + anti-slop + **3 essential hooks** (block, protect, handoff)
 - `standard` (default) — general apps: minimal + **the remaining core hooks** (7 total: +lint, test, format, Slack)
-- `full` — standard + **additional skills** (verify, iterate, security-scan, test-gen, parallel-agents, coordinator, etc.)
+- `full` — standard + **additional skills** (verify, iterate, test-gen, parallel-agents, etc. — deprecated components are excluded automatically)
 
 For the force-level (`--level`), explicit-selection (`--only`), and LSP-auto-install commands, see **Quick start → Install options** above.
 

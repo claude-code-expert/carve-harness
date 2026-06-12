@@ -130,9 +130,12 @@ test('node-cron 의존 → batch', () => {
   );
 });
 
-test('잘못된 package.json은 안전하게 무시 → unknown', () => {
+test('잘못된 package.json은 안전하게 무시 → unknown + 파싱 실패 시그널 기록', () => {
   withTempProject({ 'package.json': '{ not valid json' }, (root) => {
-    assert.equal(analyze(root).type, 'unknown');
+    const p = analyze(root);
+    assert.equal(p.type, 'unknown');
+    // 조용한 삼킴 금지 — doctor/디버깅용 signals에 진단이 남아야 한다
+    assert.ok(p.signals.some((s) => s.includes('package.json 파싱 실패')));
   });
 });
 

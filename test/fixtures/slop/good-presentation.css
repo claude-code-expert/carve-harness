@@ -1,0 +1,20 @@
+/* 폰트 선택 이유: 슬라이드 한글 가독성 — Noto Sans KR (GOOD 예시 캘리브레이션 픽스처) */
+.chapter {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: #111111;
+  background: #ffffff;
+}
+.head {
+  font-size: 88px;
+  line-height: 1.12;
+  font-weight: 700;
+  color: #111111;
+  background: #ffffff;
+}
+.body {
+  font-size: 18px;
+  line-height: 1.6;
+  color: #374151;
+  background: #ffffff;
+}

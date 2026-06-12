@@ -1,0 +1,7 @@
+/* 폰트 선택 이유: 테스트 픽스처. 회색 계열(#6b7280·#374151)은 multi-accent에 집계되면 안 됨(3종 단언이 가드). */
+.card-a { border-radius: 16px; text-align: center; color: #7c3aed; border-color: #6b7280; }
+.card-b { border-radius: 16px; text-align: center; color: #0d9488; border-color: #374151; }
+.card-c { border-radius: 16px; text-align: center; color: #f59e0b; }
+.card-d { border-radius: 16px; text-align: center; }
+.card-e { border-radius: 16px; text-align: center; }
+.hero { text-align: center; }

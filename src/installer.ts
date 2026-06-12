@@ -2,7 +2,7 @@
 // - 사용자 파일은 .bak로 1회 보존 후 기록.
 // - settings.json 훅은 idempotent 병합(carve 마커). uninstall 시 정확 제거.
 import {
-  readFileSync, writeFileSync, existsSync, mkdirSync, rmSync, chmodSync, copyFileSync,
+  readFileSync, writeFileSync, existsSync, mkdirSync, rmSync, chmodSync, copyFileSync, constants,
 } from 'node:fs';
 import { join, dirname } from 'node:path';
 import type { Artifact } from './generator.ts';
@@ -48,8 +48,10 @@ function readSettings(root: string): Settings {
   if (!existsSync(p)) return {};
   try {
     return JSON.parse(readFileSync(p, 'utf8')) as Settings;
-  } catch {
-    return {};
+  } catch (e) {
+    // 손상 JSON을 {}로 삼키면 mergeSettings가 사용자 settings 전체를 carve 항목만으로 덮어쓴다(데이터 손실).
+    // 조용히 진행하지 않고 중단한다 — cli.run()의 에러 경계가 사유 + exit 1로 보고.
+    throw new Error(`.claude/settings.json 파싱 실패(손상된 JSON) — 수동 수정 후 재시도: ${(e as Error).message}`);
   }
 }
 
@@ -59,12 +61,51 @@ function writeSettings(root: string, s: Settings): void {
   writeFileSync(p, JSON.stringify(s, null, 2) + '\n');
 }
 
+/** 훅 command의 스크립트 파일명(identity). 경로 표기(상대/절대)가 바뀌어도 같은 훅으로 본다. */
+function hookScriptName(command: string): string {
+  const m = /([^/\s"']+\.sh)\b/.exec(command);
+  return m?.[1] ?? command;
+}
+
 function applyHooks(s: Settings, regs: HookReg[]): void {
   const hooks = (s.hooks ??= {});
   for (const r of regs) {
-    const arr = (hooks[r.event] ??= []);
-    const present = arr.some((g) => g.hooks.some((h) => h.command === r.command));
-    if (!present) {
+    const existing = hooks[r.event];
+    // 사용자 손편집으로 배열이 아니면 TypeError 대신 맥락 있는 에러로 중단(사용자 settings 불가침).
+    if (existing !== undefined && !Array.isArray(existing)) {
+      throw new Error(`.claude/settings.json hooks.${r.event}가 배열이 아닙니다 — 수동 수정 후 재시도`);
+    }
+    let arr = (hooks[r.event] ??= []);
+    const script = hookScriptName(r.command);
+    // 같은 스크립트의 기존 _carve 항목은 제자리 갱신(경로 rel→abs 드리프트·스테일 matcher 교정).
+    // 과거 버그로 이중 등록된 중복 _carve 항목은 자가 수리(첫 항목만 유지).
+    let matched = false;
+    const emptied = new Set<HookGroup>();
+    for (const g of arr) {
+      if (!Array.isArray(g.hooks)) {
+        throw new Error(`.claude/settings.json hooks.${r.event}의 그룹 hooks가 배열이 아닙니다 — 수동 수정 후 재시도`);
+      }
+      const kept: HookEntry[] = [];
+      for (const h of g.hooks) {
+        if (h._carve && hookScriptName(h.command) === script) {
+          if (matched) continue; // 중복 항목 제거
+          matched = true;
+          h.command = r.command;
+          // matcher는 그룹 단위 — 사용자 훅이 섞인 그룹은 건드리지 않는다(외과적).
+          if (g.hooks.every((x) => x._carve)) g.matcher = r.matcher ?? '';
+        }
+        kept.push(h);
+      }
+      if (kept.length !== g.hooks.length) {
+        g.hooks = kept;
+        if (kept.length === 0) emptied.add(g);
+      }
+    }
+    if (emptied.size > 0) {
+      arr = arr.filter((g) => !emptied.has(g));
+      hooks[r.event] = arr;
+    }
+    if (!matched) {
       arr.push({ matcher: r.matcher ?? '', hooks: [{ type: 'command', command: r.command, _carve: true }] });
     }
   }
@@ -91,17 +132,27 @@ function mergeSettings(root: string, hooks: HookReg[], mcps: McpReg[]): void {
  * 해시는 installer가 쓰는 시점에 계산한다(generator/Artifact는 순수 값객체 유지).
  * ManifestFile[] 반환 — 경로별 {path, hash, assetVersion}.
  */
+/**
+ * 대상 파일을 .bak로 1회 보존한다. COPYFILE_EXCL로 존재 검사·복사가 원자적(TOCTOU 제거).
+ * @returns 새로 백업했으면 true, 이미 .bak가 있으면 false. EEXIST 외 오류는 그대로 던진다.
+ */
+export function backupOnce(full: string): boolean {
+  try {
+    copyFileSync(full, full + '.bak', constants.COPYFILE_EXCL);
+    return true;
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code === 'EEXIST') return false;
+    throw e;
+  }
+}
+
 function writeArtifacts(root: string, artifacts: Artifact[], prevFiles: Set<string>, backedUp: string[]): ManifestFile[] {
   const written: ManifestFile[] = [];
   for (const a of artifacts) {
     const full = join(root, a.path);
     mkdirSync(dirname(full), { recursive: true });
     if (existsSync(full) && !prevFiles.has(a.path)) {
-      const bak = full + '.bak';
-      if (!existsSync(bak)) {
-        copyFileSync(full, bak);
-        backedUp.push(a.path + '.bak');
-      }
+      if (backupOnce(full)) backedUp.push(a.path + '.bak');
     }
     writeFileSync(full, a.content);
     if (a.executable) chmodSync(full, 0o755);
@@ -240,11 +291,7 @@ export function installClaudeBase(
   const rootContent = existsSync(rootFull) ? readFileSync(rootFull, 'utf8') : '';
   if (!rootContent.includes(marker)) {
     if (existsSync(rootFull) && !prevFiles.has(ROOT_CLAUDE)) {
-      const bak = rootFull + '.bak';
-      if (!existsSync(bak)) {
-        copyFileSync(rootFull, bak);
-        backedUp.push(ROOT_CLAUDE + '.bak');
-      }
+      if (backupOnce(rootFull)) backedUp.push(ROOT_CLAUDE + '.bak');
     }
     const next = rootContent.length
       ? rootContent.replace(/\s*$/, '\n') + importBlock

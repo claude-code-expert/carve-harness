@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, rmSync, writeFileSync, mkdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
-import { classify, cmdReport, type DiffEntry } from '../../src/commands.ts';
+import { classify, cmdReport, cmdList, cmdInstall, type DiffEntry } from '../../src/commands.ts';
 import { hashContent, type Manifest, type ManifestFile } from '../../src/manifest.ts';
 import type { Artifact } from '../../src/generator.ts';
 import type { IO } from '../../src/cli.ts';
@@ -46,6 +46,26 @@ function art(path: string, content: string): Artifact {
 function statusOf(entries: DiffEntry[], path: string): DiffEntry['status'] | undefined {
   return entries.find((e) => e.path === path)?.status;
 }
+
+// ── 라이프사이클 표면화 (cmdList·cmdInstall --only) ──
+test('cmdList: deprecated는 {비추천→대체} 태그 표시 (hidden은 미표시)', () => {
+  const { io, msgs } = captureIO();
+  assert.equal(cmdList(io), 0);
+  const out = msgs.join('\n');
+  assert.match(out, /review \(90\).*\{.*비추천→squad-review.*\}/);
+  assert.match(out, /coordinator \(75\).*\{.*비추천→parallel-agents.*\}/);
+  // active 항목엔 비추천 태그 없음
+  assert.ok(!/commit \(90\).*비추천/.test(out));
+});
+
+test('cmdInstall --only: 미등재 id는 조용히 버리지 않고 안내한다', () => {
+  withTemp((root) => {
+    writeFileSync(join(root, 'package.json'), '{"name":"x"}');
+    const { io, msgs } = captureIO();
+    assert.equal(cmdInstall(root, io, ['commit', 'no-such-id']), 0);
+    assert.ok(msgs.some((m) => m.includes('무시된 id') && m.includes('no-such-id')));
+  });
+});
 
 test('classify: 디스크=매니페스트=자산 → unchanged', () => {
   withTemp((root) => {

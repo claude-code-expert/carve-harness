@@ -14,3 +14,8 @@
 ## Observability
 - **Log start/end, counts, and durations** with a run id; emit metrics (processed / failed / skipped) so a run's outcome is auditable.
 - **Make runs reproducible**: pin inputs (date window, source snapshot) explicitly rather than "now".
+
+## Concurrency & windows
+- **Lock against overlapping runs** (advisory lock / lease) — a slow run and the next schedule firing together must not double-process.
+- **Date windows carry an explicit timezone**; "yesterday" in UTC vs local is a classic silent off-by-one.
+- **Define a retention policy** for outputs and logs (how long, who deletes) so storage doesn't grow unbounded.

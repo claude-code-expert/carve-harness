@@ -13,5 +13,9 @@
 - **Errors are part of the contract.** Throw/return typed, documented errors; don't leak internal types across the boundary.
 
 ## Footprint
-- **Minimize dependencies** — each one becomes the consumer's transitive cost and risk.
+- **Minimize dependencies** — each one becomes the consumer's transitive cost and risk. Default to zero runtime deps; justify each addition.
 - **Document the surface** (types, parameters, examples); ship type definitions if the ecosystem uses them.
+
+## Docs as contract
+- **Every public API has a runnable example** — and the examples are executed in tests so they can't rot.
+- **Declare the supported runtime matrix** (language/runtime versions, platforms) explicitly and test against its edges.

@@ -1,4 +1,11 @@
 {
+  "permissions": {
+    "allow": [
+      "Bash(node --test --disable-warning=ExperimentalWarning test/unit/check-slop.test.ts test/unit/score.test.ts)",
+      "Bash(node --test --disable-warning=ExperimentalWarning test/unit/assets.test.ts)",
+      "Bash(node scripts/score.mjs --json --axes audit,template)"
+    ]
+  },
   "hooks": {
     "SessionStart": [
       {

@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>typography slop</title>
+<style>
+  /* 폰트 선택 이유: 테스트 픽스처 — Noto Sans KR */
+  body { font-family: 'Noto Sans KR', sans-serif; color: #111; background: #fff; }
+  .unreadable { font-size: 8px; }
+  .squeezed { font: 14px/1.1 'Noto Sans KR', sans-serif; }
+  .label { font-size: 11px; }
+</style>
+</head>
+<body>
+  <h1>첫 번째 제목</h1>
+  <h3>h2를 건너뛴 소제목</h3>
+  <h1>두 번째 h1</h1>
+  <p class="squeezed">행간이 좁은 본문 텍스트.</p>
+</body>
+</html>

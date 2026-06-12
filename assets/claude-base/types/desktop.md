@@ -4,6 +4,8 @@
 
 ## Process & integration
 - **Separate UI from privileged work.** Keep the rendering/UI layer thin; run file-system, network, and OS calls in a controlled layer with the narrowest privileges needed.
+- **The renderer never gets raw FS/network privileges** (context isolation on; no `nodeIntegration`-style bridges). Expose a minimal, typed IPC surface instead.
+- **Validate every IPC message like a network request** — the UI process may be compromised by remote content; check types, ranges, and authorization in the privileged layer.
 - **Single-instance where it matters.** Decide and enforce whether a second launch focuses the existing window or opens a new one; coordinate shared resources (files, ports, locks).
 - **Integrate natively.** Honor platform menus, shortcuts, notifications, and window/state conventions per OS rather than one-size-fits-all.
 

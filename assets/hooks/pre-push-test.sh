@@ -8,7 +8,8 @@ printf '%s' "$cmd" | grep -Eq 'git[[:space:]]+push' || exit 0
 TEST="{{HOOK_TEST_CMD}}"
 TEST="${CARVE_TEST_CMD:-$TEST}"
 [ -z "$TEST" ] && exit 0
-if ! eval "$TEST" >/dev/null 2>&1; then
+# eval 대신 bash -c — 명령이 훅 셸 상태를 변경하지 못하게 격리
+if ! bash -c "$TEST" >/dev/null 2>&1; then
   echo "[carve:pre-push-test] 테스트 실패 — 푸시 차단: $TEST" >&2
   carve_metric pre-push-test block
   exit 2

@@ -1,0 +1,28 @@
+name: ci
+
+# PR(→main)과 develop 푸시마다 머지 전 게이트를 돌린다 — 로컬 체크리스트의 CI 버전.
+# 게시는 release.yml(태그 push)이 담당하고, 여기서는 검증만 한다(권한 read 고정).
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [develop]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22          # engines >=22.18 (.ts 타입 스트리핑)
+      - run: npm ci
+      - run: npm run check          # 타입체크 (tsc strict)
+      - run: npm run test:cov       # 전체 테스트 + 커버리지 게이트(≥80)
+      # 품질 점수 게이트: tests(25)·quality(20) 축은 위 두 단계가 이미 보장하므로
+      # cheap 축만 채점한다(테스트 재실행 방지). 총점 ≥90 게이트와 등가 조건은
+      # cheap 축(최대 55) ≥ 45 (= 90 − 25 − 20).
+      - run: npm run score -- --axes audit,antislop,redundancy,template --min 45

@@ -1,7 +1,7 @@
 // src/wizard.ts — 대화형 구성요소 선택 (레이어 A). 추천을 기본 체크로 제시하되 사용자가 고른다.
 // 선택 로직(buildChoices)은 순수·테스트 가능. selectInteractive는 @clack TTY 래퍼(얇음).
 import type { HarnessDesign } from './designer.ts';
-import { byId } from './catalog.ts';
+import { byId, statusOf } from './catalog.ts';
 import { readPrefs, writePrefs, applyPrefs, type CarvePrefs } from './prefs.ts';
 
 export interface WizardChoice {
@@ -20,10 +20,12 @@ export function buildChoices(design: HarnessDesign, prefs?: CarvePrefs | null): 
   const checked = new Set(applyPrefs(design, prefs ?? null));
   return design.available.map((id) => {
     const c = byId(id);
+    // deprecated는 [비추천→대체id] 힌트 — designer가 추천에서 빼므로 기본 미체크(사용자 prefs로 켠 건 유지)
+    const dep = c && statusOf(c) === 'deprecated';
     return {
       value: id,
       label: c?.title ?? id,
-      hint: c ? `${c.kind} · ${c.description}` : undefined,
+      hint: c ? `${c.kind} · ${dep ? `[비추천${c.replacedBy ? `→ ${c.replacedBy}` : ''}] ` : ''}${c.description}` : undefined,
       selected: checked.has(id),
     };
   });

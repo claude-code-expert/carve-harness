@@ -88,12 +88,35 @@ test('generate: anti-slop 미추천이면 anti-slop 섹션·훅 없음', () => {
   assert.ok(fr && !/any.*금지/.test(fr.content)); // go → LANG_RULES 없음
 });
 
-test('generate: anti-slop 팩 vendoring — check-slop.mjs + 마스터 스킬 emit', () => {
+// ── evaluation-criteria 100점 채점표 ──
+test('evaluation-criteria: anti-slop 설치 시 10점 행 주입, 미설치 시 행 없음(만점 처리 규칙은 상존)', () => {
+  const p = profile({});
+  const withSlop = find(generate(p, design(p)), 'evaluation-criteria.md');
+  assert.ok(withSlop && /\| 7 \| anti-slop \| 10 \|/.test(withSlop.content));
+  const d = design(p);
+  const noSlop = find(generate(p, { ...d, recommended: d.recommended.filter((id) => id !== 'anti-ai-slop') }), 'evaluation-criteria.md');
+  assert.ok(noSlop && !/\| 7 \| anti-slop/.test(noSlop.content));
+  assert.ok(noSlop && /미적용 항목은 만점 처리/.test(noSlop.content));
+});
+
+test('evaluation-criteria: 채점표 배점 합계 = 100 (anti-slop 포함 시), PASS ≥ 90 명시', () => {
+  const p = profile({});
+  const art = find(generate(p, design(p)), 'evaluation-criteria.md');
+  assert.ok(art);
+  // 표의 배점 열(3번째 컬럼) 숫자를 파싱해 합산 — 가중치 드리프트 가드
+  const rows = art.content.split('\n').filter((l) => /^\| (G?\d+) \|/.test(l));
+  const total = rows.reduce((s, l) => s + Number((l.split('|')[3] ?? '0').trim()), 0);
+  assert.equal(total, 100, `배점 합계 ${total} ≠ 100`);
+  assert.match(art.content, /총점 ≥ 90 = PASS/);
+});
+
+test('generate: anti-slop 팩 vendoring — check-slop.mjs + 마스터 스킬 + ui-component emit', () => {
   const p = profile({});
   const arts = generate(p, design(p));
   assert.ok(find(arts, '.claude/skills/clean-html/scripts/check-slop.mjs')?.executable);
   assert.ok(find(arts, '.claude/skills/SKILL.md')); // anti-ai-slop 마스터
   assert.ok(find(arts, '.claude/skills/svg-image.md'));
+  assert.ok(find(arts, '.claude/skills/ui-component.md')); // 앱 UI 크롬 포맷 가이드
 });
 
 test('generate: standard 레벨 7 필수 훅 전부 생성 + 변수 치환', () => {

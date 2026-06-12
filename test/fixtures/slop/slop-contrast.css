@@ -1,0 +1,20 @@
+/* 폰트 선택 이유: 테스트 픽스처 */
+.fail-floor {
+  color: #c7cdd4;
+  background: #ffffff;
+}
+.fail-aa-body {
+  color: #949494;
+  background-color: #ffffff;
+  font-size: 16px;
+}
+.pass-body {
+  color: #6b7280;
+  background: #ffffff;
+  font-size: 16px;
+}
+.pass-large {
+  color: #8a8a8a;
+  background: #ffffff;
+  font-size: 32px;
+}

@@ -15,3 +15,8 @@
 ## Output
 - **Quiet by default, `--verbose` to expand**; consider a `--json` mode for scripting.
 - **No color/spinners when output isn't a TTY** (or honor `NO_COLOR`).
+
+## Failure UX & signals
+- **Error messages are actionable**: state what failed *and* how to fix it ("config not found — run `tool init` first"), not just the symptom.
+- **Clean up on SIGINT/SIGTERM**: remove temp files and partial output before exiting; never leave half-written state behind.
+- **Document exit codes in `--help`** so scripts can branch on them without reading source.
