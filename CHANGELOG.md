@@ -4,7 +4,7 @@
 포맷은 [Keep a Changelog](https://keepachangelog.com/ko/1.1.0/)를 따르며,
 [유의적 버전(SemVer)](https://semver.org/lang/ko/)을 준수한다.
 
-> 릴리스 태그: `v1.1.0`·`v1.1.1`(2026-06-02). `1.2.0`·`1.3.0`은 develop에서 준비 중(미태깅).
+> 릴리스 태그: `v1.1.0`–`v1.4.0` 게시됨. 버전별 상세는 아래 각 섹션 참조.
 
 ## [Unreleased]
 
@@ -12,6 +12,24 @@
 - v2.0 로드맵 **M11(비교·증명 벤치)·M12(피드백 루프)** 예정 — `docs/milestones/MS7-v2-roadmap.md`.
 - v1.0 토큰효율 **절약 수치 검증**: 대형 fixture·탐색 태스크로 벤치 재측정 필요(소형 단발은 MCP 고정비용으로 효과 작음).
 - 벤치 cross-harness **축 3(트리거 정확도)·축 4(컨텍스트 점유율)** 라이브 미측정(추가 LLM 필요).
+
+---
+
+## [1.4.1] — 2026-06-13
+
+스킬 이름이 Claude Code 내장 슬래시 명령과 충돌하던 문제를 라이프사이클 fade-out으로 해소한 패치.
+
+### Fixed
+- **스킬 이름 ↔ 내장 슬래시 명령 충돌(치명)**: `memory`·`verify`·`pr`·`review` 스킬이 설치되면서 슬래시 메뉴에 내장 `/memory`·`/verify`·`/pr`·`/review`와 **같은 이름이 이중 등록**되던 문제. 네 컴포넌트를 카탈로그에서 `status: 'hidden'`으로 전환 → `designer`가 추천·설치 후보(`available`)·`--only`에서 완전 제외하여 신규 설치 시 충돌이 사라진다. 근본 원인: Claude Code는 스킬을 **디렉터리 이름** 그대로 `/<name>`으로 노출하는데, carve는 커맨드 shim(`carve-*`)에만 네임스페이스를 줬고 스킬 이름엔 안 줬다(shim `/carve-memory`는 충돌 없음 — 범인은 스킬).
+
+### Changed
+- `iterate` 스킬의 목표 설정 단계를 `verify` 스킬 의존 → `build→lint→test→typecheck` 인라인(내장 `/verify` 활용 안내)으로 변경.
+- 설치 템플릿(`CLAUDE.md`)·README의 스킬 안내를 hidden 처리에 맞춰 갱신(메모리·검증·리뷰·PR은 내장 명령 사용).
+- `review`는 deprecated → hidden으로 라이프사이클 진행.
+
+### Notes
+- 테스트 264개 통과(회귀 잠금 2종 추가: hidden 4종 추천·설치 제외, hidden 설치분 안내), 커버리지 약 88.1%(게이트 ≥80). tsc strict clean. 런타임 의존성 불변(@clack 하나). 자산·카탈로그 엔트리는 라이프사이클 cadence상 보존(삭제는 후속 단계).
+- **기존 설치는 자동 정리되지 않는다** — `carve update`는 hidden 설치분을 동결·안내만 한다. 충돌 제거는 `.claude/skills/<id>/` + `carve-manifest.json` 항목 수동 삭제 또는 `uninstall→install`이 필요(skill은 훅·MCP 미등록이라 settings.json 무관).
 
 ---
 
