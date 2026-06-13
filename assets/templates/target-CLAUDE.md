@@ -20,7 +20,7 @@ codesight·LSP MCP가 `.claude/settings.json`에 등록돼 있다. 모든 스킬
 - 추론(왜)과 실행(무엇을)을 분리해 기술한다. 계획은 `squad-plan`, 계약은 `sprint-contract.md` 참조.
 
 ## 워크플로
-- 스킬: 핸드오프·메모리·커밋·체인지로그·리뷰·PR (자연어로 트리거).
+- 스킬: 핸드오프·커밋 (자연어로 트리거). 메모리·검증·리뷰·PR은 Claude Code 내장 `/memory`·`/verify`·`/review`·`/pr` 사용.
 - 깊은 작업은 Squad 서브에이전트(`/squad <member>`)에 위임.
 
 자세한 규칙: `flight-rules.md` · 품질 기준: `evaluation-criteria.md`
