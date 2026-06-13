@@ -48,3 +48,9 @@
 - 근본원인: pathspec 중 하나라도 매치 안 되면 `git add`가 fatal로 멈춰 유효 파일도 스테이징 안 됨.
 - 수정: 삭제 파일은 `git rm`로 먼저 처리하고, 커밋 직전 `git status --short`로 스테이징 상태 확인.
 - 날짜: 2026-06-02
+
+### 맨 동사형 스킬 이름은 Claude Code 내장 슬래시 명령과 충돌(`/memory` 이중 등록)
+- 증상: 대상 프로젝트에 carve 설치 후 슬래시 메뉴에 `/memory`가 **두 개** 뜸(내장 + carve). `/verify`·`/pr`·`/review`도 동일.
+- 근본원인: Claude Code는 `.claude/skills/<dir>/SKILL.md`를 **디렉터리 이름** 그대로 `/<dir>` 슬래시로 노출한다. carve는 커맨드 shim만 `carve-` 네임스페이스를 주고(`carve-memory.md`→`/carve-memory`) **스킬 디렉터리 이름엔 접두사를 안 줘서**, `memory`·`verify`·`pr`·`review` 같은 맨 동사형 id가 내장 명령을 그대로 가린다. shim(`/carve-memory`)은 충돌하지 않음 — 범인은 스킬 디렉터리.
+- 수정: 해당 4개를 카탈로그에서 `status: 'hidden'`으로 fade-out(`designer.ts`가 hidden을 available·recommended·`--only`에서 완전 제외 → 신규 설치 충돌 소멸). 자산·엔트리는 보존(라이프사이클 cadence상 삭제는 다음 단계). `iterate`가 `verify` 스킬에 의존하던 1줄은 게이트 단계 인라인으로 풀었다. 회귀 가드: `designer.test.ts`의 "hidden 4종 제외" + `lifecycle.test.ts`의 "hidden 설치분 보고". **신규 스킬 추가 시 id가 내장 슬래시 명령과 겹치지 않는지 먼저 확인**(내장 목록: memory·verify·pr·review·init·run·config·review 등). 기존 피해 설치는 `.claude/skills/<id>/` + manifest 항목 수동 삭제(skill은 훅·MCP 미등록이라 settings.json 무관).
+- 날짜: 2026-06-13

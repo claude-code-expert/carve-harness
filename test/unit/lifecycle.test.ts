@@ -39,16 +39,27 @@ test('deprecationNotices: active만 설치된 경우 빈 배열', () => {
   assert.deepEqual(deprecationNotices(m), []);
 });
 
-test('deprecationNotices: deprecated 설치분만 보고 + replacedBy 전달 (wave-1: review→squad-review)', () => {
+test('deprecationNotices: deprecated 설치분만 보고 + replacedBy 전달 (wave-1: changelog→squad-gitops)', () => {
   const m = manifestOf([
     '.claude/skills/commit/SKILL.md', // active — 보고 안 함
-    '.claude/skills/review/SKILL.md', // wave-1 deprecated
+    '.claude/skills/changelog/SKILL.md', // wave-1 deprecated
     '.claude/skills/security-scan/SKILL.md', // wave-1 deprecated
     '.claude/skills/unknown-thing/SKILL.md', // 카탈로그 미등재 — 무시
   ]);
   const notices = deprecationNotices(m).sort((a, b) => a.id.localeCompare(b.id));
-  assert.deepEqual(notices.map((n) => n.id), ['review', 'security-scan']);
+  assert.deepEqual(notices.map((n) => n.id), ['changelog', 'security-scan']);
   assert.ok(notices.every((n) => n.status === 'deprecated'));
-  assert.equal(notices.find((n) => n.id === 'review')?.replacedBy, 'squad-review');
+  assert.equal(notices.find((n) => n.id === 'changelog')?.replacedBy, 'squad-gitops');
   assert.equal(notices.find((n) => n.id === 'security-scan')?.replacedBy, 'squad-audit');
+});
+
+test('deprecationNotices: hidden 설치분도 보고 (status hidden — 내장 슬래시 충돌로 fade-out된 memory·review)', () => {
+  const m = manifestOf([
+    '.claude/skills/commit/SKILL.md', // active — 보고 안 함
+    '.claude/skills/memory/SKILL.md', // hidden (내장 /memory 충돌)
+    '.claude/skills/review/SKILL.md', // hidden (내장 /review 충돌)
+  ]);
+  const notices = deprecationNotices(m).sort((a, b) => a.id.localeCompare(b.id));
+  assert.deepEqual(notices.map((n) => n.id), ['memory', 'review']);
+  assert.ok(notices.every((n) => n.status === 'hidden'));
 });

@@ -7,16 +7,10 @@
 <p align="center"><a href="./README.md">한국어</a> · <b>English</b></p>
 
 ## Update
-> **Changelog** — full history in [CHANGELOG.md](CHANGELOG.md)
+> **Changelog** — latest 3 shown; full history in [CHANGELOG.md](CHANGELOG.md)
+> - `2026-06-13` **v1.4.1** — Skill name-collision fix: `memory`·`verify`·`pr`·`review` skills set to hidden, resolving duplicate-slash collisions with Claude Code built-ins (`/memory`·`/verify`·`/pr`·`/review`) on new installs
 > - `2026-06-12` **v1.4.0** — 6-axis 100-point self-scoring (`npm run score`) · component lifecycle (wave-1 fade-out: review·changelog·security-scan·coordinator deprecated) · 12 new anti-slop linter rules (typography · WCAG contrast · copy tone) + `ui-component.md` · evaluation-criteria 100-point rubric (PASS ≥ 90) · `init-claude --lang` · 11 hook-merge/bypass hardening fixes
 > - `2026-06-11` **v1.3.5** — `init-claude` enhanced: richer `_default` rules for unlisted languages + project-type overlay (`project-type.md`, orthogonal to the language axis)
-> - `2026-06-11` **v1.3.4** — Hook path fix: installed hooks now use `$CLAUDE_PROJECT_DIR` absolute paths (relative paths failed with `No such file`) + `carve update` auto-migration → [Existing users](#existing-users-v134-hook-path-fix)
-> - `2026-06-10` **v1.3.3** — Quick start restructured into 4 stages (first install · install options · update · removal), distinguishing CLI (tool) vs harness install (README KR/EN)
-> - `2026-06-08` **v1.3.2** — install guide switched to global-install-first (`npm i -g`) across README · INSTALL
-> - `2026-06-08` **v1.3.1** — `anti-ai-slop` shared rule in `init-claude` · progressive command guide in README · release script (`scripts/release.sh`)
-> - `2026-06-06` **v1.3.0** — Autonomous fix loop (`iterate`) · plan separation/verification · context diet + full audit patch (critical: `update` deadlock fixed)
-> - `2026-06-05` **v1.2.0** — Lifecycle (`diff`/`update`/`migrate`) · smarter analysis (monorepo/container weighting) · opt-in local telemetry (`carve report`)
-> - `2026-06-02` **v1.1.0** — Project-tailored harness install CLI (MVP): analyze → design → generate → audit → idempotent install
 
 # carve-harness
 
@@ -24,7 +18,7 @@
 
 > A CLI that analyzes a project and interactively selects and installs a harness (skills, hooks, subagents) tailored to that project.
 
-**v1.4.0** · TypeScript (ESM, no build step) · Node >=22.18 · 262 tests / ~88.2% coverage
+**v1.4.1** · TypeScript (ESM, no build step) · Node >=22.18 · 264 tests / ~88.1% coverage
 
 `carve` reads the codebase to detect the project type and tooling, then recommends suitable components.
 It installs only what the user selects into `.claude/`. carve = carving general-purpose assets down to fit a project.
@@ -77,7 +71,7 @@ Skip the wizard and pin the level/components with flags. (For what the levels me
 
 ```bash
 carve install --level full                   # Force level (minimal|standard|full)
-carve install --only commit,handoff,review   # Explicit selection (no bulk install)
+carve install --only commit,handoff,tdd      # Explicit selection (no bulk install)
 carve install --lsp-servers                  # Auto-install LSP language servers
 ```
 
@@ -124,7 +118,7 @@ Four commands cover everyday use. Call them in natural language or via `/carve-<
 | Commit message | "write a commit message" · `/carve-commit` | Generates a Conventional Commit (quick inline) |
 | Code review | "review this" · `/squad review` | Keyword auto-delegation → squad-review |
 | Session handoff | "handoff" · `/carve-handoff` | Leaves progress/decisions/next steps for the next session |
-| Remember a decision | "remember this" · `/carve-memory` | Persistent project memory |
+| Remember a decision | "remember this" · `/memory` | Claude Code built-in memory |
 
 And the **block / protect / format hooks run automatically — no need to call them**: dangerous commands (`rm -rf /`, fork bombs) and secret files (`.env`, keys) are stopped with `exit 2` (not advisory), the formatter runs on save, and lint/test are enforced before commit/push.
 
@@ -135,7 +129,7 @@ And the **block / protect / format hooks run automatically — no need to call t
 Add them one at a time as needed. All are part of the install (by level) and cost no context until you call them (on-demand loading). Two ways to call: **skills** via natural language or `/carve-<name>`; **Squad specialists** via `/squad <member>` or `/squad-<member>` (the `squad-…` entries below are those members).
 
 **Code quality & verification**
-- `verify` — `build→lint→test→typecheck` in one go ("run the verify loop")
+- `/verify` (Claude Code built-in) — `build→lint→test→typecheck` in one go ("run the verify loop")
 - `iterate` — diagnose→fix→re-run until tests are green, report only the final result ("fix it until it passes")
 - `squad-refactor` extract/simplify · `squad-debug` root cause · `squad-evaluator` independent evaluation against completion criteria (Self-Eval Blindspot)
 
@@ -146,7 +140,7 @@ Add them one at a time as needed. All are part of the install (by level) and cos
 - `squad-audit` security audit & vulnerability scan *(the `security-scan` skill is deprecated as of v1.4.0 — consolidated into squad-audit)*
 
 **Release & collaboration**
-- `pr` PR body · `squad-gitops` commits/PRs/changelog · `squad-docs` docs · `squad-plan` planning/user stories *(the `changelog` skill is deprecated — squad-gitops covers it)*
+- `squad-gitops` commits/PRs/changelog · `squad-docs` docs · `squad-plan` planning/user stories *(PR body via built-in `/pr` or squad-gitops — the `pr`·`changelog` skills are inactive)*
 
 **Docs & visuals (anti-slop)**
 - When generating HTML, SVG, card news, reports, and slides, AI slop (gradients, glow, watermarks, etc.) is removed and `check-slop` gates deterministically ("make a slop-free html")
@@ -181,7 +175,7 @@ Within a session, the `harness-audit` skill checks install integrity (hook regis
 Core skills, the 9 Squad agents, and anti-slop are recommended at *every level*; what changes by level is the **number of hooks and additional skills**.
 - `minimal` — small CLI/library/batch: core + 9 Squad + anti-slop + **3 essential hooks** (block, protect, handoff)
 - `standard` (default) — general apps: minimal + **the remaining core hooks** (7 total: +lint, test, format, Slack)
-- `full` — standard + **additional skills** (verify, iterate, test-gen, parallel-agents, etc. — deprecated components are excluded automatically)
+- `full` — standard + **additional skills** (iterate, test-gen, tdd, parallel-agents, model-route, etc. — deprecated/hidden components are excluded automatically)
 
 For the force-level (`--level`), explicit-selection (`--only`), and LSP-auto-install commands, see **Quick start → Install options** above.
 
