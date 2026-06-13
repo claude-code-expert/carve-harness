@@ -9,9 +9,9 @@
 
 ## Update
 > **변경 이력 (Changelog)** — 최근 3건만 표시, 전체 이력은 [CHANGELOG.md](CHANGELOG.md)
+> - `2026-06-13` **v1.5.0** — 페이드아웃 7종 삭제: hidden 4종(memory·verify·pr·review) + deprecated 3종(changelog·security-scan·coordinator)을 카탈로그·자산에서 제거(내장 슬래시·squad 위임으로 대체) + `carve update` 잔여 자동정리(해시 가드)
 > - `2026-06-13` **v1.4.1** — 스킬 이름 충돌 수정: `memory`·`verify`·`pr`·`review` 스킬을 hidden 처리해 Claude Code 내장 슬래시 명령(`/memory`·`/verify`·`/pr`·`/review`)과의 이중 등록 충돌 해소(신규 설치 적용)
 > - `2026-06-12` **v1.4.0** — 6축 100점 자기 채점기(`npm run score`) · 컴포넌트 라이프사이클(wave-1 fade-out: review·changelog·security-scan·coordinator 비추천) · anti-slop 린터 룰 12종 고도화(타이포·WCAG 대비·카피 톤) + `ui-component.md` · evaluation-criteria 100점 채점표(PASS ≥ 90) · `init-claude --lang` · 훅 병합/우회 버그 하드닝 11건
-> - `2026-06-11` **v1.3.5** — `init-claude` 보강: 미지원 언어 `_default` 규칙 강화 + 프로젝트 타입 오버레이(`project-type.md`, 언어 축과 직교) 추가
 
 # carve-harness
 
@@ -19,7 +19,7 @@
 
 > 프로젝트를 분석해 그 프로젝트에 맞는 하네스(스킬·훅·서브에이전트)를 대화형으로 선택해 설치하는 CLI.
 
-**v1.4.1** · TypeScript(ESM, 빌드 단계 없음) · Node >=22.18 · 테스트 264 / 커버리지 약 88.1%
+**v1.5.0** · TypeScript(ESM, 빌드 단계 없음) · Node >=22.18 · 테스트 268 / 커버리지 약 88.0%
 
 `carve`는 코드베이스를 읽어 프로젝트 타입과 도구를 탐지하고, 적합한 구성요소를 추천한다.
 사용자가 고른 것만 `.claude/`에 설치한다. carve = 범용 자산을 프로젝트에 맞게 깎아냄.
