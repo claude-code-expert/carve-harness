@@ -9,7 +9,7 @@ import type { ProjectProfile } from './types.ts';
 import { design, type HarnessLevel } from './designer.ts';
 import { generate, hookRegsFor, mcpRegsFor, type Artifact } from './generator.ts';
 import { audit, auditShellSyntax, errorsOf, type AuditFinding } from './auditor.ts';
-import { install, uninstall, installClaudeBase, migrateHookPaths, backupOnce, ROOT_CLAUDE } from './installer.ts';
+import { install, uninstall, installClaudeBase, migrateHookPaths, removeOrphanedComponents, backupOnce, ROOT_CLAUDE } from './installer.ts';
 import { generateClaudeBase, selectStack, ROOT_IMPORT_BLOCK, ROOT_IMPORT_MARKER, type ResponseLang } from './claudebase.ts';
 import {
   readManifest, writeManifest, migrateManifest, hashContent, CARVE_VERSION,
@@ -345,6 +345,11 @@ export function cmdUpdate(root: string, io: IO, opts: { yes?: boolean; force?: b
   // (재설치 없이 `carve update`만으로 "No such file" 훅 실패가 해소된다 — gotchas 참조.)
   const fixedHooks = migrateHookPaths(root);
   if (fixedHooks > 0) io.log(`훅 경로 교정: 상대→$CLAUDE_PROJECT_DIR 절대경로 ${fixedHooks}건 (settings.json·manifest 동기화).`);
+
+  // 삭제된 컴포넌트(tombstone) 잔여 정리: 기존 설치에 남은 fade-out 스킬/shim을 1회 제거(해시 가드).
+  const orphans = removeOrphanedComponents(root);
+  if (orphans.removed.length > 0) io.log(`삭제된 컴포넌트 잔여 정리: ${orphans.removed.length}건 제거 (${orphans.removed.join(', ')}).`);
+  for (const p of orphans.preserved) io.log(`삭제된 컴포넌트지만 사용자 수정분 보존: ${p} (수동 삭제 가능).`);
 
   // new-recommended: 절대 자동 설치하지 않고 제안만.
   for (const e of newRecommended) {

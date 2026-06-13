@@ -36,34 +36,15 @@ test('Squad 9종(+evaluator) + anti-ai-slop 팩 존재', () => {
   assert.ok(byId('anti-ai-slop'));
 });
 
-// ── 라이프사이클 (wave-1 fade-out) ──
-test('wave-1: deprecated 3종은 available 포함(선택 가능)·recommended 제외', () => {
-  const WAVE1 = ['changelog', 'security-scan', 'coordinator'];
-  for (const id of WAVE1) {
-    const c = byId(id);
-    assert.ok(c, `${id} 카탈로그 부재`);
-    assert.equal(statusOf(c), 'deprecated', `${id} 상태`);
-    assert.ok(c.replacedBy, `${id} replacedBy 부재`);
+// ── 라이프사이클 (fade-out 완료: v1.5.0에서 deprecated/hidden 7종 삭제) ──
+test('fade-out 완료: 카탈로그에 deprecated/hidden 컴포넌트가 없다 + 삭제 7종 부재', () => {
+  // 7종(memory·verify·pr·review·changelog·security-scan·coordinator)을 카탈로그·자산에서 삭제했다.
+  // 잔여 deprecated/hidden이 없어야 lifecycle 머시너리가 미래 fade-out용으로만 남는다.
+  for (const c of CATALOG) {
+    assert.equal(statusOf(c), 'active', `${c.id}: 잔여 deprecated/hidden — 삭제 누락`);
   }
-  const d = design(profile({ type: 'web', ci: 'github-actions', languages: ['ts', 'js'] })); // full
-  for (const id of WAVE1) {
-    assert.ok(d.available.includes(id), `${id}가 available에서 빠짐(hidden 아님)`);
-    assert.ok(!d.recommended.includes(id), `${id}가 추천됨(deprecated 위반)`);
-  }
-});
-
-test('hidden 4종(memory·pr·verify·review)은 available·recommended에서 완전 제외 (내장 슬래시 충돌 회피)', () => {
-  const HIDDEN = ['memory', 'pr', 'verify', 'review'];
-  for (const id of HIDDEN) {
-    const c = byId(id);
-    assert.ok(c, `${id} 카탈로그 부재`);
-    assert.equal(statusOf(c), 'hidden', `${id} 상태`);
-  }
-  // full 레벨이라도 hidden은 설치 후보(available)·추천(recommended) 양쪽에서 빠진다 → 신규 설치 시 내장 슬래시와 충돌 없음
-  const d = design(profile({ type: 'web', ci: 'github-actions', languages: ['ts', 'js'] }));
-  for (const id of HIDDEN) {
-    assert.ok(!d.available.includes(id), `${id}가 available에 노출(hidden 위반)`);
-    assert.ok(!d.recommended.includes(id), `${id}가 추천됨(hidden 위반)`);
+  for (const id of ['memory', 'verify', 'pr', 'review', 'changelog', 'security-scan', 'coordinator']) {
+    assert.equal(byId(id), undefined, `${id}: 삭제됐어야 함`);
   }
 });
 
@@ -121,12 +102,11 @@ test('standard(web): 7 필수 훅 + Squad 추천, 추가 스킬은 미추천', (
   assert.ok(!d.recommended.includes('auto-commit'));
 });
 
-test('full: 추가 스킬(test-gen·iterate 등) 포함 — deprecated·hidden·optional은 미추천', () => {
+test('full: 추가 스킬(test-gen·iterate 등) 포함 — optional은 미추천', () => {
   const d = design(profile({ type: 'web', ci: 'github-actions', languages: ['ts', 'js'] }));
   assert.equal(d.level, 'full');
   assert.ok(d.recommended.includes('test-gen'));
   assert.ok(d.recommended.includes('iterate'));
-  assert.ok(!d.recommended.includes('security-scan')); // wave-1 deprecated → 추천 제외
   assert.ok(!d.recommended.includes('evaluator-tuning')); // optional 강등 → 직접 선택만
 });
 
