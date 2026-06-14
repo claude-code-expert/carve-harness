@@ -8,9 +8,9 @@
 
 ## Update
 > **Changelog** — latest 3 shown; full history in [CHANGELOG.md](CHANGELOG.md)
+> - `2026-06-15` **v1.6.0** — v2.0 roadmap M12 (closed-loop feedback: extract `src/metrics.ts` aggregation + designer demote suggestions + surface in `carve update`/`report`, recommendations unchanged) · M11 Phase A (bench measurement infra: `collect.mjs`·`gen-fixture.mjs`·`test-trigger.sh` trigger 17/17·`report.mjs` axes 3·4) · first publish since 1.4.1, so it also delivers v1.5.0's 7-component deletion + orphan auto-clean
 > - `2026-06-13` **v1.5.0** — Removed 7 faded-out components: 4 hidden (memory·verify·pr·review) + 3 deprecated (changelog·security-scan·coordinator) from catalog/assets (replaced by built-in slashes · squad delegation) + `carve update` auto-cleans orphaned files (hash-guarded)
 > - `2026-06-13` **v1.4.1** — Skill name-collision fix: `memory`·`verify`·`pr`·`review` skills set to hidden, resolving duplicate-slash collisions with Claude Code built-ins (`/memory`·`/verify`·`/pr`·`/review`) on new installs
-> - `2026-06-12` **v1.4.0** — 6-axis 100-point self-scoring (`npm run score`) · component lifecycle (wave-1 fade-out: review·changelog·security-scan·coordinator deprecated) · 12 new anti-slop linter rules (typography · WCAG contrast · copy tone) + `ui-component.md` · evaluation-criteria 100-point rubric (PASS ≥ 90) · `init-claude --lang` · 11 hook-merge/bypass hardening fixes
 
 # carve-harness
 
@@ -18,7 +18,7 @@
 
 > A CLI that analyzes a project and interactively selects and installs a harness (skills, hooks, subagents) tailored to that project.
 
-**v1.5.0** · TypeScript (ESM, no build step) · Node >=22.18 · 268 tests / ~88.0% coverage
+**v1.6.0** · TypeScript (ESM, no build step) · Node >=22.18 · 287 tests / ~88.3% coverage
 
 `carve` reads the codebase to detect the project type and tooling, then recommends suitable components.
 It installs only what the user selects into `.claude/`. carve = carving general-purpose assets down to fit a project.

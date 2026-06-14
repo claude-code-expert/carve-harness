@@ -4,25 +4,28 @@
 포맷은 [Keep a Changelog](https://keepachangelog.com/ko/1.1.0/)를 따르며,
 [유의적 버전(SemVer)](https://semver.org/lang/ko/)을 준수한다.
 
-> 릴리스 태그: `v1.1.0`–`v1.4.0` 게시됨. 버전별 상세는 아래 각 섹션 참조.
+> 릴리스 태그: `v1.1.0`–`v1.4.1` 게시됨(v1.5.0은 태그 없이 v1.6.0에 통합 게시). 버전별 상세는 아래 각 섹션 참조.
 
 ## [Unreleased]
+
+### 잔여 (로드맵)
+- v2.0 로드맵 **M11 Phase B(라이브 캠페인)만 대기** — Phase A(측정 인프라)·M12(피드백 루프)는 v1.6.0 포함. Phase B는 API·타 하네스 n≥5 실측이라 코드 외.
+- v1.0 토큰효율 **절약 수치 검증**: 측정 무대(`gen-fixture.mjs` 대형 fixture + `tasksets/explore`) 준비됨 → 라이브 실행만 남음(Phase B).
+- 벤치 cross-harness **축 3(트리거)는 결정적 측정 완료**(`test-trigger.sh` 17/17·0/5). **축 4(컨텍스트)는 파서만 준비** — 라이브 `/context` 실측 대기(Phase B).
+
+---
+
+## [1.6.0] — 2026-06-15
+
+v2.0 로드맵 진척 — **M12(피드백 루프 closed loop)** + **M11 Phase A(측정 인프라)**. 1.4.1 이후 첫 npm 게시라, v1.5.0의 페이드아웃 7종 삭제 + `carve update` orphan 자동정리도 함께 전달된다(아래 [1.5.0]).
 
 ### Added
 - **비교·증명 벤치 측정 인프라(M11 Phase A)**: 라이브 캠페인(Phase B)을 한 번에 돌릴 수 있는 결정적 측정 도구를 `bench/`에 완비. (1) `bench/collect.mjs` — ccusage(`--json` → 토큰·$)·Claude Code `/context`(점유율, 축 4) 순수 파서. 라이브 호출 없이 stdin/파일 출력만 파싱(결정적·테스트 가능), 인식 못 한 입력은 빈 값(추정 금지). (2) `bench/gen-fixture.mjs` — 상호 import·참조가 깊은 대형 코드베이스 fixture 결정적 생성기(codesight/LSP vs grep 측정 무대). 같은 (modules, seed) → 같은 트리, 유효 TS. (3) `bench/test-trigger.sh` + 시드(`routing.tsv` 17종 정상 라우팅 + `no-route.txt` 5종 오발화) — squad-router 트리거 정확도/오발화를 전수 측정(결정적, **17/17 라우팅·0/5 오발화**). (4) `bench/report.mjs` 축 3(트리거)·4(컨텍스트 점유율) 열 추가 + `summarize` 순수화(구 4필드 results는 `—`로 하위호환, 옵셔널 결과 디렉토리 인자). (5) `bench/tasksets/explore.md`(탐색 지배 태스크) + `run.sh`에 트리거 단계·collect 파이프 안내. **Phase B(A~E n≥5 실측)는 API·타 하네스가 필요해 코드로 끝낼 수 없음 — 인프라만 완료, 라이브 실행 대기.** 명세: `docs/milestones/M11-bench-completion.md`.
 - **피드백 루프 통합(M12, closed loop)**: M10 텔레메트리(`.claude/.carve-metrics.jsonl`)를 designer 제안·`carve update`/`report`에 환류하는 measure→suggest→사용자 결정 고리. (1) `src/metrics.ts` 신규 — `aggregateMetrics(root, manifest)` 순수 read-only 집계 함수로 `cmdReport`의 인라인 로직(`parseMetricLine`·`INSTRUMENTED_HOOKS`·0-fire 역매핑)을 추출, report·update·designer가 단일 출처 공유(`cmdReport` 출력 byte-identical). (2) `designer.applyMetricsWeights(metrics)` — 발화 0회 계측 훅을 `demote` 제안으로 산출(결정적 정렬). **추천 집합은 바꾸지 않는다**(harness-architect: 강제 금지) — metrics null이면 빈 배열로 기존 동작 100% 동일. (3) `carve update`·`carve report`가 제안을 안내 출력(write 경로 불변, opt-out 기본이면 무출력). `weight-up` 규칙은 매핑 자의성으로 의도적 보류(타입 슬롯만). 명세: `docs/milestones/M12-feedback-loop.md`.
 
-### Notes (M11·M12)
+### Notes
 - 테스트 287개 통과(신규 19: M12 11 + M11 8). M11 신규는 `test/unit/bench.test.ts` — collect 파서·gen-fixture 결정성·report 축3·4 하위호환·test-trigger 라우팅 100%를 서브프로세스로 검증(bench는 tsconfig include 밖이라 import 대신 CLI 실행, check-slop 관례). 커버리지 ≥80(88.31%), `npm run score` 100/100, tsc strict clean. 런타임 의존성 불변(@clack 하나). 네트워크 전송 없음 — collect.mjs는 ccusage/`/context`의 *출력*만 파싱(추정 금지).
-
-### 해야 할 일 (다음 릴리스)
-- [ ] **v1.5.0 릴리스** — develop 작업트리에 준비 완료(미커밋·미푸시). 순서: develop 커밋(`fix(catalog)` 7종 삭제+orphan 마이그레이션 → `chore(release): v1.5.0`) → `origin/develop` 푸시 → develop→main PR → 태그 `v1.5.0` push → CI(`release.yml`)가 `npm publish`. *비가역 단계는 태그 push뿐 — 명시 승인 후 진행.*
-- [ ] **사용자 업그레이드 안내(릴리스 후)** — 기존 사용자는 `npm i -g carve-harness@latest` → `carve update` 2단계면 삭제 7종 잔여가 자동 정리됨(언인스톨 불필요). 단, 사용자가 수정한 스킬 파일은 보존+수동 삭제 안내, v1 manifest는 `carve migrate` 선행.
-
-### 잔여 (로드맵)
-- v2.0 로드맵 **M11 Phase B(라이브 캠페인)만 대기** — Phase A(측정 인프라)·M12(피드백 루프)는 완료(위 Added 참조). Phase B는 API·타 하네스 n≥5 실측이라 코드 외.
-- v1.0 토큰효율 **절약 수치 검증**: 측정 무대(`gen-fixture.mjs` 대형 fixture + `tasksets/explore`)는 준비됨 → 라이브 실행만 남음(Phase B).
-- 벤치 cross-harness **축 3(트리거 정확도)는 결정적 측정 완료**(`test-trigger.sh` 17/17·0/5). **축 4(컨텍스트 점유율)는 파서(`collect.mjs context`)만 준비** — 라이브 `/context` 실측 대기(Phase B).
+- **버전·업그레이드**: 1.4.1 → 1.6.0 (v1.5.0은 별도 태그 없이 본 릴리스에 통합). 기존 사용자는 `npm i -g carve-harness@latest` → `carve update`로 삭제 7종 잔여 자동 정리(언인스톨 불필요; 사용자 수정 스킬은 보존+수동 삭제 안내, v1 manifest는 `carve migrate` 선행).
 
 ---
 
