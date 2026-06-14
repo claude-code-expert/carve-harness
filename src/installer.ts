@@ -2,7 +2,7 @@
 // - 사용자 파일은 .bak로 1회 보존 후 기록.
 // - settings.json 훅은 idempotent 병합(carve 마커). uninstall 시 정확 제거.
 import {
-  readFileSync, writeFileSync, existsSync, mkdirSync, rmSync, chmodSync, copyFileSync, constants,
+  readFileSync, writeFileSync, existsSync, mkdirSync, rmSync, rmdirSync, chmodSync, copyFileSync, constants,
 } from 'node:fs';
 import { join, dirname } from 'node:path';
 import type { Artifact } from './generator.ts';
@@ -243,6 +243,74 @@ export function migrateHookPaths(root: string): number {
   }
 
   return changed;
+}
+
+// 라이프사이클 fade-out의 최종 단계로 카탈로그·자산에서 삭제된 컴포넌트 id (tombstone).
+// 컴포넌트를 삭제할 때 그 id를 여기에 append하면 carve update가 기존 설치의 잔여(orphan)를 1회 정리한다.
+// 명시 목록을 쓰는 이유: "카탈로그 미등재 = orphan"으로 판정하면 비카탈로그 자산(anti-slop clean-html 등)을
+// 오삭제한다. 삭제 대상을 명시해 그 위험을 차단한다(카탈로그와 항상 일관 — 삭제 릴리스에서만 함께 채운다).
+export const REMOVED_COMPONENTS: readonly string[] = [
+  // v1.5.0 fade-out 최종 삭제: hidden 4종(내장 슬래시 충돌) + deprecated 3종(squad 위임 일원화).
+  'memory', 'verify', 'pr', 'review', 'changelog', 'security-scan', 'coordinator',
+];
+
+export interface OrphanCleanupResult {
+  /** 삭제한 파일 경로 */
+  removed: string[];
+  /** 사용자 수정(해시 불일치)으로 보존한 파일 경로 */
+  preserved: string[];
+}
+
+/** orphan 후보 경로 → 컴포넌트 id. skill SKILL.md면 isSkillDir=true(빈 디렉터리 정리 대상). */
+function orphanRef(path: string): { id: string; isSkillDir: boolean } | null {
+  const skill = /^\.claude\/skills\/([^/]+)\/SKILL\.md$/.exec(path);
+  if (skill?.[1] !== undefined) return { id: skill[1], isSkillDir: true };
+  const cmd = /^\.claude\/commands\/carve-(.+)\.md$/.exec(path);
+  if (cmd?.[1] !== undefined) return { id: cmd[1], isSkillDir: false };
+  return null;
+}
+
+/**
+ * 삭제된(tombstone) 컴포넌트의 잔여 파일을 기존 설치에서 1회 정리한다(멱등). carve update가 호출.
+ * 안전 가드:
+ *  - tombstone에 명시된 id만 대상(비카탈로그 자산 clean-html 등은 절대 건드리지 않는다).
+ *  - manifest 기록 해시와 디스크 콘텐츠 해시가 일치하는 carve 소유·미수정 파일만 삭제한다.
+ *    사용자가 수정한 파일(해시 불일치)은 보존하고 안내한다. 해시 미상('' — v1 back-fill 전)은 carve 소유로 본다.
+ * manifest.files에서도 제거 항목을 빼 기록 정합을 맞춘다(uninstall은 manifest 기반이므로 정합 유지 필수).
+ */
+export function removeOrphanedComponents(
+  root: string,
+  tombstone: readonly string[] = REMOVED_COMPONENTS,
+): OrphanCleanupResult {
+  const removed: string[] = [];
+  const preserved: string[] = [];
+  const m = readManifest(root);
+  if (!m) return { removed, preserved };
+
+  const dead = new Set(tombstone);
+  const kept: ManifestFile[] = [];
+  for (const f of m.files) {
+    const ref = orphanRef(f.path);
+    if (ref === null || !dead.has(ref.id)) {
+      kept.push(f);
+      continue;
+    }
+    const full = join(root, f.path);
+    if (!existsSync(full)) continue; // 디스크엔 이미 없음 → manifest에서만 빠짐
+    // 해시 가드: 설치 시점 해시(f.hash)와 현재 콘텐츠 불일치 = 사용자 수정 → 보존.
+    if (f.hash !== '' && f.hash !== hashContent(readFileSync(full, 'utf8'))) {
+      preserved.push(f.path);
+      kept.push(f);
+      continue;
+    }
+    rmSync(full);
+    removed.push(f.path);
+    if (ref.isSkillDir) {
+      try { rmdirSync(dirname(full)); } catch { /* 비어있지 않으면 둔다 */ }
+    }
+  }
+  if (kept.length !== m.files.length) writeManifest(root, { ...m, files: kept });
+  return { removed, preserved };
 }
 
 /** 자산을 멱등 설치한다. level=적용 레벨(update/diff 재현용으로 영속). */

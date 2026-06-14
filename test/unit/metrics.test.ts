@@ -4,9 +4,11 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { mkdtempSync, mkdirSync, rmSync, existsSync, readFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, rmSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { aggregateMetrics, parseMetricLine, METRICS_REL } from '../../src/metrics.ts';
+import type { Manifest, ManifestFile } from '../../src/manifest.ts';
 
 const hook = (name: string) =>
   fileURLToPath(new URL(`../../assets/hooks/${name}`, import.meta.url));
@@ -134,3 +136,78 @@ for (const f of [HELPER, ...HOOKS, 'precompact-handoff.sh']) {
     assert.equal(spawnSync('bash', ['-n', hook(f)]).status, 0);
   });
 }
+
+// ── M12: TS 집계 모듈 (aggregateMetrics / parseMetricLine) ──
+function mfile(path: string): ManifestFile {
+  return { path, hash: 'h', assetVersion: '2.0.0' };
+}
+
+test('aggregateMetrics: 메트릭 파일 없음 → null (opt-out graceful)', () => {
+  const root = mkdtempSync(join(tmpdir(), 'carve-agg-'));
+  try {
+    assert.equal(aggregateMetrics(root, null), null);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('aggregateMetrics: 발화·차단 집계 + 손상/빈 줄 skip + 합계', () => {
+  const root = mkdtempSync(join(tmpdir(), 'carve-agg-'));
+  mkdirSync(join(root, '.claude'), { recursive: true });
+  try {
+    const lines = [
+      JSON.stringify({ ts: 1, hook: 'block-destructive', event: 'block' }),
+      JSON.stringify({ ts: 2, hook: 'block-destructive', event: 'allow' }),
+      JSON.stringify({ ts: 3, hook: 'protect-secrets', event: 'block' }),
+      '{ not json',                          // 손상 → skip
+      JSON.stringify({ ts: 4, foo: 'bar' }), // 필드 누락 → skip
+      '',                                    // 빈 줄 → skip
+    ];
+    writeFileSync(join(root, METRICS_REL), lines.join('\n') + '\n');
+    const agg = aggregateMetrics(root, null);
+    assert.ok(agg);
+    assert.equal(agg.totalFires, 3); // 유효 줄 3개 = 발화 3건 (손상/누락/빈 줄 제외)
+    assert.equal(agg.totalBlocks, 2);
+    assert.deepEqual(agg.perHook.get('block-destructive'), { total: 2, blocks: 1 });
+    assert.deepEqual(agg.perHook.get('protect-secrets'), { total: 1, blocks: 1 });
+    assert.deepEqual(agg.zeroFire, []); // manifest null → 0-fire 판정 생략
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('aggregateMetrics: 0-fire는 manifest 계측 훅 중 미발화 id (비계측 제외)', () => {
+  const root = mkdtempSync(join(tmpdir(), 'carve-agg-'));
+  mkdirSync(join(root, '.claude'), { recursive: true });
+  try {
+    writeFileSync(join(root, METRICS_REL),
+      JSON.stringify({ ts: 1, hook: 'block-destructive', event: 'block' }) + '\n');
+    const m: Manifest = {
+      schemaVersion: 2, version: '2.0.0',
+      files: [
+        mfile('.claude/hooks/carve-block-destructive.sh'), // 발화함 → 후보 아님
+        mfile('.claude/hooks/carve-pre-push-test.sh'),     // 계측·0회 → 후보
+        mfile('.claude/hooks/carve-slack-notify.sh'),      // 비계측 → 제외
+      ],
+      backups: [], hooks: [],
+    };
+    const agg = aggregateMetrics(root, m);
+    assert.ok(agg);
+    assert.deepEqual(agg.zeroFire, ['pre-push-test']);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('parseMetricLine: 유효/손상/필드누락/ts 기본값', () => {
+  assert.deepEqual(
+    parseMetricLine(JSON.stringify({ ts: 5, hook: 'h', event: 'block' })),
+    { ts: 5, hook: 'h', event: 'block' },
+  );
+  assert.equal(parseMetricLine('{nope'), null);                       // 손상
+  assert.equal(parseMetricLine(JSON.stringify({ hook: 'h' })), null); // event 누락
+  assert.deepEqual(
+    parseMetricLine(JSON.stringify({ hook: 'h', event: 'e' })),
+    { ts: 0, hook: 'h', event: 'e' }, // ts 누락 → 0
+  );
+});

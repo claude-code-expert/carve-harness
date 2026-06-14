@@ -48,17 +48,16 @@ function statusOf(entries: DiffEntry[], path: string): DiffEntry['status'] | und
 }
 
 // ── 라이프사이클 표면화 (cmdList·cmdInstall --only) ──
-test('cmdList: deprecated는 {비추천→대체} 태그 표시 (hidden은 미표시)', () => {
+test('cmdList: fade-out 7종 삭제 후 비추천 태그 없음 + 삭제 컴포넌트 미표시', () => {
   const { io, msgs } = captureIO();
   assert.equal(cmdList(io), 0);
   const out = msgs.join('\n');
-  assert.match(out, /changelog \(85\).*\{.*비추천→squad-gitops.*\}/);
-  assert.match(out, /coordinator \(75\).*\{.*비추천→parallel-agents.*\}/);
-  // active 항목엔 비추천 태그 없음
-  assert.ok(!/commit \(90\).*비추천/.test(out));
-  // hidden(내장 슬래시 충돌로 fade-out)은 목록에 아예 안 나온다
-  assert.ok(!/\[skill\] memory \(/.test(out), 'hidden memory가 목록에 표시됨');
-  assert.ok(!/\[skill\] review \(/.test(out), 'hidden review가 목록에 표시됨');
+  // deprecated/hidden이 0개라 비추천 태그가 어디에도 없다.
+  assert.ok(!/비추천/.test(out), '비추천 태그 잔존 — 삭제 누락');
+  // 삭제된 7종은 목록에 나오지 않는다.
+  for (const id of ['memory', 'verify', 'pr', 'review', 'changelog', 'security-scan', 'coordinator']) {
+    assert.ok(!new RegExp(`\\[skill\\] ${id} \\(`).test(out), `${id}가 목록에 표시됨`);
+  }
 });
 
 test('cmdInstall --only: 미등재 id는 조용히 버리지 않고 안내한다', () => {

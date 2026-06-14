@@ -89,18 +89,6 @@ test('install --level full: 단일언어 프로젝트도 병렬 에이전트 가
   }
 });
 
-test('buildChoices: deprecated는 [비추천→대체] 힌트 + 기본 미체크, prefs로 켜면 체크 유지', () => {
-  const d = design(profile({ type: 'web' }));
-  const choices = buildChoices(d);
-  const dep = choices.find((c) => c.value === 'changelog');
-  assert.ok(dep, 'deprecated도 available(선택 가능)에는 있어야 함');
-  assert.ok(!dep.selected, 'deprecated가 기본 체크됨');
-  assert.match(dep.hint ?? '', /\[비추천→ squad-gitops\]/);
-  // 사용자가 prefs로 명시 선택한 deprecated는 체크 유지
-  const withPrefs = buildChoices(d, { deselected: [], selected: ['changelog'], updatedAt: 't' });
-  assert.ok(withPrefs.find((c) => c.value === 'changelog')?.selected);
-});
-
 test('install --level 무효값 → exit 1', () => {
   assert.equal(run(['install', '/tmp/nope', '--level', 'huge'], capture().io), 1);
 });

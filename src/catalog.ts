@@ -52,17 +52,9 @@ export const CATALOG: CatalogComponent[] = [
   { id: 'codesight', kind: 'skill', title: 'codesight 컨텍스트', description: '프로젝트 구조 맵 MCP — 탐색 토큰 ~11배 절약(grep 대체)', score: 92, core: true, optional: false, applicable: 'all' },
   { id: 'lsp', kind: 'skill', title: 'LSP 인텔리전스', description: '정확한 코드 네비게이션 MCP — findReferences/getDiagnostics(grep 대체)', score: 90, core: true, optional: false, applicable: 'all' },
 
-  // ── 6 핵심 스킬 (Skill + 커맨드 shim) ──
+  // ── 핵심 스킬 (Skill + 커맨드 shim) ──
   { id: 'handoff', kind: 'skill', title: '핸드오프', description: '세션 인계 컨텍스트(PreCompact 훅 연동)', score: 90, core: true, optional: false, applicable: 'all' },
-  // hidden(fast-track): 스킬명이 Claude Code 내장 /memory 슬래시와 충돌 → 내장 메모리에 위임 (collision bug, 케이던스 우회)
-  { id: 'memory', kind: 'skill', title: '메모리', description: '프로젝트 지속 메모리 (내장 /memory 사용)', score: 90, core: true, optional: false, applicable: 'all', status: 'hidden' },
-  { id: 'commit', kind: 'skill', title: '커밋', description: 'Conventional Commit 메시지 생성(빠른 인라인) — 브랜치·PR·체인지로그 등 깊은 git 작업은 squad-gitops', score: 90, core: true, optional: false, applicable: 'all' },
-  // wave-1 fade-out: squad-gitops가 체인지로그를 포함 — 단독 스킬은 중복이라 비추천 (docs/lifecycle.md)
-  { id: 'changelog', kind: 'skill', title: '체인지로그', description: 'CHANGELOG 생성·갱신', score: 85, core: false, optional: false, applicable: 'all', status: 'deprecated', replacedBy: 'squad-gitops' },
-  // hidden: 순수 위임 shim + 스킬명이 내장 /review 슬래시와 충돌 → deprecated에서 hidden으로 진행. 심층 리뷰는 squad-review
-  { id: 'review', kind: 'skill', title: '리뷰', description: '코드 리뷰(squad-review 위임)', score: 90, core: false, optional: false, applicable: 'all', status: 'hidden', replacedBy: 'squad-review' },
-  // hidden(fast-track): 스킬명이 내장 /pr 슬래시와 충돌 → 내장 /pr·squad-gitops에 위임 (collision bug)
-  { id: 'pr', kind: 'skill', title: 'PR', description: 'PR 본문 생성 (내장 /pr·squad-gitops 사용)', score: 85, core: true, optional: false, applicable: 'all', status: 'hidden' },
+  { id: 'commit', kind: 'skill', title: '커밋', description: 'Conventional Commit 메시지 생성(빠른 인라인) — 깊은 git 작업은 squad-gitops', score: 90, core: true, optional: false, applicable: 'all' },
 
   // ── 7 필수 훅 (matcher는 settings.json 등록의 단일 출처 — generator가 참조) ──
   { id: 'block-destructive', kind: 'hook', event: 'PreToolUse', matcher: 'Bash', title: '파괴적 명령 차단', description: 'rm -rf 등 위험 명령 exit 2 차단', score: 95, core: true, optional: false, applicable: 'all' },
@@ -89,11 +81,7 @@ export const CATALOG: CatalogComponent[] = [
 
   // ── 추가 컴포넌트 (≥75) ──
   { id: 'anti-ai-slop', kind: 'pack', title: 'Anti-AI-Slop 팩', description: 'HTML·SVG·문서 슬롭 제거 스킬 + check-slop 검증 훅', score: 85, core: false, optional: false, applicable: 'all' },
-  // hidden(fast-track): 스킬명이 내장 /verify 슬래시와 충돌 → 내장 /verify에 위임 (collision bug)
-  { id: 'verify', kind: 'skill', title: '검증 루프', description: 'build→lint→test→typecheck 루프 (내장 /verify 사용)', score: 90, core: false, optional: false, applicable: 'all', status: 'hidden' },
-  { id: 'iterate', kind: 'skill', title: '자율 수렴 루프', description: 'verify green까지 진단→수정→재실행, 최종만 보고(최대 N회)', score: 85, core: false, optional: false, applicable: 'all' },
-  // wave-1 fade-out: 얇은 위임 shim — 레이어 A auditor + squad-audit이 양쪽을 커버
-  { id: 'security-scan', kind: 'skill', title: '보안 스캔', description: 'squad-audit 위임 보안 게이트', score: 80, core: false, optional: false, applicable: 'all', status: 'deprecated', replacedBy: 'squad-audit' },
+  { id: 'iterate', kind: 'skill', title: '자율 수렴 루프', description: 'green까지 진단→수정→재실행, 최종만 보고(최대 N회)', score: 85, core: false, optional: false, applicable: 'all' },
   { id: 'test-gen', kind: 'skill', title: '테스트 생성', description: 'UAT 기준 테스트 생성', score: 76, core: false, optional: false, applicable: 'all' },
 
   // ── 외부 큐레이션 도입 (mattpocock/skills, MIT — 출처 표기) ──
@@ -109,8 +97,6 @@ export const CATALOG: CatalogComponent[] = [
 
   // ── post-PoC (고도화) ──
   { id: 'harness-audit', kind: 'skill', title: '하네스 감사', description: '설치된 하네스 자기 점검(doctor+훅 등록·문법·자산 정합)', score: 78, core: false, optional: false, applicable: 'all' },
-  // wave-1 fade-out: 자체 SKILL.md가 "parallel-agents로 충분하면 그걸 먼저" — 최저 점수·중복
-  { id: 'coordinator', kind: 'skill', title: '에이전트 조율', description: '멀티에이전트 메일박스/TeamCreate 패턴 가이드', score: 75, core: false, optional: false, applicable: 'all', coordination: true, status: 'deprecated', replacedBy: 'parallel-agents' },
 ];
 
 /** 컴포넌트가 주어진 프로젝트 타입에 적합한지 */

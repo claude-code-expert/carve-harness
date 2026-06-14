@@ -158,6 +158,44 @@ test('cmdUpdate: user-modified는 기본 보존(건드리지 않음), --force면
   });
 });
 
+// ── M12: 텔레메트리 기반 제안 표면화 (제안만 — write 경로 불변) ──
+
+test('cmdUpdate: 0-fire 훅 → 텔레메트리 제안 표면화 + carve-updated write 경로 불변', () => {
+  withTemp((root) => {
+    // carve-updated 1건(기존 패턴) + manifest에 계측·미발화 훅(0-fire) + metrics jsonl.
+    const oldContent = 'OLD CARVE CONTENT — not what generate produces\n';
+    writeFile(root, 'flight-rules.md', oldContent);
+    writeManifest(root, v2Manifest([
+      mf('flight-rules.md', hashContent(oldContent)),
+      mf('.claude/hooks/carve-pre-push-test.sh', hashContent('x')), // 계측·미발화 → 0-fire
+    ]));
+    // metrics: pre-push-test 미등장 → 0-fire 후보.
+    writeFile(root, '.claude/.carve-metrics.jsonl',
+      `${JSON.stringify({ ts: 1, hook: 'block-destructive', event: 'block' })}\n`);
+
+    const { io, cap } = captureIO();
+    assert.equal(cmdUpdate(root, io), 0);
+    // 제안 표면화(제안만)
+    assert.ok(
+      cap.logs.some((l) => l.includes('텔레메트리 제안') && l.includes('pre-push-test')),
+      '0-fire 제안이 표면화되지 않음',
+    );
+    // write 경로 불변: carve-updated는 여전히 갱신됨(metrics가 write를 막지 않음)
+    assert.notEqual(read(root, 'flight-rules.md'), oldContent, 'metrics 존재가 carve-updated write를 바꿈');
+  });
+});
+
+test('cmdUpdate: metrics 없으면 제안 무출력 (하위호환 — 기존 동작 동일)', () => {
+  withTemp((root) => {
+    const oldContent = 'OLD CARVE CONTENT — not what generate produces\n';
+    writeFile(root, 'flight-rules.md', oldContent);
+    writeManifest(root, v2Manifest([mf('flight-rules.md', hashContent(oldContent))]));
+    const { io, cap } = captureIO();
+    assert.equal(cmdUpdate(root, io), 0);
+    assert.ok(!cap.logs.some((l) => l.includes('텔레메트리 제안')), 'metrics 없는데 제안 출력됨');
+  });
+});
+
 // ── 회귀: CLAUDE.md append-merge 센티넬(빈 해시)이 v1 미마이그레이션과 충돌하지 않아야 함 ──
 
 test('cmdUpdate: CLAUDE.md 센티넬(빈 해시)만 있으면 차단 안 함 (회귀: init-claude→update 데드락)', () => {

@@ -1,6 +1,6 @@
 # MS7 — carve-harness v2.0 로드맵: "하네스 엔지니어링 도구"로의 진화
 
-> 상태: 🚧 진행 중. MS0~MS6(v1.x) 완료 · **M8·M9·M10 완료 (v1.2.0, 2026-06-05)** · M11·M12 예정. 본 문서는 v2.0까지의 단계별 개발 계획이다.
+> 상태: 🚧 진행 중. MS0~MS6(v1.x) 완료 · **M8·M9·M10 완료 (v1.2.0, 2026-06-05)** · **M12 완료 (피드백 루프 closed loop)** · **M11 Phase A(측정 인프라) 완료 · Phase B(라이브) 대기**. 본 문서는 v2.0까지의 단계별 개발 계획이다.
 > 두 레이어(A=리포 자체, B=대상 `.claude/` 산출물) 구분과 carve의 모든 가드레일을 준수한다.
 
 ## Context (왜 이 작업인가)
@@ -114,39 +114,47 @@ M12 피드백 루프 통합  ← M10(텔레메트리) + M11(벤치) 결과를 de
 
 ---
 
-## M11 — 비교·증명 벤치 완성
+## M11 — 비교·증명 벤치 완성 🚧 Phase A 완료 · Phase B 대기
 
-**목표**: 보류된 라이브 크로스하네스 비교(축 1·4)와 대형 토큰효율 재측정을 마무리, 정직 라벨 유지.
+> 구현 명세·갭 분석: [M11-bench-completion.md](M11-bench-completion.md). M11은 성격상 2단 — Phase A(측정 인프라, 코드)/Phase B(라이브 캠페인, API).
 
-**구현**
-- **bench 자동화 확장**: `bench/run.mjs`로 no-harness vs carve(vs 타 하네스) 시드 실행, 메트릭(토큰·차단율·트리거 정확도) 수집·표 생성.
-- **대형 코드베이스 fixture 추가** → codesight/LSP "11× 절감" 주장 검증 (현재 소규모 CRUD만 측정됨).
-- **결과 재생성**: `docs/guide/carve-harness-benchmark-results.md` 갱신, 추정 금지·보류 라벨 정책 유지.
+**목표**: 보류된 라이브 크로스하네스 비교(축 1·3·4)와 대형 토큰효율 재측정을 마무리, 정직 라벨 유지.
+
+**Phase A — 측정 인프라 (구현됨, Opus 4.8)**
+- `bench/collect.mjs` — ccusage(토큰·$)·`/context`(점유율 축4) 순수 파서(라이브 호출 안 함 → 결정적·테스트 가능).
+- `bench/gen-fixture.mjs` — 대형 코드베이스 fixture 결정적 생성기(codesight/LSP vs grep 측정 무대). 유효 TS, 같은 시드→같은 트리.
+- `bench/test-trigger.sh` + 시드(`routing.tsv` 17 + `no-route.txt` 5) — 트리거 정확도/오발화 결정적 측정. **17/17·0/5**.
+- `bench/report.mjs` — 축 3(트리거)·4(컨텍스트) 열 추가 + `summarize` 순수화(하위호환: 구 4필드 → `—`).
+- `bench/tasksets/explore.md` — 탐색 지배 태스크(findReferences·구조맵 의존). `run.sh`에 트리거 단계·collect 파이프 안내.
+- 검증: 신규 `test/unit/bench.test.ts`(8) 서브프로세스 테스트. 287 통과·tsc clean·score 100/100.
+
+**Phase B — 측정 캠페인 (대기, 코드 외)**
+- A~E 하네스 n≥5 실행 → `collect.mjs` 수집 → `results/*.json` → `report.mjs`. 대형 fixture로 토큰효율 재측정.
+- `docs/guide/carve-harness-benchmark-results.md` ⏳ 행 갱신. **API·타 하네스 필요 — Fable/코드로 끝낼 수 없음.**
 
 **코드 위치**: `bench/` (리포 내, 런타임 외부), `docs/guide/`.
 
-**검증**: bench 재현성(동일 시드→동일 메트릭), 측정 표 산출. 측정만 — 추정 수치 삽입 금지(현 정책).
-
-**가드레일**: 측정 전용. 의존성 추가 시 명시 승인.
+**가드레일**: 측정 전용. 추정 금지·보류 라벨 유지. 의존성 무추가(ccusage는 `npx`).
 
 ---
 
-## M12 — 피드백 루프 통합 (closed loop) — "하네스 엔지니어링"의 핵심
+## M12 — 피드백 루프 통합 (closed loop) — "하네스 엔지니어링"의 핵심 ✅ 완료
 
-**목표**: M10 텔레메트리 + M11 벤치 결과를 designer 추천에 환류. 측정→설계 반영의 닫힌 고리 완성.
+> 구현 명세: [M12-feedback-loop.md](M12-feedback-loop.md). M10 텔레메트리만 입력원으로 사용(M11 벤치 환류는 후속 슬롯).
 
-**구현**
-- designer가 (존재 시) `.claude/.carve-metrics.jsonl` 집계를 읽어 추천 가중에 반영:
-  - 발화 0회 훅 → 다음 `update`에서 강등/제거 제안.
-  - 자주 차단된 패턴 영역 → 관련 컴포넌트 가중↑.
-- `carve update`가 텔레메트리 기반 제안을 포함(제안만, 강제 금지).
-- 완전 로컬·옵셔널·결정론. **metrics 없을 때 기존 동작과 100% 동일**(하위호환).
+**목표**: M10 텔레메트리(`.claude/.carve-metrics.jsonl`)를 designer 추천·`carve update`/`report` 제안에 환류. measure→suggest→사용자 결정의 닫힌 고리.
 
-**코드 위치**: `src/designer.ts` (metrics 입력 파라미터), `src/commands.ts` (`cmdUpdate` 연동).
+**구현됨**
+- **집계 추출**: `src/metrics.ts`(신규) — `aggregateMetrics(root, manifest)` 순수 read-only 함수. `cmdReport`의 인라인 집계(`parseMetricLine`·`INSTRUMENTED_HOOKS`·0-fire 역매핑)를 이리로 빼 report·update·designer가 단일 출처로 공유. `cmdReport`는 호출로 축소(출력 byte-identical).
+- **designer 제안**: `designer.applyMetricsWeights(metrics)` — 발화 0회 계측 훅 → `demote` 제안(정렬·결정적). **추천 집합(`design().recommended`)은 바꾸지 않는다** — measure→suggest→사용자 결정(harness-architect: 강제 금지). metrics null이면 빈 배열.
+- **표면화**: `carve update`·`carve report`가 제안을 안내 출력(제안만 — write 경로 불변). metrics opt-out(기본)이면 무출력 → 기존 동작 100% 동일.
+- **보류(슬롯만)**: "차단 빈발 훅 → 컴포넌트 weight-up"은 매핑이 자의적이라 의도적 미구현(`kind: 'weight-up'` 타입 슬롯만 열어둠). demote 한 규칙으로 closed loop 성립.
 
-**검증**: metrics 주입 시 추천 변화 단위 테스트, metrics 부재 시 기존 추천 불변(스냅샷) 테스트.
+**코드 위치**: `src/metrics.ts`(신규), `src/designer.ts`(`applyMetricsWeights`·`MetricsSuggestion`), `src/commands.ts`(`cmdReport` 추출·`cmdUpdate`/`cmdReport` 제안 표면화).
 
-**가드레일**: 로컬 데이터만 입력. 결정론 유지(같은 입력→같은 추천).
+**검증됨**: `aggregateMetrics`/`parseMetricLine` 단위(`metrics.test.ts`), `applyMetricsWeights` 제안·결정성·하위호환(`designer.test.ts`), `cmdUpdate` 제안 표면화 + write 경로 불변 + metrics 부재 시 무출력(`update.e2e.test.ts`). 279 테스트 통과·커버리지 ≥80·score 100/100.
+
+**가드레일**: 로컬 데이터만 입력, 네트워크 없음, 결정론(같은 입력→같은 제안), metrics 부재 시 byte-identical 동작, 제안만(강제 변경 없음).
 
 ---
 
