@@ -6,3 +6,12 @@
 기능 기획 도와줘	squad-plan
 문서화 해줘	squad-docs
 커밋 메시지 작성	squad-gitops
+pr 리뷰 해줘	squad-review
+pr 작성해줘	squad-gitops
+보안 리뷰 해줘	squad-audit
+에러 테스트 작성해줘	squad-debug
+빌드 확인해줘	squad-qa
+코드 정리해줘	squad-refactor
+보안 에러를 디버그	squad-audit
+테스트 코드 리뷰	squad-review
+평가 기준 채점해줘	squad-evaluator

@@ -2,6 +2,9 @@
 bin/*.js
 src/*.js
 
+# 벤치 생성 fixture (gen-fixture.mjs가 on-demand 생성 — 대형, 추적 불필요)
+bench/fixtures/
+
 # GSD (get-shit-done) 설치물 — npx로 재생성하는 개발 툴링(제품 소스 아님). .claude/skills(저작물)은 추적.
 .claude/get-shit-done/
 .claude/agents/
