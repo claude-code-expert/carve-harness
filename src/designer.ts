@@ -2,6 +2,7 @@
 // 추천만 한다. 실제 설치는 wizard 선택 + installer가 한다 (일괄 설치 없음).
 import type { ProjectProfile, ProjectType } from './types.ts';
 import { CATALOG, forType, statusOf, type CatalogComponent } from './catalog.ts';
+import type { MetricsAggregate } from './metrics.ts';
 
 export type HarnessLevel = 'minimal' | 'standard' | 'full';
 
@@ -48,6 +49,39 @@ export function applySignalWeights(
     }
   }
   return [...result];
+}
+
+/** 텔레메트리 기반 추천 조정 제안 1건 (M12). 추천을 강제로 바꾸지 않고 사용자에게 안내만 한다. */
+export interface MetricsSuggestion {
+  /** demote=설치돼 있으나 무용 → 제외 고려 · weight-up=가중 제안(현재 보류, 슬롯만) */
+  kind: 'demote' | 'weight-up';
+  /** 대상 컴포넌트 id */
+  id: string;
+  /** 사람이 읽을 근거 */
+  reason: string;
+}
+
+/**
+ * 텔레메트리 집계 → 추천 조정 "제안"(M12 closed loop). 순수·결정적.
+ *
+ * 핵심 설계: design()의 recommended 집합을 **바꾸지 않는다**. metrics로 추천을 흔들면 결정성·신뢰를
+ * 해치므로(harness-architect: 강제 금지), measure → suggest → 사용자 결정의 닫힌 고리만 만든다.
+ * metrics가 null(=opt-out 기본)이면 빈 배열 → 기존 동작과 100% 동일(하위호환).
+ *
+ * 규칙:
+ *   - 발화 0회 계측 훅(metrics.zeroFire) → demote 제안("다음 설치에서 제외 고려"). 결정적 정렬.
+ * (차단 빈발 훅 → 관련 컴포넌트 weight-up은 매핑이 자의적이라 의도적으로 보류 — kind 슬롯만 열어둠.
+ *  demote 한 규칙만으로 measure→suggest 고리가 성립한다. 과설계 금지.)
+ */
+export function applyMetricsWeights(metrics: MetricsAggregate | null): MetricsSuggestion[] {
+  if (metrics === null) return [];
+  return [...metrics.zeroFire]
+    .sort()
+    .map((id) => ({
+      kind: 'demote' as const,
+      id,
+      reason: '설치됐지만 한 번도 발화하지 않음 — 다음 설치에서 제외를 고려하세요.',
+    }));
 }
 
 /** ProjectProfile → 추천 슬롯 설계. levelOverride로 자동 레벨을 덮어쓸 수 있다(--level). */

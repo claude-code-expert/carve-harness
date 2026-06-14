@@ -2,8 +2,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { CATALOG, applicableTo, forType, byId, statusOf, type CatalogComponent } from '../../src/catalog.ts';
-import { design, harnessLevel, applySignalWeights } from '../../src/designer.ts';
+import { design, harnessLevel, applySignalWeights, applyMetricsWeights } from '../../src/designer.ts';
 import type { ProjectProfile, ProjectType } from '../../src/types.ts';
+import type { MetricsAggregate } from '../../src/metrics.ts';
 
 function profile(over: Partial<ProjectProfile>): ProjectProfile {
   return {
@@ -176,4 +177,38 @@ test('design: single-package(web) → 조정 컴포넌트 미추천 (회귀 가�
   const single = design(profile({ type: 'web' }));
   assert.ok(!single.recommended.includes('parallel-agents'));
   assert.ok(!single.recommended.includes('coordinator'));
+});
+
+// ── applyMetricsWeights (M12 텔레메트리 제안 — 추천 집합은 불변, 제안만) ──
+function agg(over: Partial<MetricsAggregate>): MetricsAggregate {
+  return { perHook: new Map(), zeroFire: [], totalFires: 0, totalBlocks: 0, ...over };
+}
+
+test('applyMetricsWeights: metrics null → 빈 배열 (opt-out 하위호환)', () => {
+  assert.deepEqual(applyMetricsWeights(null), []);
+});
+
+test('applyMetricsWeights: zeroFire 비어있으면 제안 없음', () => {
+  assert.deepEqual(applyMetricsWeights(agg({})), []);
+});
+
+test('applyMetricsWeights: zeroFire → demote 제안(정렬·근거)', () => {
+  const out = applyMetricsWeights(agg({ zeroFire: ['pre-push-test', 'auto-format'] }));
+  assert.equal(out.length, 2);
+  assert.deepEqual(out.map((s) => s.id), ['auto-format', 'pre-push-test']); // 결정적 정렬
+  assert.ok(out.every((s) => s.kind === 'demote'));
+  assert.ok(out.every((s) => s.reason.includes('제외')));
+});
+
+test('applyMetricsWeights: 결정적 — 같은 입력 같은 출력', () => {
+  const a = agg({ zeroFire: ['b', 'a'] });
+  assert.deepEqual(applyMetricsWeights(a), applyMetricsWeights(a));
+});
+
+test('design()는 metrics와 무관 — applyMetricsWeights가 추천을 바꾸지 않음(하위호환 봉인)', () => {
+  // 추천 집합은 design()이 단독 결정. M12 제안은 별도 채널이라 recommended에 영향 없음.
+  const d = design(profile({ type: 'web' }));
+  const before = [...d.recommended];
+  applyMetricsWeights(agg({ zeroFire: ['slack-notify'] }));
+  assert.deepEqual(d.recommended, before);
 });

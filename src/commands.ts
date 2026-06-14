@@ -6,7 +6,8 @@ import { join, dirname } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { analyze } from './analyzer.ts';
 import type { ProjectProfile } from './types.ts';
-import { design, type HarnessLevel } from './designer.ts';
+import { design, applyMetricsWeights, type HarnessLevel, type MetricsSuggestion } from './designer.ts';
+import { aggregateMetrics, METRICS_REL } from './metrics.ts';
 import { generate, hookRegsFor, mcpRegsFor, type Artifact } from './generator.ts';
 import { audit, auditShellSyntax, errorsOf, type AuditFinding } from './auditor.ts';
 import { install, uninstall, installClaudeBase, migrateHookPaths, removeOrphanedComponents, backupOnce, ROOT_CLAUDE } from './installer.ts';
@@ -29,6 +30,11 @@ export function cmdList(io: IO): number {
     io.log(`  [${c.kind}] ${c.id} (${c.score})${tags ? ` {${tags}}` : ''} — ${c.description}`);
   }
   return 0;
+}
+
+/** 텔레메트리 제안 표면화 (report·update 공용). 제안만 — 추천·자산을 강제로 바꾸지 않는다. */
+function printSuggestions(suggestions: MetricsSuggestion[], io: IO): void {
+  for (const s of suggestions) io.log(`텔레메트리 제안(${s.kind}): ${s.id} — ${s.reason}`);
 }
 
 /** deprecated/hidden 설치분 안내 출력 (doctor·update 공용). 에러 아님 — 안내만. */
@@ -362,6 +368,11 @@ export function cmdUpdate(root: string, io: IO, opts: { yes?: boolean; force?: b
   }
 
   io.log(`업데이트 완료: 갱신 ${carveUpdated.length} · 보존(사용자수정) ${opts.force ? 0 : userModified.length} · 신규 제안 ${newRecommended.length}`);
+
+  // M12 closed loop: 로컬 텔레메트리 기반 제안 표면화(제안만 — 위 write 경로는 metrics와 무관하게 불변).
+  // metrics opt-out(기본)이면 aggregateMetrics가 null → 제안 없음 → 기존 동작과 100% 동일.
+  printSuggestions(applyMetricsWeights(aggregateMetrics(root, m)), io);
+
   // deprecated 설치분은 generate()에서 자연 탈락해 갱신 대상이 아니다 — 암묵 동결을 사용자에게 명시한다.
   printLifecycleNotices(deprecationNotices(m), io, true);
   return 0;
@@ -388,84 +399,39 @@ export function cmdMigrate(root: string, io: IO): number {
   return 0;
 }
 
-/** carve_metric을 실제로 호출하는(계측된) 훅 id — 0-fire 판정 대상. 비계측 훅(slack-notify·codesight-refresh)은 제외. */
-const INSTRUMENTED_HOOKS = new Set([
-  'block-destructive', 'protect-secrets', 'pre-commit-lint',
-  'pre-push-test', 'auto-format', 'precompact-handoff', 'anti-slop',
-]);
-
-/** 메트릭 한 줄의 신뢰 가능한 형태 — {ts, hook, event}만 본다. */
-interface MetricLine {
-  ts: number;
-  hook: string;
-  event: string;
-}
-
-/** 손편집·부분기록 가능한 jsonl 한 줄을 안전하게 파싱·검증. 무효면 null(throw 없음). */
-function parseMetricLine(line: string): MetricLine | null {
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(line);
-  } catch {
-    return null;
-  }
-  if (typeof parsed !== 'object' || parsed === null) return null;
-  const o = parsed as Record<string, unknown>;
-  if (typeof o.hook !== 'string' || typeof o.event !== 'string') return null;
-  const ts = typeof o.ts === 'number' ? o.ts : 0;
-  return { ts, hook: o.hook, event: o.event };
-}
-
 /**
  * carve report — 설치 훅의 로컬 효과 텔레메트리(.claude/.carve-metrics.jsonl)를 집계한다.
- * 훅별 발화(total)·차단(event==='block') 수와, 매니페스트 기준 0회 발화 훅(노이즈 후보)을 보고한다.
- * opt-in 기록이 없으면 graceful degrade(메시지 + return 0). 손상 줄은 줄 단위 try/catch로 건너뛴다.
+ * 집계는 metrics.aggregateMetrics에 위임(designer·update와 단일 출처 공유).
+ * 훅별 발화(total)·차단(event==='block') 수와, 매니페스트 기준 0회 발화 훅(노이즈 후보)을 보고하고,
+ * M12: 0-fire 훅을 "제외 고려" 제안으로 표면화한다(제안만 — 추천/자산을 강제로 바꾸지 않음).
+ * opt-in 기록이 없으면 graceful degrade(메시지 + return 0).
  */
 export function cmdReport(root: string, io: IO): number {
-  const metricsPath = join(root, '.claude/.carve-metrics.jsonl');
-  if (!existsSync(metricsPath)) {
+  // 메트릭 파일이 없으면 매니페스트를 읽지 않는다(손상 manifest로 인한 throw 회피 — 기존 동작 보존).
+  const manifest = existsSync(join(root, METRICS_REL)) ? readManifest(root) : null;
+  const agg = aggregateMetrics(root, manifest);
+  if (agg === null) {
     io.log('텔레메트리 기록 없음 (opt-in: CARVE_METRICS=on 또는 .claude/.carve-metrics.enabled 파일).');
     return 0;
   }
 
-  const agg = new Map<string, { total: number; blocks: number }>();
-  let parsedLines = 0;
-  for (const line of readFileSync(metricsPath, 'utf8').split(/\r?\n/)) {
-    if (line.trim() === '') continue;
-    const m = parseMetricLine(line);
-    if (!m) continue; // 손상·필드 누락 줄은 방어적으로 건너뜀
-    parsedLines += 1;
-    const e = agg.get(m.hook) ?? { total: 0, blocks: 0 };
-    e.total += 1;
-    if (m.event === 'block') e.blocks += 1;
-    agg.set(m.hook, e);
-  }
-
   io.log('carve 로컬 효과 텔레메트리 (opt-in):');
-  let totalFires = 0;
-  let totalBlocks = 0;
-  for (const [hook, { total, blocks }] of agg) {
-    totalFires += total;
-    totalBlocks += blocks;
+  for (const [hook, { total, blocks }] of agg.perHook) {
     io.log(`  · ${hook}: 발화 ${total} · 차단 ${blocks}`);
   }
 
   // 0회 발화 훅: 계측된(carve_metric 호출) 훅 중 메트릭에 한 번도 안 나온 id만 노이즈 후보로 본다.
-  // slack-notify·codesight-refresh는 의도적으로 비계측이라 구조상 0회 → 오탐 방지 위해 제외.
-  const m = readManifest(root);
-  if (m) {
-    const zeroFire: string[] = [];
-    for (const f of m.files) {
-      const match = /^\.claude\/hooks\/carve-(.+)\.sh$/.exec(f.path);
-      const id = match?.[1];
-      if (id !== undefined && INSTRUMENTED_HOOKS.has(id) && !agg.has(id)) zeroFire.push(id);
-    }
-    io.log(`발화 0회 훅(노이즈 후보): ${zeroFire.length ? zeroFire.join(', ') : '없음'}`);
+  // slack-notify·codesight-refresh는 의도적으로 비계측이라 구조상 0회 → aggregateMetrics가 제외함.
+  if (manifest) {
+    io.log(`발화 0회 훅(노이즈 후보): ${agg.zeroFire.length ? agg.zeroFire.join(', ') : '없음'}`);
   } else {
     io.log('발화 0회 훅: 매니페스트 없음 — 0-fire 판정 생략.');
   }
 
-  io.log(`합계: 발화 ${totalFires} · 차단 ${totalBlocks} (유효 ${parsedLines}줄, 훅 ${agg.size}종)`);
+  io.log(`합계: 발화 ${agg.totalFires} · 차단 ${agg.totalBlocks} (유효 ${agg.totalFires}줄, 훅 ${agg.perHook.size}종)`);
+
+  // M12 closed loop: 측정 → 제안. 0-fire 훅을 "다음 설치에서 제외 고려" 제안으로 표면화(강제 변경 없음).
+  printSuggestions(applyMetricsWeights(agg), io);
   return 0;
 }
 
