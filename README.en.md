@@ -131,6 +131,7 @@ Add them one at a time as needed. All are part of the install (by level) and cos
 **Code quality & verification**
 - `/verify` (Claude Code built-in) — `build→lint→test→typecheck` in one go ("run the verify loop")
 - `iterate` — diagnose→fix→re-run until tests are green, report only the final result ("fix it until it passes")
+- `workflow` (`/carve-workflow`) — redefine goal→decompose→criteria→assumptions→execute→verify→risks: a 7-step procedure for long-running tasks ("run it as a procedure", "Fablize")
 - `squad-refactor` extract/simplify · `squad-debug` root cause · `squad-evaluator` independent evaluation against completion criteria (Self-Eval Blindspot)
 
 **Testing**
