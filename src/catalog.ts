@@ -93,6 +93,7 @@ export const CATALOG: CatalogComponent[] = [
   // ── post-PoC (멀티에이전트·튜닝·라우팅) ──
   { id: 'model-route', kind: 'skill', title: '모델 라우팅', description: '작업→Haiku/Sonnet/Opus 3-Tier 라우팅(비용 최적화)', score: 85, core: false, optional: false, applicable: 'all' },
   { id: 'parallel-agents', kind: 'skill', title: '멀티에이전트 병렬', description: '최소 병렬화 3~4 에이전트 + git worktree 격리', score: 80, core: false, optional: false, applicable: 'all', coordination: true },
+  { id: 'workflow', kind: 'skill', title: '절차적 완수 워크플로', description: 'Fablize식 장기 실행 작업 규율 — 목표→분해→완료기준→가정→실행→자체검증→리스크 7단계 + 최소 출력형식·완료 게이트·에스컬레이션. iterate/sprint-contract/evaluation-criteria를 지휘.', score: 85, core: false, optional: false, applicable: 'all' },
   { id: 'evaluator-tuning', kind: 'skill', title: 'Evaluator 튜닝', description: '평가자 오판 수집→few-shot 보정 루프 (squad-evaluator 운영자용 — 필요 시 직접 선택)', score: 76, core: false, optional: true, applicable: 'all' },
 
   // ── post-PoC (고도화) ──

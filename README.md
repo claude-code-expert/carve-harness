@@ -132,6 +132,7 @@ npm uninstall -g carve-harness  # 2. (선택) carve CLI(도구) 제거
 **코드 품질·검증**
 - `/verify` (Claude Code 내장) — `build→lint→test→typecheck`를 한 번에 ("검증 루프 돌려")
 - `iterate` — 테스트가 green일 때까지 진단→수정→재실행, 최종 결과만 보고 ("통과할 때까지 고쳐")
+- `workflow` (`/carve-workflow`) — 목표→분해→완료기준→가정→실행→검증→리스크 7단계로 장기 작업을 절차대로 완수 ("절차대로 완수해"·"Fablize")
 - `squad-refactor` 추출·단순화 · `squad-debug` 근본 원인 · `squad-evaluator` 완료 기준 독립 평가(Self-Eval Blindspot 대응)
 
 **테스트**
