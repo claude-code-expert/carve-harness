@@ -4,20 +4,26 @@
 포맷은 [Keep a Changelog](https://keepachangelog.com/ko/1.1.0/)를 따르며,
 [유의적 버전(SemVer)](https://semver.org/lang/ko/)을 준수한다.
 
-> 릴리스 태그: `v1.1.0`–`v1.4.1` 게시됨(v1.5.0은 태그 없이 v1.6.0에 통합 게시). 버전별 상세는 아래 각 섹션 참조.
+> 릴리스 태그: `v1.1.0`–`v1.6.0` 게시됨(v1.5.0은 태그 없이 v1.6.0에 통합). 버전별 상세는 아래 각 섹션 참조.
 
 ## [Unreleased]
-
-### Added
-- **절차적 완수 워크플로 스킬(`workflow` · `/carve-workflow`)**: Fablize식 장기 실행 작업 규율을 carve가 대상 프로젝트에 깐다 — 목표 재정의→분해→완료기준→가정→실행→자체검증→리스크 **7단계 루프** + 최소 출력형식(`[목표][계획][가정][실행][증거][검증][리스크][다음]`)·완료 게이트·에스컬레이션 분류. 갭 분석상 Fablize의 ~70%는 carve가 이미 보유(완료게이트·자체검증·사고은닉·분해)하므로 스킬은 기존 자산(`iterate`·`sprint-contract`·`evaluation-criteria`·Response Control)을 **지휘(참조)**하고 net-new만 더한다. **하이브리드 주입**(net-new를 항상-켜짐 자산에 단일 출처로): `assets/claude-base/CLAUDE.md` §6 Contractual Distrust·§7 Externalized Decisions(+§3 scope-first 한 줄), `assets/templates/sprint-contract.md` `## 가정` 표(가정/검증법/fallback)·문서현행화 DoD·범위-먼저, `assets/squad/agents/squad-evaluator.md` 절차 규율 3항(결정근거·가정 fallback·에스컬레이션 선행). 절차는 프로젝트 무관이라 **generator/installer/types 변경 0**(스킬 emit 컨벤션 재사용). 명세: 사용자 스펙 `docs/fable-workflow.md`(ref github.com/fivetaku/fablize).
-
-### Notes (workflow)
-- 287 테스트·`npm run check`·`npm run score` **100/100** 유지(특히 축6 Plan Quality 3기준·evaluation 100점·잔여 `{{}}` 0 보존 — sprint-contract 가정은 *별도 절*, evaluation-criteria 미수정). antislop 71파일 0 ERROR·redundancy 27파일 0 중복쌍(`workflow` SKILL.md를 iterate와 어휘 분리). e2e: full 설치 시 스킬·shim·always-on 주입 렌더 확인, uninstall 클린. 네이밍: `/workflow`(단수)는 내장 `/workflows`(복수)와 별개 — 출시 전 단수 충돌 재확인 권장.
 
 ### 잔여 (로드맵)
 - v2.0 로드맵 **M11 Phase B(라이브 캠페인)만 대기** — Phase A(측정 인프라)·M12(피드백 루프)는 v1.6.0 포함. Phase B는 API·타 하네스 n≥5 실측이라 코드 외.
 - v1.0 토큰효율 **절약 수치 검증**: 측정 무대(`gen-fixture.mjs` 대형 fixture + `tasksets/explore`) 준비됨 → 라이브 실행만 남음(Phase B).
 - 벤치 cross-harness **축 3(트리거)는 결정적 측정 완료**(`test-trigger.sh` 17/17·0/5). **축 4(컨텍스트)는 파서만 준비** — 라이브 `/context` 실측 대기(Phase B).
+
+---
+
+## [1.7.0] — 2026-06-15
+
+대상 프로젝트에 **Fablize식 절차적 완수 규율**을 까는 `workflow` 스킬(`/carve-workflow`) — 7단계 루프 + net-new 원칙의 항상-켜짐 주입.
+
+### Added
+- **절차적 완수 워크플로 스킬(`workflow` · `/carve-workflow`)**: Fablize식 장기 실행 작업 규율을 carve가 대상 프로젝트에 깐다 — 목표 재정의→분해→완료기준→가정→실행→자체검증→리스크 **7단계 루프** + 최소 출력형식(`[목표][계획][가정][실행][증거][검증][리스크][다음]`)·완료 게이트·에스컬레이션 분류. 갭 분석상 Fablize의 ~70%는 carve가 이미 보유(완료게이트·자체검증·사고은닉·분해)하므로 스킬은 기존 자산(`iterate`·`sprint-contract`·`evaluation-criteria`·Response Control)을 **지휘(참조)**하고 net-new만 더한다. **하이브리드 주입**(net-new를 항상-켜짐 자산에 단일 출처로): `assets/claude-base/CLAUDE.md` §6 Contractual Distrust·§7 Externalized Decisions(+§3 scope-first 한 줄), `assets/templates/sprint-contract.md` `## 가정` 표(가정/검증법/fallback)·문서현행화 DoD·범위-먼저, `assets/squad/agents/squad-evaluator.md` 절차 규율 3항(결정근거·가정 fallback·에스컬레이션 선행). 절차는 프로젝트 무관이라 **generator/installer/types 변경 0**(스킬 emit 컨벤션 재사용). Fablize 절차 기반(ref github.com/fivetaku/fablize).
+
+### Notes
+- 287 테스트·`npm run check`·`npm run score` **100/100** 유지(특히 축6 Plan Quality 3기준·evaluation 100점·잔여 `{{}}` 0 보존 — sprint-contract 가정은 *별도 절*, evaluation-criteria 미수정). antislop 71파일 0 ERROR·redundancy 27파일 0 중복쌍(`workflow` SKILL.md를 iterate와 어휘 분리). e2e: full 설치 시 스킬·shim·always-on 주입 렌더 확인, uninstall 클린. 네이밍: `/workflow`(단수)는 내장 `/workflows`(복수)와 별개 — 출시 전 단수 충돌 재확인 권장.
 
 ---
 

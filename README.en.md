@@ -8,9 +8,9 @@
 
 ## Update
 > **Changelog** — latest 3 shown; full history in [CHANGELOG.md](CHANGELOG.md)
+> - `2026-06-15` **v1.7.0** — Procedure-enforcement skill (`workflow`·`/carve-workflow`): a Fablize-style 7-step loop (goal→decompose→criteria→assumptions→execute→verify→risks) + minimal output format · completion gate · escalation. Conducts existing assets (iterate·sprint-contract); net-new principles (distrust·externalized-decisions·scope-convergence) are injected always-on into CLAUDE.md·sprint-contract·squad-evaluator
 > - `2026-06-15` **v1.6.0** — v2.0 roadmap M12 (closed-loop feedback: extract `src/metrics.ts` aggregation + designer demote suggestions + surface in `carve update`/`report`, recommendations unchanged) · M11 Phase A (bench measurement infra: `collect.mjs`·`gen-fixture.mjs`·`test-trigger.sh` trigger 17/17·`report.mjs` axes 3·4) · first publish since 1.4.1, so it also delivers v1.5.0's 7-component deletion + orphan auto-clean
 > - `2026-06-13` **v1.5.0** — Removed 7 faded-out components: 4 hidden (memory·verify·pr·review) + 3 deprecated (changelog·security-scan·coordinator) from catalog/assets (replaced by built-in slashes · squad delegation) + `carve update` auto-cleans orphaned files (hash-guarded)
-> - `2026-06-13` **v1.4.1** — Skill name-collision fix: `memory`·`verify`·`pr`·`review` skills set to hidden, resolving duplicate-slash collisions with Claude Code built-ins (`/memory`·`/verify`·`/pr`·`/review`) on new installs
 
 # carve-harness
 
@@ -18,7 +18,7 @@
 
 > A CLI that analyzes a project and interactively selects and installs a harness (skills, hooks, subagents) tailored to that project.
 
-**v1.6.0** · TypeScript (ESM, no build step) · Node >=22.18 · 287 tests / ~88.3% coverage
+**v1.7.0** · TypeScript (ESM, no build step) · Node >=22.18 · 287 tests / ~88.3% coverage
 
 `carve` reads the codebase to detect the project type and tooling, then recommends suitable components.
 It installs only what the user selects into `.claude/`. carve = carving general-purpose assets down to fit a project.
