@@ -9,9 +9,9 @@
 
 ## Update
 > **변경 이력 (Changelog)** — 최근 3건만 표시, 전체 이력은 [CHANGELOG.md](CHANGELOG.md)
+> - `2026-06-15` **v1.7.0** — 절차적 완수 워크플로 스킬(`workflow`·`/carve-workflow`): Fablize식 7단계 루프(목표→분해→완료기준→가정→실행→검증→리스크) + 최소 출력형식·완료 게이트·에스컬레이션. 기존 자산(iterate·sprint-contract)을 지휘하고, net-new 원칙(불신·결정외화·범위수렴)은 CLAUDE.md·sprint-contract·squad-evaluator에 항상-켜짐 주입
 > - `2026-06-15` **v1.6.0** — v2.0 로드맵 M12(피드백 루프 closed loop: `src/metrics.ts` 집계 추출 + designer demote 제안 + `carve update`/`report` 표면화, 추천 불변) · M11 Phase A(벤치 측정 인프라: `collect.mjs`·`gen-fixture.mjs`·`test-trigger.sh` 트리거 17/17·`report.mjs` 축3·4) · 1.4.1 이후 첫 게시라 v1.5.0 페이드아웃 7종 삭제+orphan 자동정리도 통합
 > - `2026-06-13` **v1.5.0** — 페이드아웃 7종 삭제: hidden 4종(memory·verify·pr·review) + deprecated 3종(changelog·security-scan·coordinator)을 카탈로그·자산에서 제거(내장 슬래시·squad 위임으로 대체) + `carve update` 잔여 자동정리(해시 가드)
-> - `2026-06-13` **v1.4.1** — 스킬 이름 충돌 수정: `memory`·`verify`·`pr`·`review` 스킬을 hidden 처리해 Claude Code 내장 슬래시 명령(`/memory`·`/verify`·`/pr`·`/review`)과의 이중 등록 충돌 해소(신규 설치 적용)
 
 # carve-harness
 
@@ -19,7 +19,7 @@
 
 > 프로젝트를 분석해 그 프로젝트에 맞는 하네스(스킬·훅·서브에이전트)를 대화형으로 선택해 설치하는 CLI.
 
-**v1.6.0** · TypeScript(ESM, 빌드 단계 없음) · Node >=22.18 · 테스트 287 / 커버리지 약 88.3%
+**v1.7.0** · TypeScript(ESM, 빌드 단계 없음) · Node >=22.18 · 테스트 287 / 커버리지 약 88.3%
 
 `carve`는 코드베이스를 읽어 프로젝트 타입과 도구를 탐지하고, 적합한 구성요소를 추천한다.
 사용자가 고른 것만 `.claude/`에 설치한다. carve = 범용 자산을 프로젝트에 맞게 깎아냄.
