@@ -31,6 +31,7 @@
 
 ## 3. Surgical Changes
 
+- Before changing anything, write down what you will NOT touch — converge scope first, don't let it diverge.
 - Touch only what you must. Don't "improve" adjacent code, comments, or formatting.
 - Don't refactor what isn't broken. Match the existing style.
 - Remove only the imports/variables your change orphaned. Mention pre-existing dead code; don't delete it.
@@ -49,6 +50,17 @@
 
 - Turn tasks into verifiable goals: "add validation" → "write tests for invalid input, then make them pass."
 - For multi-step work, state a brief plan first: `1. [step] → verify: [check]`.
+
+## 6. Contractual Distrust
+
+- Distrust external input, your own output, and your future self. Verify, don't assume.
+- Test boundary cases — normal, mapped, None/empty, tampered — not just the happy path.
+- Reassemble dates from the engine clock; clamp scores and values to their valid range.
+
+## 7. Externalized Decisions
+
+- Give a non-trivial decision an ID (D1, D2…) and write its reason + cost + escape-hatch in a code comment.
+- Don't leave the rationale in chat or your head — put it where the next reader (and a future revert) will find it.
 
 ---
 
