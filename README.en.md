@@ -8,7 +8,7 @@
 
 ## Update
 > **Changelog** — latest 3 shown; full history in [CHANGELOG.md](CHANGELOG.md)
-> - `2026-06-15` **v1.7.0** — Procedure-enforcement skill (`workflow`·`/carve-workflow`): a Fablize-style 7-step loop (goal→decompose→criteria→assumptions→execute→verify→risks) + minimal output format · completion gate · escalation. Conducts existing assets (iterate·sprint-contract); net-new principles (distrust·externalized-decisions·scope-convergence) are injected always-on into CLAUDE.md·sprint-contract·squad-evaluator
+> - `2026-06-15` **v1.7.0** — Procedure-enforcement skill (`workflow`·`/carve-workflow`): a Fable5-style 7-step loop (goal→decompose→criteria→assumptions→execute→verify→risks) + minimal output format · completion gate · escalation. Conducts existing assets (iterate·sprint-contract); net-new principles (distrust·externalized-decisions·scope-convergence) are injected always-on into CLAUDE.md·sprint-contract·squad-evaluator
 > - `2026-06-15` **v1.6.0** — v2.0 roadmap M12 (closed-loop feedback: extract `src/metrics.ts` aggregation + designer demote suggestions + surface in `carve update`/`report`, recommendations unchanged) · M11 Phase A (bench measurement infra: `collect.mjs`·`gen-fixture.mjs`·`test-trigger.sh` trigger 17/17·`report.mjs` axes 3·4) · first publish since 1.4.1, so it also delivers v1.5.0's 7-component deletion + orphan auto-clean
 > - `2026-06-13` **v1.5.0** — Removed 7 faded-out components: 4 hidden (memory·verify·pr·review) + 3 deprecated (changelog·security-scan·coordinator) from catalog/assets (replaced by built-in slashes · squad delegation) + `carve update` auto-cleans orphaned files (hash-guarded)
 
@@ -44,7 +44,42 @@ carve install → stack detection → (component selection) → generate assets 
 - Self-verification: before installing, the auditor scans generated assets for secrets, excessive permissions, hook injection, and shell syntax.
 - Zero build: runs `.ts` directly. Distributed via both npx and bash.
 
-## Quick start — global install recommended
+## Cheatsheet — all commands
+
+> An at-a-glance index of every command. For step-by-step install/removal see the **Install** and **Removal** sections below; for scenario usage see **Going deeper**. Flags not in the table don't exist (don't invent options).
+
+### CLI commands (global install)
+
+| Command | What it does | Key options |
+|---------|--------------|-------------|
+| `carve install` | Interactive selective install (detect → recommend → select; no bulk) | `--level <minimal\|standard\|full>` · `--only a,b` · `--lsp-servers` |
+| `carve init-claude` | Generate CLAUDE.md baseline + stack rules | `--lang <en-ko\|en\|ko>` (default `en-ko`) |
+| `carve list` | List installable / installed components | — |
+| `carve doctor` | Audit the install (security, permissions, shell syntax) | — |
+| `carve diff` | 3-way compare installed vs current carve assets (read-only) | — |
+| `carve update` | Refresh carve-updated assets in place; your edits kept as `.bak` | `--force` · `--yes` |
+| `carve migrate` | Promote carve-manifest schema v1 → v2 (lossless) | — |
+| `carve report` | Aggregate what the installed hooks actually blocked (opt-in, no network) | — |
+| `carve uninstall` | Clean removal (carve files only · restore `.bak` · preserve your settings) | — |
+| `carve --version` | Print version | `-v` |
+| `carve --help` | Print help | `-h` |
+
+### In a session (natural language or slash)
+
+| What you want | How to call |
+|---|---|
+| Commit message | "write a commit message" · `/carve-commit` |
+| Code review | "review this" · `/squad review` |
+| Session handoff | "handoff" · `/carve-handoff` |
+| Verify loop (`build→lint→test→typecheck`) | "run the verify loop" · `/verify` |
+| Auto-fix until green | "fix it until it passes" · `iterate` |
+| Procedural completion of long tasks (7 steps) | `/carve-workflow` |
+| Slop-free HTML / docs | "make a slop-free html" (gated by `check-slop` after generation) |
+| Call a Squad specialist | `/squad <member>` — review · plan · refactor · qa · debug · docs · gitops · audit · evaluator |
+
+> **Automatic hooks (no need to call)**: `block-destructive`·`protect-secrets` deterministically block dangerous commands / secret files with `exit 2`; `pre-commit-lint`·`pre-push-test` enforce before commit/push; `auto-format` runs after save; `precompact-handoff` preserves state before compaction.
+
+## Install — global install recommended
 
 > Full manual: [INSTALL.md](./INSTALL.md) (Korean) · [INSTALL.en.md](./INSTALL.en.md) (English) — requirements, modes, troubleshooting.
 
@@ -100,7 +135,7 @@ carve update                    # 2. one-time in-place rewrite of carve hooks to
 carve uninstall && carve install
 ```
 
-### 4. Removal
+## Removal
 
 Remove just the harness, or the CLI (the tool) too.
 
@@ -131,7 +166,7 @@ Add them one at a time as needed. All are part of the install (by level) and cos
 **Code quality & verification**
 - `/verify` (Claude Code built-in) — `build→lint→test→typecheck` in one go ("run the verify loop")
 - `iterate` — diagnose→fix→re-run until tests are green, report only the final result ("fix it until it passes")
-- `workflow` (`/carve-workflow`) — redefine goal→decompose→criteria→assumptions→execute→verify→risks: a 7-step procedure for long-running tasks ("run it as a procedure", "Fablize")
+- `workflow` (`/carve-workflow`) — redefine goal→decompose→criteria→assumptions→execute→verify→risks: a 7-step procedure for long-running tasks ("run it as a procedure", "Fable")
 - `squad-refactor` extract/simplify · `squad-debug` root cause · `squad-evaluator` independent evaluation against completion criteria (Self-Eval Blindspot)
 
 **Testing**
@@ -178,7 +213,7 @@ Core skills, the 9 Squad agents, and anti-slop are recommended at *every level*;
 - `standard` (default) — general apps: minimal + **the remaining core hooks** (7 total: +lint, test, format, Slack)
 - `full` — standard + **additional skills** (iterate, test-gen, tdd, parallel-agents, model-route, etc. — deprecated/hidden components are excluded automatically)
 
-For the force-level (`--level`), explicit-selection (`--only`), and LSP-auto-install commands, see **Quick start → Install options** above.
+For the force-level (`--level`), explicit-selection (`--only`), and LSP-auto-install commands, see **Install → Install options** above.
 
 > The score (the number in parentheses in `carve list`, ≥75) is carve's internal usefulness assessment. For per-level defaults and the full component list, see [INSTALL.en.md](./INSTALL.en.md).
 

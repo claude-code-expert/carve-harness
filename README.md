@@ -9,7 +9,7 @@
 
 ## Update
 > **변경 이력 (Changelog)** — 최근 3건만 표시, 전체 이력은 [CHANGELOG.md](CHANGELOG.md)
-> - `2026-06-15` **v1.7.0** — 절차적 완수 워크플로 스킬(`workflow`·`/carve-workflow`): Fablize식 7단계 루프(목표→분해→완료기준→가정→실행→검증→리스크) + 최소 출력형식·완료 게이트·에스컬레이션. 기존 자산(iterate·sprint-contract)을 지휘하고, net-new 원칙(불신·결정외화·범위수렴)은 CLAUDE.md·sprint-contract·squad-evaluator에 항상-켜짐 주입
+> - `2026-06-15` **v1.7.0** — 절차적 완수 워크플로 스킬(`workflow`·`/carve-workflow`): Fable5 모델식 7단계 루프(목표→분해→완료기준→가정→실행→검증→리스크) + 최소 출력형식·완료 게이트·에스컬레이션. 기존 자산(iterate·sprint-contract)을 지휘하고, net-new 원칙(불신·결정외화·범위수렴)은 CLAUDE.md·sprint-contract·squad-evaluator에 항상-켜짐 주입
 > - `2026-06-15` **v1.6.0** — v2.0 로드맵 M12(피드백 루프 closed loop: `src/metrics.ts` 집계 추출 + designer demote 제안 + `carve update`/`report` 표면화, 추천 불변) · M11 Phase A(벤치 측정 인프라: `collect.mjs`·`gen-fixture.mjs`·`test-trigger.sh` 트리거 17/17·`report.mjs` 축3·4) · 1.4.1 이후 첫 게시라 v1.5.0 페이드아웃 7종 삭제+orphan 자동정리도 통합
 > - `2026-06-13` **v1.5.0** — 페이드아웃 7종 삭제: hidden 4종(memory·verify·pr·review) + deprecated 3종(changelog·security-scan·coordinator)을 카탈로그·자산에서 제거(내장 슬래시·squad 위임으로 대체) + `carve update` 잔여 자동정리(해시 가드)
 
@@ -45,7 +45,42 @@ carve install → 스택 탐지 → (구성요소 선택) → .claude/에 자산
 - 자기검증: 설치 전 auditor가 생성물의 secret·과도 권한·훅 주입·셸 문법을 스캔한다.
 - 빌드 0: `.ts` 직접 실행. npx + bash 양쪽 배포.
 
-## 빠른 시작 — 글로벌 설치 권장
+## 치트시트 — 전체 명령어 (Cheatsheet)
+
+> 모든 명령을 한눈에 보는 색인. 설치·삭제의 상세 절차는 아래 **설치**·**삭제** 섹션, 시나리오별 활용은 **더 깊게** 섹션을 본다. 표에 없는 플래그는 없는 것이다(없는 옵션 추측 금지).
+
+### CLI 명령어 (글로벌 설치 기준)
+
+| 명령 | 하는 일 | 주요 옵션 |
+|------|--------|----------|
+| `carve install` | 대화형 선택 설치 (탐지 → 추천 → 선택, 일괄 없음) | `--level <minimal\|standard\|full>` · `--only a,b` · `--lsp-servers` |
+| `carve init-claude` | CLAUDE.md 베이스라인 + 스택 rules 생성 | `--lang <en-ko\|en\|ko>` (기본 `en-ko`) |
+| `carve list` | 설치 가능/설치된 구성요소 목록 | — |
+| `carve doctor` | 설치 감사 (보안·권한·셸 문법) | — |
+| `carve diff` | 설치본 vs 현재 carve 자산 3-way 비교 (읽기 전용) | — |
+| `carve update` | carve 갱신분만 제자리 갱신, 내 수정은 `.bak` 보존 | `--force` · `--yes` |
+| `carve migrate` | carve-manifest 스키마 v1 → v2 무손실 승격 | — |
+| `carve report` | 설치 훅이 실제로 막은 것 집계 (opt-in, 네트워크 전송 없음) | — |
+| `carve uninstall` | 클린 제거 (carve 설치분만 제거·`.bak` 복원·사용자 settings 보존) | — |
+| `carve --version` | 버전 출력 | `-v` |
+| `carve --help` | 도움말 출력 | `-h` |
+
+### 세션 안에서 (자연어 또는 슬래시)
+
+| 하고 싶은 것 | 부르는 법 |
+|---|---|
+| 커밋 메시지 | "커밋 메시지 만들어" · `/carve-commit` |
+| 코드 리뷰 | "리뷰해줘" · `/squad review` |
+| 세션 인계 | "핸드오프" · `/carve-handoff` |
+| 검증 루프(`build→lint→test→typecheck`) | "검증 루프 돌려" · `/verify` |
+| green까지 자동 수정 | "통과할 때까지 고쳐" · `iterate` |
+| 장기 작업 절차적 완수(7단계) | `/carve-workflow` |
+| 슬롭 없는 HTML·문서 | "슬롭 없는 html 만들어" (생성 후 `check-slop` 게이트) |
+| Squad 전문가 호출 | `/squad <멤버>` — review · plan · refactor · qa · debug · docs · gitops · audit · evaluator |
+
+> **자동 훅(부를 필요 없음)**: `block-destructive`·`protect-secrets`는 위험 명령·비밀 파일을 `exit 2`로 결정적 차단, `pre-commit-lint`·`pre-push-test`는 커밋/푸시 전 강제, `auto-format`은 저장 후, `precompact-handoff`는 압축 직전 상태 보존.
+
+## 설치 — 글로벌 설치 권장
 
 > 전체 매뉴얼: [INSTALL.md](./INSTALL.md) (한글) · [INSTALL.en.md](./INSTALL.en.md) (English) — 요구사항·모드·문제 해결까지.
 
@@ -101,7 +136,7 @@ carve update                    # 2. settings.json의 carve 훅을 절대경로�
 carve uninstall && carve install
 ```
 
-### 4. 삭제
+## 삭제
 
 하네스만 걷어내거나, CLI(도구)까지 지운다.
 
@@ -132,7 +167,7 @@ npm uninstall -g carve-harness  # 2. (선택) carve CLI(도구) 제거
 **코드 품질·검증**
 - `/verify` (Claude Code 내장) — `build→lint→test→typecheck`를 한 번에 ("검증 루프 돌려")
 - `iterate` — 테스트가 green일 때까지 진단→수정→재실행, 최종 결과만 보고 ("통과할 때까지 고쳐")
-- `workflow` (`/carve-workflow`) — 목표→분해→완료기준→가정→실행→검증→리스크 7단계로 장기 작업을 절차대로 완수 ("절차대로 완수해"·"Fablize")
+- `workflow` (`/carve-workflow`) — 목표→분해→완료기준→가정→실행→검증→리스크 7단계로 장기 작업을 절차대로 완수 ("절차대로 완수해"·"Fable5")
 - `squad-refactor` 추출·단순화 · `squad-debug` 근본 원인 · `squad-evaluator` 완료 기준 독립 평가(Self-Eval Blindspot 대응)
 
 **테스트**
@@ -179,7 +214,7 @@ carve uninstall # 클린 제거 — carve 설치분만 제거·.bak 복원·사�
 - `standard` (기본) — 일반 앱: minimal + **나머지 코어 훅**(총 7개: +린트·테스트·포맷·Slack)
 - `full` — standard + **추가 스킬**(iterate·test-gen·tdd·parallel-agents·model-route 등 — 비추천·hidden 컴포넌트는 자동 제외)
 
-레벨 강제(`--level`)·명시 선택(`--only`)·LSP 자동설치 명령은 위 **빠른 시작 → 설치 후 옵션** 참고.
+레벨 강제(`--level`)·명시 선택(`--only`)·LSP 자동설치 명령은 위 **설치 → 설치 후 옵션** 참고.
 
 > 점수(`carve list`의 괄호 숫자, ≥75)는 carve의 내부 유용성 평가다. 레벨별 기본 추천·전체 구성요소 상세는 [INSTALL.md](./INSTALL.md) 참고.
 
