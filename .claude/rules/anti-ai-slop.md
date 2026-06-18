@@ -11,6 +11,8 @@
 - **카드 상단 컬러 액센트 바 금지** (`border-top: Npx solid color`).
 - **이모지 불릿·장식 금지**, 뱃지/pill 남발 금지.
 - **마케팅 상투어 금지** — Seamlessly, Elevate, Unlock, Empower, Supercharge, ✨ 등.
+- **좌측 테두리 border-radius 금지** - 테두리의 blockquote 스타일 적용시 둥근 알약같은 라디우스 효과, 색 씌우기 금지 
+
 
 ## MUST (강제)
 
