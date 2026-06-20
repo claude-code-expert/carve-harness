@@ -53,4 +53,13 @@
 - 증상: 대상 프로젝트에 carve 설치 후 슬래시 메뉴에 `/memory`가 **두 개** 뜸(내장 + carve). `/verify`·`/pr`·`/review`도 동일.
 - 근본원인: Claude Code는 `.claude/skills/<dir>/SKILL.md`를 **디렉터리 이름** 그대로 `/<dir>` 슬래시로 노출한다. carve는 커맨드 shim만 `carve-` 네임스페이스를 주고(`carve-memory.md`→`/carve-memory`) **스킬 디렉터리 이름엔 접두사를 안 줘서**, `memory`·`verify`·`pr`·`review` 같은 맨 동사형 id가 내장 명령을 그대로 가린다. shim(`/carve-memory`)은 충돌하지 않음 — 범인은 스킬 디렉터리.
 - 수정: 해당 4개를 카탈로그에서 `status: 'hidden'`으로 fade-out(`designer.ts`가 hidden을 available·recommended·`--only`에서 완전 제외 → 신규 설치 충돌 소멸). 자산·엔트리는 보존(라이프사이클 cadence상 삭제는 다음 단계). `iterate`가 `verify` 스킬에 의존하던 1줄은 게이트 단계 인라인으로 풀었다. 회귀 가드: `designer.test.ts`의 "hidden 4종 제외" + `lifecycle.test.ts`의 "hidden 설치분 보고". **신규 스킬 추가 시 id가 내장 슬래시 명령과 겹치지 않는지 먼저 확인**(내장 목록: memory·verify·pr·review·init·run·config·review 등). 기존 피해 설치는 `.claude/skills/<id>/` + manifest 항목 수동 삭제(skill은 훅·MCP 미등록이라 settings.json 무관).
+- 후속(구조적 해소): 아래 "스킬 슬래시 이중 노출" 항목에서 **모든** 스킬 디렉터리를 `carve-<id>`로 접두 → 슬래시가 전부 `/carve-<id>`가 돼 내장 충돌 클래스 자체가 소멸. 이 hidden 우회는 그 변경의 선행 임시조치였다.
 - 날짜: 2026-06-13
+
+### 스킬 슬래시 이중 노출(`/workflow` + `/carve-workflow`) — shim 레이어 폐지로 해소
+- 증상: 대상 프로젝트 슬래시 메뉴에 한 스킬당 두 개(`/workflow`와 `/carve-workflow`)가 떴다. 16개 스킬 전부.
+- 근본원인: Claude Code가 `.claude/skills/<dir>/SKILL.md`를 **디렉터리 이름** 그대로 `/<dir>` 슬래시로 자동 노출한다. carve는 스킬 디렉터리를 bare id(`workflow`)로 깔고, 별도로 `carve-<id>` 커맨드 shim(`/carve-workflow`)도 깔아 둘이 공존했다. 스킬은 `$ARGUMENTS`를 **네이티브 지원**하므로 shim의 인자 전달 명분도 이미 사라진 상태였다(공식 문서: code.claude.com/docs/en/skills).
+- 수정: 스킬 디렉터리를 `carve-<id>`로 접두(`assets/skills/carve-<id>/`) → 슬래시가 `/carve-<id>` 하나로 수렴, 내장 충돌 클래스 소멸. shim 자산(`assets/commands/carve-<id>.md`) 16개 전부 삭제. **카탈로그 id는 bare 유지**(designer·scoring·테스트 불변), 경로 생성부(`generator.ts`)와 역매핑부(`lifecycle.ts` — `byId(dir)` 없으면 `carve-` 접두 제거)만 갱신. 회귀 가드: `assets.test.ts`(shim 부재·carve- 경로 존재), `generator.test.ts`(shim 미emit), `orphan-cleanup.test.ts`(마이그레이션).
+- 주의(규약): **신규 스킬 디렉터리는 반드시 `carve-<id>`**, 카탈로그 id는 bare. 향후 carve- 접두 스킬을 tombstone에 넣을 땐 `carve-<id>`(접두 포함)로 적는다(orphanRef가 디렉터리 세그먼트를 그대로 id로 환원하므로). 부수효과: `/workflow`(단수) vs 내장 `/workflows`(복수) 혼동도 함께 소멸.
+- 마이그레이션: 구설치(접두 이전)는 `cmdInstall`이 `install()` 직전 `removeOrphanedComponents(root, RENAMED_SKILL_IDS)`로 old `skills/<id>/`+옛 shim을 해시 가드로 1회 제거 후 새 경로 기록(클린 스왑). 사용자 수정 old 스킬은 보존·안내. 확실한 클린은 `uninstall`→`install`.
+- 날짜: 2026-06-21

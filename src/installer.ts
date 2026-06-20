@@ -254,6 +254,16 @@ export const REMOVED_COMPONENTS: readonly string[] = [
   'memory', 'verify', 'pr', 'review', 'changelog', 'security-scan', 'coordinator',
 ];
 
+// 스킬 디렉터리를 carve-<id>로 접두한 마이그레이션(이중 슬래시 노출 제거)의 old-path tombstone.
+// 여기 적힌 bare id는 구설치의 .claude/skills/<id>/SKILL.md + .claude/commands/carve-<id>.md(옛 shim)에만 매칭된다
+// (orphanRef가 둘 다 bare id로 환원). 새 경로 .claude/skills/carve-<id>/SKILL.md는 id가 carve-<id>라 미매칭 → 안전.
+// cmdInstall이 install() 직전에 이걸 정리해 구설치 재설치 시 old /<id> 슬래시 고스트를 1회 제거한다(해시 가드).
+export const RENAMED_SKILL_IDS: readonly string[] = [
+  'harness-architect', 'codesight', 'lsp', 'handoff', 'commit', 'iterate', 'test-gen',
+  'tdd', 'caveman', 'write-a-skill', 'zoom-out', 'model-route', 'parallel-agents',
+  'workflow', 'evaluator-tuning', 'harness-audit',
+];
+
 export interface OrphanCleanupResult {
   /** 삭제한 파일 경로 */
   removed: string[];

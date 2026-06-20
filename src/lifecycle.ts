@@ -5,7 +5,9 @@ import { byId, statusOf, type ComponentStatus } from './catalog.ts';
 
 /**
  * manifest 파일 경로 → 컴포넌트 id 역매핑.
- * 매핑 규칙(installer 산출 컨벤션의 역): .claude/skills/<id>/SKILL.md · .claude/hooks/carve-<id>.sh · .claude/agents/<id>.md
+ * 매핑 규칙(installer 산출 컨벤션의 역): .claude/skills/carve-<id>/SKILL.md · .claude/hooks/carve-<id>.sh · .claude/agents/<id>.md
+ * 스킬 디렉터리는 carve-<id>(슬래시 이름)지만 카탈로그 id는 bare → 접두를 벗겨 환원한다.
+ * 구설치(carve- 접두 이전)의 .claude/skills/<id>/SKILL.md도 byId 직격으로 처리(하위호환).
  * 비매핑 파일(문서·팩 자산 등)은 무시한다.
  */
 export function installedComponentIds(m: Manifest): Set<string> {
@@ -13,7 +15,9 @@ export function installedComponentIds(m: Manifest): Set<string> {
   for (const { path } of m.files) {
     const skill = /^\.claude\/skills\/([^/]+)\/SKILL\.md$/.exec(path);
     if (skill?.[1] !== undefined) {
-      ids.add(skill[1]);
+      const dir = skill[1];
+      // bare id로 등재됐으면(구설치) 그대로, 아니면 carve- 접두를 벗겨 카탈로그 id로 환원.
+      ids.add(byId(dir) ? dir : dir.replace(/^carve-/, ''));
       continue;
     }
     const hook = /^\.claude\/hooks\/carve-(.+)\.sh$/.exec(path);

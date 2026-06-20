@@ -121,7 +121,7 @@ test('install→doctor→uninstall 라운드트립 (임시 디렉토리)', () =>
     assert.match(inst.out.log, /설치 완료/);
     assert.ok(existsSync(join(root, 'carve-manifest.json')));
     assert.ok(existsSync(join(root, 'flight-rules.md')));
-    assert.ok(existsSync(join(root, '.claude/skills/harness-architect/SKILL.md')));
+    assert.ok(existsSync(join(root, '.claude/skills/carve-harness-architect/SKILL.md')));
     // doctor → 설치됨
     const d1 = capture();
     run(['doctor', root], d1.io);

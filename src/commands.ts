@@ -10,7 +10,7 @@ import { design, applyMetricsWeights, type HarnessLevel, type MetricsSuggestion 
 import { aggregateMetrics, METRICS_REL } from './metrics.ts';
 import { generate, hookRegsFor, mcpRegsFor, type Artifact } from './generator.ts';
 import { audit, auditShellSyntax, errorsOf, type AuditFinding } from './auditor.ts';
-import { install, uninstall, installClaudeBase, migrateHookPaths, removeOrphanedComponents, backupOnce, ROOT_CLAUDE } from './installer.ts';
+import { install, uninstall, installClaudeBase, migrateHookPaths, removeOrphanedComponents, RENAMED_SKILL_IDS, backupOnce, ROOT_CLAUDE } from './installer.ts';
 import { generateClaudeBase, selectStack, ROOT_IMPORT_BLOCK, ROOT_IMPORT_MARKER, type ResponseLang } from './claudebase.ts';
 import {
   readManifest, writeManifest, migrateManifest, hashContent, CARVE_VERSION,
@@ -113,6 +113,12 @@ export function cmdInstall(root: string, io: IO, selected?: string[], lspServers
 
   // 설치 전 자기 검증 (PoC: secret·과도권한·훅 주입 0건 + 셸 문법)
   if (auditGate([...audit(artifacts), ...auditShellSyntax(artifacts)], io, '설치')) return 1;
+
+  // 마이그레이션: 스킬 디렉터리 carve- 접두 이전(구설치)의 old 경로 스킬 + 옛 커맨드 shim을 1회 정리(해시 가드).
+  // 새 carve-<id> 경로는 미매칭이라 안전. install()이 정리된 manifest를 prev로 읽어 깨끗이 스왑한다(고스트 /<id> 슬래시 제거).
+  const renamed = removeOrphanedComponents(root, RENAMED_SKILL_IDS);
+  if (renamed.removed.length > 0) io.log(`스킬 경로 마이그레이션: old 슬래시 잔여 ${renamed.removed.length}건 제거 (${renamed.removed.join(', ')}).`);
+  for (const p of renamed.preserved) io.log(`스킬 경로 마이그레이션: 사용자 수정분 보존(수동 삭제 가능): ${p}`);
 
   const hooks = hookRegsFor(d);
   const mcps = mcpRegsFor(d);

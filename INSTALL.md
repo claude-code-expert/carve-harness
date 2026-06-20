@@ -97,8 +97,8 @@ node bin/carve.ts install <대상-프로젝트-경로>
 - **lsp** (cclsp MCP) — `findReferences`/`getDiagnostics`로 정확 탐색. grep 2,000+ 토큰 대신 약 500 토큰.
 - 설치 시 `.claude/settings.json`의 `mcpServers`에 자동 등록. 언어서버 바이너리는 대화형 또는 `--lsp-servers`에서만 설치.
 
-### 6 핵심 스킬
-`handoff` · `memory` · `commit` · `changelog` · `review` · `pr` — 자연어로 트리거되며 `/carve-*` 커맨드 shim도 함께 설치.
+### 핵심 스킬
+`handoff` · `commit` — 자연어로 트리거되며, 스킬 디렉터리명(`carve-<id>`)이 곧 슬래시라 `/carve-handoff`·`/carve-commit`로도 직접 실행(별도 커맨드 shim 없음).
 
 ### 진입 스킬
 `harness-architect` — "이 프로젝트에 맞는 하네스 구성해줘" 같은 자연어로 설치 흐름을 안내.
@@ -174,10 +174,10 @@ carve init-claude
     ├── settings.json          # 훅·MCP 병합(carve 마커)
     ├── CLAUDE.md              # (init-claude) 베이스라인
     ├── rules/*.md             # (init-claude) 스택 규칙 6종 + 공용 anti-ai-slop
-    ├── skills/                # 선택 스킬 + 커맨드 shim
+    ├── skills/carve-*/        # 선택 스킬 (디렉터리명 = /carve-<id> 슬래시)
     ├── hooks/                 # 선택 훅 스크립트
     ├── agents/                # Squad 서브에이전트
-    └── commands/              # 커맨드(/squad 등)
+    └── commands/              # Squad 디스패처 커맨드(/squad 등)
 ```
 
 ---

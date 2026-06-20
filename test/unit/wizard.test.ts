@@ -78,12 +78,12 @@ test('install --level full: 단일언어 프로젝트도 병렬 에이전트 가
     const { io } = capture();
     // 기본(standard)에선 parallel-agents 미설치
     run(['install', root], io);
-    assert.ok(!existsSync(join(root, '.claude/skills/parallel-agents/SKILL.md')));
+    assert.ok(!existsSync(join(root, '.claude/skills/carve-parallel-agents/SKILL.md')));
     run(['uninstall', root], capture().io);
     // --level full → parallel-agents 설치, coordinator는 wave-1 deprecated라 자동 미설치
     assert.equal(run(['install', root, '--level', 'full'], capture().io), 0);
-    assert.ok(existsSync(join(root, '.claude/skills/parallel-agents/SKILL.md')));
-    assert.ok(!existsSync(join(root, '.claude/skills/coordinator/SKILL.md')));
+    assert.ok(existsSync(join(root, '.claude/skills/carve-parallel-agents/SKILL.md')));
+    assert.ok(!existsSync(join(root, '.claude/skills/carve-coordinator/SKILL.md')));
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
@@ -98,11 +98,11 @@ test('install --only: 고른 것만 설치 (일괄 아님)', () => {
   try {
     const { io } = capture();
     assert.equal(run(['install', root, '--only', 'commit,handoff'], io), 0);
-    // 선택한 스킬만 설치
-    assert.ok(existsSync(join(root, '.claude/skills/commit/SKILL.md')));
-    assert.ok(existsSync(join(root, '.claude/skills/handoff/SKILL.md')));
+    // 선택한 스킬만 설치 (carve- 접두 디렉터리 = /carve-<id> 슬래시)
+    assert.ok(existsSync(join(root, '.claude/skills/carve-commit/SKILL.md')));
+    assert.ok(existsSync(join(root, '.claude/skills/carve-handoff/SKILL.md')));
     // 선택 안 한 것은 미설치
-    assert.ok(!existsSync(join(root, '.claude/skills/pr/SKILL.md')));
+    assert.ok(!existsSync(join(root, '.claude/skills/carve-test-gen/SKILL.md')));
     assert.ok(!existsSync(join(root, '.claude/hooks/carve-block-destructive.sh')));
     assert.ok(!existsSync(join(root, '.claude/agents/squad-review.md')));
   } finally {

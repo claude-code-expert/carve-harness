@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, rmSync, mkdirSync, writeFileSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
-import { removeOrphanedComponents, REMOVED_COMPONENTS } from '../../src/installer.ts';
+import { removeOrphanedComponents, REMOVED_COMPONENTS, RENAMED_SKILL_IDS } from '../../src/installer.ts';
 import { hashContent, writeManifest, readManifest, type Manifest, type ManifestFile } from '../../src/manifest.ts';
 
 function withTemp(fn: (root: string) => void): void {
@@ -108,4 +108,34 @@ test('removeOrphanedComponents: 설치 없음(manifest 부재)이면 no-op', () 
 test('REMOVED_COMPONENTS: Stage 1에선 비어 있다(컴포넌트 실삭제 시 채워짐)', () => {
   // 이 가드는 Stage 2에서 7종을 채우며 함께 갱신된다.
   assert.ok(Array.isArray(REMOVED_COMPONENTS));
+});
+
+test('RENAMED_SKILL_IDS 마이그레이션: 구설치 old 경로 스킬+옛 shim 제거, 새 carve- 경로는 보존', () => {
+  withTemp((root) => {
+    // 구설치(접두 이전) 재현: skills/workflow/ + commands/carve-workflow.md(옛 shim), 그리고 이미 깔린 새 경로.
+    const oldSkill = '.claude/skills/workflow/SKILL.md';
+    const oldShim = '.claude/commands/carve-workflow.md';
+    const newSkill = '.claude/skills/carve-workflow/SKILL.md';
+    const osc = 'old-workflow-skill', oshc = 'old-workflow-shim', nsc = 'new-workflow-skill';
+    writeFile(root, oldSkill, osc); writeFile(root, oldShim, oshc); writeFile(root, newSkill, nsc);
+    writeManifest(root, manifest([mf(oldSkill, osc), mf(oldShim, oshc), mf(newSkill, nsc)]));
+
+    const r = removeOrphanedComponents(root, RENAMED_SKILL_IDS);
+    // old 스킬 + 옛 shim은 bare id 'workflow'로 환원돼 제거된다.
+    assert.deepEqual([...r.removed].sort(), [oldShim, oldSkill].sort());
+    assert.ok(!existsSync(join(root, oldSkill)), 'old 스킬 미제거');
+    assert.ok(!existsSync(join(root, oldShim)), '옛 shim 미제거');
+    assert.ok(!existsSync(join(root, '.claude/skills/workflow')), '빈 old 디렉터리 미정리');
+    // 새 carve- 경로는 id가 carve-workflow라 RENAMED_SKILL_IDS(bare)에 미매칭 → 보존.
+    assert.ok(existsSync(join(root, newSkill)), '새 carve- 경로 오삭제');
+    assert.deepEqual(readManifest(root)?.files.map((f) => f.path), [newSkill]);
+  });
+});
+
+test('RENAMED_SKILL_IDS: 16개 카탈로그 스킬 bare id를 모두 포함한다', () => {
+  // 누락되면 해당 스킬의 구설치 old /<id> 슬래시 고스트가 마이그레이션에서 안 지워진다.
+  assert.equal(RENAMED_SKILL_IDS.length, 16);
+  for (const id of ['workflow', 'commit', 'handoff', 'harness-architect', 'codesight', 'lsp']) {
+    assert.ok(RENAMED_SKILL_IDS.includes(id), `RENAMED_SKILL_IDS에 ${id} 누락`);
+  }
 });

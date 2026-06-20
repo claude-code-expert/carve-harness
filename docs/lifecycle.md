@@ -22,7 +22,7 @@
 active → deprecated (≥1 minor 유지) → hidden (≥1 minor 유지) → 카탈로그 항목 + assets/ 자산 삭제
 ```
 
-- deprecated 동안 자산 파일(`assets/skills/<id>/`, `assets/commands/carve-<id>.md`)은 **유지**한다
+- deprecated 동안 자산 파일(`assets/skills/carve-<id>/`)은 **유지**한다
   (기존 설치 + 명시 선택 설치가 계속 동작해야 함).
 - 삭제 릴리스에서 카탈로그 항목과 자산을 **함께** 지운다(assets.test가 카탈로그 기준으로 자산을 검사하므로 자동 정합).
 - 삭제 후 기존 설치 잔여 정리: 삭제 id를 `installer.REMOVED_COMPONENTS`(tombstone)에 추가하면 `carve update`가 orphan(잔여 스킬/shim)을 1회 제거한다. **명시 목록**을 쓰는 이유 — "카탈로그 미등재 = orphan"으로 판정하면 비카탈로그 팩 스킬(clean-html 등)을 오삭제한다.

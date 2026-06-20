@@ -166,14 +166,12 @@ export function generate(profile: ProjectProfile, design: HarnessDesign): Artifa
     artifacts.push({ path: '.claude/hooks/carve-codesight-refresh.sh', content: readAsset('hooks/codesight-refresh.sh'), executable: true });
   }
 
-  // 스킬 자산(+커맨드 shim) + Squad 에이전트(+커맨드) — 추천된 것만
+  // 스킬 자산(carve- 접두 디렉터리 = /carve-<id> 슬래시, $ARGUMENTS 네이티브) + Squad 에이전트(+커맨드) — 추천된 것만.
+  // 스킬 디렉터리 이름이 곧 슬래시 이름이라(Claude Code 규약) carve- 접두로 내장 슬래시·중복 노출을 차단한다(별도 커맨드 shim 불필요).
   for (const id of design.recommended) {
     const c = byId(id);
-    if (c?.kind === 'skill' && assetExists(`skills/${id}/SKILL.md`)) {
-      artifacts.push({ path: `.claude/skills/${id}/SKILL.md`, content: readAsset(`skills/${id}/SKILL.md`), executable: false });
-      if (assetExists(`commands/carve-${id}.md`)) {
-        artifacts.push({ path: `.claude/commands/carve-${id}.md`, content: readAsset(`commands/carve-${id}.md`), executable: false });
-      }
+    if (c?.kind === 'skill' && assetExists(`skills/carve-${id}/SKILL.md`)) {
+      artifacts.push({ path: `.claude/skills/carve-${id}/SKILL.md`, content: readAsset(`skills/carve-${id}/SKILL.md`), executable: false });
     } else if (c?.kind === 'agent' && assetExists(`squad/agents/${id}.md`)) {
       artifacts.push({ path: `.claude/agents/${id}.md`, content: readAsset(`squad/agents/${id}.md`), executable: false });
       if (assetExists(`squad/commands/${id}.md`)) {

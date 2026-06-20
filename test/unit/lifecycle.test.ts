@@ -21,9 +21,10 @@ test('statusOf: 생략 시 active, 명시 시 그대로', () => {
   assert.equal(statusOf({ id: 'x', status: 'hidden' } as CatalogComponent), 'hidden');
 });
 
-test('installedComponentIds: 파일 경로 → 컴포넌트 id 역매핑 (skills/hooks/agents, 비매핑 무시)', () => {
+test('installedComponentIds: 파일 경로 → 컴포넌트 id 역매핑 (carve- 접두 환원 + 구설치 bare 하위호환, 비매핑 무시)', () => {
   const m = manifestOf([
-    '.claude/skills/commit/SKILL.md',
+    '.claude/skills/carve-commit/SKILL.md', // 신규 스킴: carve- 접두 → bare id 'commit'로 환원
+    '.claude/skills/handoff/SKILL.md', // 구설치(접두 이전) bare 경로 → byId 직격 'handoff' (하위호환)
     '.claude/hooks/carve-block-destructive.sh',
     '.claude/agents/squad-review.md',
     'flight-rules.md', // 비매핑 문서
@@ -31,7 +32,7 @@ test('installedComponentIds: 파일 경로 → 컴포넌트 id 역매핑 (skills
     '.claude/hooks/_metrics.sh', // carve- 프리픽스 아님 → 비매핑
   ]);
   const ids = installedComponentIds(m);
-  assert.deepEqual([...ids].sort(), ['block-destructive', 'commit', 'squad-review']);
+  assert.deepEqual([...ids].sort(), ['block-destructive', 'commit', 'handoff', 'squad-review']);
 });
 
 test('deprecationNotices: active만 설치된 경우 빈 배열', () => {

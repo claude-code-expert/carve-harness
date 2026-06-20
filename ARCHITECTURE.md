@@ -43,8 +43,8 @@ carve install
 
 ```
 <user-project>/.claude/
-  skills/carve-*/SKILL.md      # 6 핵심 + 추가
-  commands/carve-*.md          # 얇은 shim
+  skills/carve-*/SKILL.md      # 6 핵심 + 추가 (디렉터리명 = /carve-<id> 슬래시, $ARGUMENTS 네이티브)
+  commands/squad-*.md          # Squad 디스패처 커맨드
   agents/squad-*.md            # Squad 9종 (보존)
   hooks/*.sh                   # 7 필수 + 1 선택
   settings.json                # 훅 등록 (멱등 머지)

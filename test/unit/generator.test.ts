@@ -163,27 +163,28 @@ test('generate: Squad 8 에이전트 + 커맨드 + 라우터/체이닝 훅 vendo
   assert.ok(find(arts, '.claude/hooks/subagent-chain.sh')?.executable); // 체이닝/알림
 });
 
-test('generate: full 레벨 — 도입 스킬(tdd 등) emit + 커맨드 shim', () => {
+test('generate: full 레벨 — 도입 스킬(tdd 등)을 carve- 접두 경로로 emit', () => {
   const p = profile({ ci: 'github-actions', languages: ['ts', 'js'] }); // → full
   const arts = generate(p, design(p));
-  assert.ok(find(arts, '.claude/skills/tdd/SKILL.md'), 'tdd 스킬 미생성');
-  assert.ok(find(arts, '.claude/commands/carve-tdd.md'), 'tdd shim 미생성');
-  assert.ok(find(arts, '.claude/skills/caveman/SKILL.md'), 'caveman 미생성');
-  assert.ok(find(arts, '.claude/skills/model-route/SKILL.md'), 'model-route 미생성'); // v1.4
+  assert.ok(find(arts, '.claude/skills/carve-tdd/SKILL.md'), 'tdd 스킬 미생성');
+  assert.ok(find(arts, '.claude/skills/carve-caveman/SKILL.md'), 'caveman 미생성');
+  assert.ok(find(arts, '.claude/skills/carve-model-route/SKILL.md'), 'model-route 미생성'); // v1.4
 });
 
-test('generate: 핵심 스킬 커맨드 shim emit', () => {
-  const p = profile({});
+test('generate: 스킬 커맨드 shim을 emit하지 않는다 (이중 슬래시 노출 제거 회귀 가드)', () => {
+  const p = profile({ ci: 'github-actions', languages: ['ts', 'js'] }); // → full(스킬 다수)
   const arts = generate(p, design(p));
-  assert.ok(find(arts, '.claude/commands/carve-commit.md'));
-  assert.ok(find(arts, '.claude/commands/carve-harness-architect.md'));
+  // 스킬은 /carve-<id> 슬래시로 직접 노출되므로 commands/carve-*.md shim은 더 이상 생성되지 않는다.
+  assert.ok(!find(arts, '.claude/commands/carve-commit.md'), 'commit shim 부활');
+  assert.ok(!find(arts, '.claude/commands/carve-harness-architect.md'), 'harness-architect shim 부활');
+  assert.ok(!find(arts, '.claude/commands/carve-tdd.md'), 'tdd shim 부활');
 });
 
 test('토큰 효율 기본 탑재: codesight/lsp 스킬 + MCP + flight-rules 지침', () => {
   const p = profile({});
   const arts = generate(p, design(p));
-  assert.ok(find(arts, '.claude/skills/codesight/SKILL.md'));
-  assert.ok(find(arts, '.claude/skills/lsp/SKILL.md'));
+  assert.ok(find(arts, '.claude/skills/carve-codesight/SKILL.md'));
+  assert.ok(find(arts, '.claude/skills/carve-lsp/SKILL.md'));
   assert.ok(find(arts, '.claude/hooks/carve-codesight-refresh.sh')?.executable);
   const fr = find(arts, 'flight-rules.md');
   assert.ok(fr && /codesight/.test(fr.content) && /LSP|findReferences/.test(fr.content));

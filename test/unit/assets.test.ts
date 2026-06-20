@@ -10,9 +10,9 @@ import { CATALOG } from '../../src/catalog.ts';
 const asset = (rel: string) => fileURLToPath(new URL(`../../assets/${rel}`, import.meta.url));
 const repo = (rel: string) => fileURLToPath(new URL(`../../${rel}`, import.meta.url));
 
-test('모든 카탈로그 스킬은 assets/skills/<id>/SKILL.md 를 가진다', () => {
+test('모든 카탈로그 스킬은 assets/skills/carve-<id>/SKILL.md 를 가진다', () => {
   for (const c of CATALOG.filter((x) => x.kind === 'skill')) {
-    assert.ok(existsSync(asset(`skills/${c.id}/SKILL.md`)), `${c.id}: SKILL.md 자산 없음`);
+    assert.ok(existsSync(asset(`skills/carve-${c.id}/SKILL.md`)), `${c.id}: SKILL.md 자산 없음`);
   }
 });
 
@@ -22,9 +22,12 @@ test('모든 카탈로그 에이전트는 assets/squad/agents/<id>.md 를 가진
   }
 });
 
-test('등재 스킬은 커맨드 shim도 가진다', () => {
+test('스킬 커맨드 shim은 더 이상 존재하지 않는다 (이중 슬래시 노출 제거 회귀 가드)', () => {
+  // 스킬 디렉터리(carve-<id>)가 곧 /carve-<id> 슬래시이므로 별도 shim은 폐지됐다.
+  // shim이 부활하면 /<id>+/carve-<id> 이중 노출이 재발하므로 자산 자체의 부재를 강제한다.
+  assert.ok(!existsSync(asset('commands')), 'assets/commands/ 부활 — 스킬 shim 레이어가 다시 생겼다');
   for (const c of CATALOG.filter((x) => x.kind === 'skill')) {
-    assert.ok(existsSync(asset(`commands/carve-${c.id}.md`)), `${c.id}: 커맨드 shim 없음`);
+    assert.ok(!existsSync(asset(`commands/carve-${c.id}.md`)), `${c.id}: 폐지된 커맨드 shim이 재생성됨`);
   }
 });
 

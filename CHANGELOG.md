@@ -15,6 +15,23 @@
 
 ---
 
+## [1.8.0] — 2026-06-21
+
+대상 프로젝트 슬래시 메뉴의 **스킬 이중 노출**(`/<id>` + `/carve-<id>`)을 제거 — 스킬 디렉터리를 `carve-<id>`로 접두하고 커맨드 shim 레이어를 폐지.
+
+### Changed
+- **스킬 디렉터리 `carve-<id>` 접두(16종 전부)**: Claude Code는 `.claude/skills/<dir>/`를 **디렉터리 이름** 그대로 `/<dir>` 슬래시로 자동 노출한다. carve가 bare id(`workflow`)로 깔고 별도 `carve-` 커맨드 shim도 깔던 탓에 한 스킬당 `/workflow` + `/carve-workflow` **두 슬래시**가 떴다. 스킬 디렉터리를 `assets/skills/carve-<id>/`로 접두 → 슬래시가 `/carve-<id>` 하나로 수렴하고 내장 슬래시 충돌 클래스가 소멸한다. **카탈로그 id는 bare 유지**(designer·scoring·테스트 불변), 경로 생성부(`generator.ts`)와 역매핑부(`lifecycle.ts`: `byId(dir)` 미스 시 `carve-` 접두 제거)만 갱신.
+- **마이그레이션(`carve install`)**: `cmdInstall`이 `install()` 직전 `removeOrphanedComponents(root, RENAMED_SKILL_IDS)`로 구설치의 old `skills/<id>/` + 옛 shim을 해시 가드로 1회 제거 후 새 경로를 기록(클린 스왑 — `/workflow` 고스트 소멸). 사용자 수정 old 스킬은 보존·안내. 확실한 클린은 `uninstall`→`install`.
+
+### Removed
+- **커맨드 shim 레이어 폐지**: `assets/commands/carve-<id>.md` 16종 전부 삭제. 스킬이 `$ARGUMENTS`/`$N`을 **네이티브 지원**(공식 문서)하므로 인자 전달용 shim의 명분이 사라졌다 — 스킬 디렉터리 자체가 `/carve-<id>` 진입점.
+
+### Notes
+- 회귀 가드: `assets.test.ts`(shim 부재 + `skills/carve-<id>/` 존재), `generator.test.ts`(shim 미emit + carve- 경로 emit), `lifecycle.test.ts`(carve- 접두 환원 + 구설치 bare 하위호환), `orphan-cleanup.test.ts`(RENAMED_SKILL_IDS 마이그레이션). 289 테스트·`npm run check`·커버리지 약 88.5% 통과. 런타임 의존성 불변(@clack 1종).
+- 부수효과: `/workflow`(단수) vs 내장 `/workflows`(복수) 혼동도 함께 소멸. SKILL.md 본문은 손대지 않음(MIT vendored 스킬 바이트 동일) — 순수 디렉터리 rename.
+
+---
+
 ## [1.7.0] — 2026-06-15
 
 대상 프로젝트에 **Fable5식 절차적 완수 규율**을 까는 `workflow` 스킬(`/carve-workflow`) — 7단계 루프 + net-new 원칙의 항상-켜짐 주입.

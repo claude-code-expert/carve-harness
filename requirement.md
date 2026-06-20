@@ -17,7 +17,7 @@
 - 설치 내역을 manifest에 기록해 **클린 언인스톨**을 보장한다.
 
 ### 2.2 필수 구성요소 (R-CORE)
-6개 핵심(Skill + 얇은 커맨드 shim): `handoff` · `memory` · `commit` · `changelog` · `review` · `pr`
+핵심(Skill — 디렉터리명 `carve-<id>`가 곧 `/carve-<id>` 슬래시, 별도 shim 없음): `handoff` · `commit` 등
 
 7개 필수 Hook:
 1. 파괴적 명령 차단 (PreToolUse)

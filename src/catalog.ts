@@ -52,7 +52,7 @@ export const CATALOG: CatalogComponent[] = [
   { id: 'codesight', kind: 'skill', title: 'codesight 컨텍스트', description: '프로젝트 구조 맵 MCP — 탐색 토큰 ~11배 절약(grep 대체)', score: 92, core: true, optional: false, applicable: 'all' },
   { id: 'lsp', kind: 'skill', title: 'LSP 인텔리전스', description: '정확한 코드 네비게이션 MCP — findReferences/getDiagnostics(grep 대체)', score: 90, core: true, optional: false, applicable: 'all' },
 
-  // ── 핵심 스킬 (Skill + 커맨드 shim) ──
+  // ── 핵심 스킬 (Skill — /carve-<id> 슬래시로 직접 노출, $ARGUMENTS 네이티브) ──
   { id: 'handoff', kind: 'skill', title: '핸드오프', description: '세션 인계 컨텍스트(PreCompact 훅 연동)', score: 90, core: true, optional: false, applicable: 'all' },
   { id: 'commit', kind: 'skill', title: '커밋', description: 'Conventional Commit 메시지 생성(빠른 인라인) — 깊은 git 작업은 squad-gitops', score: 90, core: true, optional: false, applicable: 'all' },
 

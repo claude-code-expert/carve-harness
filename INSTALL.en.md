@@ -93,8 +93,8 @@ The groups presented during interactive install and a selection guide.
 - **lsp** (cclsp MCP) — Precise lookups via `findReferences`/`getDiagnostics`. ~500 tokens instead of grep's 2,000+ tokens.
 - On install, automatically registered under `mcpServers` in `.claude/settings.json`. Language server binaries are installed only via interactive mode or `--lsp-servers`.
 
-### 6 core skills
-`handoff` · `memory` · `commit` · `changelog` · `review` · `pr` — triggered by natural language, installed together with `/carve-*` command shims.
+### Core skills
+`handoff` · `commit` — triggered by natural language; the skill directory name (`carve-<id>`) is itself the slash, so they also run as `/carve-handoff`·`/carve-commit` (no separate command shim).
 
 ### Entry skill
 `harness-architect` — guides the install flow via natural language like "set up a harness that fits this project".
@@ -170,10 +170,10 @@ Package manager and test/lint/format commands are substituted with values detect
     ├── settings.json          # 훅·MCP 병합(carve 마커)
     ├── CLAUDE.md              # (init-claude) 베이스라인
     ├── rules/*.md             # (init-claude) 스택 규칙 6종 + 공용 anti-ai-slop
-    ├── skills/                # 선택 스킬 + 커맨드 shim
+    ├── skills/carve-*/        # 선택 스킬 (디렉터리명 = /carve-<id> 슬래시)
     ├── hooks/                 # 선택 훅 스크립트
     ├── agents/                # Squad 서브에이전트
-    └── commands/              # 커맨드(/squad 등)
+    └── commands/              # Squad 디스패처 커맨드(/squad 등)
 ```
 
 ---

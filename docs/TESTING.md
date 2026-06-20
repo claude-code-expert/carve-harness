@@ -54,10 +54,12 @@ head -12 assets/squad/agents/squad-review.md   # tools 권한 하드 제약 확�
 ```
 스크립트: `scripts/test-squad.sh` (jq 필요). 벤치 축 3이 8종 일괄 측정.
 
-### 4. 커맨드 shim
+### 4. 스킬 슬래시 노출 (커맨드 shim 폐지)
 ```bash
-head -5 assets/commands/carve-commit.md   # description, allowed-tools 제한
+ls -d assets/skills/carve-*   # 스킬 디렉터리명 carve-<id> = /carve-<id> 슬래시 (별도 shim 없음)
+head -7 assets/skills/carve-commit/SKILL.md   # name·description frontmatter
 ```
+스킬은 `$ARGUMENTS`를 네이티브 지원하므로 인자 전달용 `commands/carve-*.md` shim은 더 이상 두지 않는다(이중 슬래시 노출 제거).
 
 ### 5. 파이프라인 + 설치 (analyzer~installer)
 ```bash

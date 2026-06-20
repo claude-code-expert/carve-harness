@@ -277,7 +277,7 @@ test('회귀: --level full 설치 시 manifest.level 영속 + update가 동일 �
     cmdInstall(root, io, undefined, false, 'full'); // --level full 강제
     const m = readManifest(root);
     assert.equal(m?.level, 'full', 'manifest에 level 미기록');
-    assert.ok(m?.files.some((f) => f.path === '.claude/skills/test-gen/SKILL.md'), 'full 컴포넌트(test-gen) 미설치');
+    assert.ok(m?.files.some((f) => f.path === '.claude/skills/carve-test-gen/SKILL.md'), 'full 컴포넌트(test-gen) 미설치');
     // update가 m.level(full)로 재현 → test-gen을 신규 추천으로 오판하지 않음
     const { io: io2, cap: cap2 } = captureIO();
     assert.equal(cmdUpdate(root, io2), 0);
