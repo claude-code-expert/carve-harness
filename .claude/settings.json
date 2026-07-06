@@ -1,6 +1,6 @@
 {
   "permissions": {
-    "deny": ["Read(./**/.env)", "Read(./**/*secret*)", "Bash(rm -rf*)", "Bash(git push*--force*)"]
+    "deny": ["Read(./**/.env*)", "Read(./**/*secret*)", "Bash(cat *.env*)", "Bash(cat *secret*)", "Bash(rm -rf*)", "Bash(git push*--force*)"]
   },
   "hooks": {
     "PreToolUse":  [ { "matcher": "Write|Edit", "hooks": [ { "type": "command", "command": "bash .claude/hooks/pretool-guard.sh" } ] } ],

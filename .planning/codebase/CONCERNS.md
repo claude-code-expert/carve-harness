@@ -26,16 +26,14 @@ last_mapped_commit: (not a git repo)
 
 ## 🟡 Medium — 커버리지 갭 / 우회 가능
 
-### C4. 보호 패턴 우회 구멍 (pretool-guard.sh)
-- 차단 case: `*.env | */application-prod.yml | *secret* | */db/migration/*`.
-- `*.env`는 **끝이 `.env`인 파일만** 매치 → `.env.production`, `.env.local`은 **미차단**.
-- `application-prod.yml`만 매치 → `application-production.yaml`, `application-prod.yaml` 미차단.
-- **조치**: `*.env*`, `*application-prod*` 등 접두/접미 확장.
+### C4. 보호 패턴 우회 구멍 (pretool-guard.sh) ✅ 해소 (2026-07-06)
+- 기존: `*.env` = 끝이 `.env`인 파일만 → `.env.production`·`.env.local` 미차단. `application-prod.yml`만 매치 → `-production.yaml` 미차단.
+- **추가 발견**: `*/db/migration/*`는 앞 `/` 필요 → **레포 루트 `db/migration/*` 미차단** (잠복 구멍).
+- **수정 완료**: case → `*.env|*.env.*|*application-prod*|*secret*|*db/migration/*`. `.environment.ts` 등 false positive 없음 검증. 스텁 테스트로 block/allow 케이스 통과.
 
-### C5. 시크릿 읽기는 Bash 우회 가능
-- `settings.json` deny: `Read(./**/.env)`, `Read(./**/*secret*)` — Read 도구만 차단.
-- `Bash(cat .env)` / `grep`으로 읽기는 막지 않음 (deny엔 `rm -rf`·force push만).
-- **조치**: deny에 `Bash(cat*.env*)` 류 추가 또는 훅으로 Bash 명령 검사.
+### C5. 시크릿 읽기는 Bash 우회 가능 ✅ 부분 해소 (2026-07-06)
+- `settings.json` deny에 `Read(./**/.env*)`(패턴 확장)·`Bash(cat *.env*)`·`Bash(cat *secret*)` 추가.
+- **한계(천장)**: deny-list는 best-effort — `less`/`head`/`grep`/`xxd`/`while read` 등 다른 읽기 경로는 못 막는다. 근본 방어는 "시크릿을 레포에 두지 않기"(env/시크릿 매니저)이며 이는 `security.md`·`CLAUDE.md` 규칙으로 이미 강제. 완전 차단이 필요하면 Bash matcher PreToolUse 훅으로 명령 문자열 검사 추가.
 
 ### C6. 스텁 다수 — 뼈대만 존재
 - `[내용없음]` 자리표시: `CLAUDE.md`(도메인 규칙), `security.md`(프로젝트 보안), `testing.md`(커버리지 기준), `specs/README.md`, java/react `patterns.md`(추가 규칙).
