@@ -14,10 +14,10 @@ last_mapped_commit: (not a git repo)
 - `README.md`는 드롭인 설치 절차를 담지만 `install.md`는 완전히 비어 있음. 진입 문서 불일치.
 - **조치**: 설치 절차를 `install.md`로 채우거나 파일 삭제.
 
-### C2. 테스트 게이트 부재 — 규칙과 실제 게이트 불일치
-- `rules/common/testing.md`: "완료는 테스트로 증명한다"고 강제하지만, `stop-verify.sh`는 **컴파일·타입체크만** 실행 (`gradlew compileJava`, `tsc --noEmit`). 테스트 실행 없음.
-- 하네스가 자기 규칙을 게이트로 강제하지 못함 → 규칙이 선언에 그침.
-- **조치**: `stop-verify.sh`에 `./gradlew test` / `pnpm test` 추가, 또는 별도 테스트 게이트.
+### C2. 테스트 게이트 부재 — 규칙과 실제 게이트 불일치 ✅ 해소 (2026-07-06)
+- `rules/common/testing.md`: "완료는 테스트로 증명한다"고 강제하지만, `stop-verify.sh`는 **컴파일·타입체크만** 실행. 테스트 실행 없음.
+- **수정 완료**: `stop-verify.sh`에 `gradlew ... test` / `pnpm test`(스크립트 존재 시) 추가. 커버리지 80%는 jacoco/vitest 임계값(빌드 설정)에 위임.
+- **잠복버그 동반 수정**: 기존 `cmd | tail || fail=1`은 `tail` 종료코드(항상 0)를 봐서 **게이트가 실패를 전혀 못 잡던** 상태였음 → `set -o pipefail`로 근본 수정. mktemp 스텁 테스트 3케이스(실패→exit2 / 통과→exit0 / 스택없음→exit0) 통과 검증.
 
 ### C3. Git 저장소 아님
 - `.git` 없음. 그런데 `git-workflow.md`·`commit.md`·`session-handoff.sh`(`git branch --show-current`)가 git 전제.
