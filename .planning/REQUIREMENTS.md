@@ -63,7 +63,33 @@
 
 ## Traceability
 
-<!-- 로드맵이 채움: REQ-ID → Phase -->
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| GUARD-01 | Phase 1 | Pending |
+| GUARD-02 | Phase 1 | Pending |
+| GUARD-03 | Phase 1 | Pending |
+| GATE-01 | Phase 1 | Pending |
+| GATE-02 | Phase 1 | Pending |
+| CFG-01 | Phase 1 | Pending |
+| CFG-02 | Phase 1 | Pending |
+| CFG-03 | Phase 1 | Pending |
+| CFG-04 | Phase 1 | Pending |
+| OBS-01 | Phase 2 | Pending |
+| OBS-02 | Phase 2 | Pending |
+| STATE-01 | Phase 3 | Pending |
+| STATE-02 | Phase 3 | Pending |
+| STATE-03 | Phase 3 | Pending |
+| AUDIT-01 | Phase 4 | Pending |
+| AUDIT-02 | Phase 4 | Pending |
+| AUDIT-03 | Phase 4 | Pending |
+| GUARD-04 | Phase 5 | Pending |
+| GATE-03 | Phase 5 | Pending |
+| CFG-05 | Phase 5 | Pending |
+| HYG-01 | Phase 5 | Pending |
+| HYG-02 | Phase 5 | Pending |
+| HYG-03 | Phase 5 | Pending |
+
+**Coverage:** 23/23 v1 requirements mapped — no orphans, no duplicates.
 
 ---
-*Last updated: 2026-07-06 after requirements definition*
+*Last updated: 2026-07-06 after roadmap traceability mapping*
