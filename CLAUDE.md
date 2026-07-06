@@ -1,0 +1,25 @@
+# CLAUDE.md — 프로젝트 가드레일 (하네스 전역 규칙)
+
+> 하네스의 "제약" 기둥. 언어 무관 항상 적용. 스택별 규칙은 `.claude/rules/`에서 glob 자동 로드.
+
+## 하네스 3기둥
+- 제약: 이 파일 + `.claude/rules/*` + PreToolUse 차단 훅
+- 피드백: PostToolUse(포맷·린트) + Stop(빌드·타입·테스트) + Evaluator 에이전트
+- 상태: SessionStart/PreCompact 핸드오프 + `specs/`(SDD 산출물)
+
+## 절대 금지 (언어 무관)
+- 시크릿 하드코딩 금지 → 환경변수/시크릿 매니저
+- 위험 git 금지: force push, 히스토리 재작성
+- 기존 마이그레이션 수정 금지 → 새 버전만
+- 미검증 완료 선언 금지 → 완료는 `specs/`의 완료 기준(SC)으로만
+
+## 작업 원칙
+- 한 번에 하나. 분해 후 진행. 모든 완료엔 검증 가능한 SC.
+- [프로젝트 도메인 규칙 — 내용없음]
+
+## 스택 감지
+- `**/*.java` → `.claude/rules/java-spring/`
+- `**/*.ts`, `**/*.tsx` → `.claude/rules/react-next/`
+
+## 참고
+- @AGENTS.md · @.claude/rules/common/
