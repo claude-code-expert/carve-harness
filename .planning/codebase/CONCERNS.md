@@ -41,6 +41,7 @@ last_mapped_commit: (not a git repo)
 - `[내용없음]` 자리표시: `CLAUDE.md`(도메인 규칙), `security.md`(프로젝트 보안), `testing.md`(커버리지 기준), `specs/README.md`, java/react `patterns.md`(추가 규칙).
 - 스킬(`handoff`, `changelog`)·에이전트 본문도 스텁 (`MANUAL §5`: "본문은 ECC에서 가져와 채운다").
 - **조치**: 프로젝트 도메인에 맞춰 스텁 채우기 — 이번 하네스 구축의 핵심 작업.
+- **진행 (2026-07-06, 범용 템플릿 방향)**: `security.md`(PII 베이스라인)·`testing.md`(라인 80%) 구체값 삽입 완료. `CLAUDE.md` 도메인 규칙은 가이드형 자리표시로 전환. 남은 스텁(`specs/README`, java/react `[추가 규칙]`, 스킬 본문)은 범용 특성상 의도적 placeholder 유지.
 
 ### C7. 핸드오프가 실제 상태를 수집하지 않음
 - `session-handoff.sh save`가 쓰는 TODO는 `"[자동 수집 — 내용없음]"` 하드코딩. branch만 실제 값.
