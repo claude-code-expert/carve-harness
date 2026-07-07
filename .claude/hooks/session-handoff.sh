@@ -52,6 +52,13 @@ _collect() {
 
 case "${1:-}" in
   start)
+    cat <<'BANNER'
+▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+   ⟦ HARNESS ⟧ ACTIVE — 3기둥 게이트 ON
+     제약 가드(차단 exit 2) · 피드백 증분검증 · 상태 핸드오프
+     점검: /harness-audit   ·   로그: logs/*.jsonl
+▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+BANNER
     [ -f "$H" ] && { echo "=== 이전 세션 핸드오프 ==="; cat "$H"; }
     bash "$LOG_EVENT" SessionStart handoff start ""
     ;;

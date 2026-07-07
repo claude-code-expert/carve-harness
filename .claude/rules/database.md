@@ -1,10 +1,3 @@
----
-paths:
-  - "src/models/**/*.ts"
-  - "src/repositories/**/*.ts"
-  - "prisma/**/*"
----
-
 # 데이터베이스 규칙
 
 ## 모델 정의
