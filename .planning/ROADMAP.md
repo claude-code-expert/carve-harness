@@ -86,7 +86,10 @@ The architecture is right; the enforcement leaks. This milestone closes every si
   2. Stop verification runs only against changed modules instead of the full build every turn — staging a change in one module asserts the untouched module's build/test is skipped.
   3. Remaining stubs (`specs/README`, stack-rule `[추가 규칙]`, skill bodies) carry usable generic defaults — no `[내용없음]` sentinel remains where content is expected.
   4. `.gitignore` blocks root `.env*`, `LICENSE` exists, `install.md` has real steps (or is removed), and manual links point to `code.claude.com` — all verifiable by grep assertions.
-**Plans**: TBD
+**Plans**: 3 plans
+- [ ] 05-01-PLAN.md — Additive hardening: GUARD-04 secret content scan + GATE-03 incremental Stop verify (GUARD-04, GATE-03)
+- [ ] 05-02-PLAN.md — CFG-05: fill remaining `[내용없음]` stubs with generic defaults (CFG-05)
+- [ ] 05-03-PLAN.md — Packaging: gitignore `.env*` + remove install docs (SAFETY-gated); LICENSE deferred by user (HYG-01, HYG-02, HYG-03)
 
 ## Progress
 
@@ -99,4 +102,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | 2. Observability Keystone | 3/3 | Complete   | 2026-07-07 |
 | 3. State Pillar | 2/2 | Complete   | 2026-07-07 |
 | 4. Self-Audit | 2/2 | Complete   | 2026-07-07 |
-| 5. Additive Hardening + Packaging | 0/TBD | Not started | - |
+| 5. Additive Hardening + Packaging | 0/3 | Planned | - |
