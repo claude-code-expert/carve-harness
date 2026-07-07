@@ -1,12 +1,13 @@
 {
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
   "permissions": {
     "deny": ["Read(./**/.env*)", "Read(./**/*secret*)", "Bash(cat *.env*)", "Bash(cat *secret*)", "Bash(rm -rf*)", "Bash(git push*--force*)"]
   },
   "hooks": {
-    "PreToolUse":  [ { "matcher": "Write|Edit", "hooks": [ { "type": "command", "command": "bash .claude/hooks/pretool-guard.sh" } ] } ],
-    "PostToolUse": [ { "matcher": "Write|Edit", "hooks": [ { "type": "command", "command": "bash .claude/hooks/posttool-format.sh" } ] } ],
-    "Stop":        [ { "hooks": [ { "type": "command", "command": "bash .claude/hooks/stop-verify.sh" } ] } ],
-    "SessionStart":[ { "hooks": [ { "type": "command", "command": "bash .claude/hooks/session-handoff.sh start" } ] } ],
-    "PreCompact":  [ { "hooks": [ { "type": "command", "command": "bash .claude/hooks/session-handoff.sh save" } ] } ]
+    "PreToolUse":  [ { "matcher": "Write|Edit|MultiEdit|NotebookEdit|Bash", "hooks": [ { "type": "command", "command": "bash ${CLAUDE_PROJECT_DIR}/.claude/hooks/pretool-guard.sh" } ] } ],
+    "PostToolUse": [ { "matcher": "Write|Edit", "hooks": [ { "type": "command", "command": "bash ${CLAUDE_PROJECT_DIR}/.claude/hooks/posttool-format.sh" } ] } ],
+    "Stop":        [ { "hooks": [ { "type": "command", "command": "bash ${CLAUDE_PROJECT_DIR}/.claude/hooks/stop-verify.sh", "timeout": 900 } ] } ],
+    "SessionStart":[ { "hooks": [ { "type": "command", "command": "bash ${CLAUDE_PROJECT_DIR}/.claude/hooks/session-handoff.sh start" } ] } ],
+    "PreCompact":  [ { "hooks": [ { "type": "command", "command": "bash ${CLAUDE_PROJECT_DIR}/.claude/hooks/session-handoff.sh save" } ] } ]
   }
 }
