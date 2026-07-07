@@ -19,7 +19,8 @@ fi
 # (*.env|*.env.*|*application-prod*|*secret*|*db/migration/*) but matches `.env` only when
 # followed by end/`.`/`/` so `src/environment.ts` is not a false positive. Both branches
 # (file and Bash) consume this ONE variable — no second definition, no drift.
-PROTECTED_RE='(\.env($|[./])|application-prod|secret|db/migration/)'
+source "$(dirname "${BASH_SOURCE[0]}")/lib-protected.sh"
+LOG_EVENT="$(dirname "${BASH_SOURCE[0]}")/log-event.sh"
 
 tool=$(printf '%s' "$input" | jq -r '.tool_name // empty')
 
@@ -33,9 +34,11 @@ if [ "$tool" = "Bash" ]; then
     || printf '%s' "$cmd" | grep -Eq "(sed|perl)[[:space:]]+-i[^|;&]*${PROTECTED_RE}" \
     || printf '%s' "$cmd" | grep -Eq "(^|[;&|][[:space:]]*)(cp|mv|install)[[:space:]][^|;&]*${PROTECTED_RE}"; then
     echo "[guard] Bash 쓰기 차단(보호 경로): $cmd" >&2
+    bash "$LOG_EVENT" PreToolUse Bash block ""
     exit 2
   fi
   # The command string is treated as opaque data — never eval / sh -c.
+  bash "$LOG_EVENT" PreToolUse Bash allow ""
   exit 0
 fi
 
@@ -44,7 +47,9 @@ fi
 p=$(printf '%s' "$input" | jq -r '.tool_input.file_path // .tool_input.notebook_path // empty')
 if printf '%s' "$p" | grep -Eq "$PROTECTED_RE"; then
   echo "[guard] 보호 파일 수정 차단: $p" >&2
+  bash "$LOG_EVENT" PreToolUse "$tool" block "$p"
   exit 2
 fi
 
+bash "$LOG_EVENT" PreToolUse "$tool" allow "$p"
 exit 0
