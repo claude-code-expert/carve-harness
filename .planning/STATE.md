@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: verifying
-stopped_at: Phase 3 complete (verified)
-last_updated: "2026-07-07T15:25:00.000Z"
-last_activity: 2026-07-07 -- Phase 3 execution complete, verification passed
+stopped_at: Phase 4 complete (verified)
+last_updated: "2026-07-07T15:40:00.000Z"
+last_activity: 2026-07-07 -- Phase 4 execution complete, verification passed
 progress:
   total_phases: 5
-  completed_phases: 3
-  total_plans: 9
-  completed_plans: 9
-  percent: 60
+  completed_phases: 4
+  total_plans: 11
+  completed_plans: 11
+  percent: 80
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-06)
 
 **Core value:** 드롭인 즉시 게이트가 실제로 작동한다 — 위험동작 차단·게이트·상태 인계가 선언이 아니라 검증된 동작.
-**Current focus:** Phase 4 — self-audit-that-actually-passes-fails (next)
+**Current focus:** Phase 5 — additive-hardening-and-drop-in-packaging (next, final)
 
 ## Current Position
 
-Phase: 3 (state-pillar-real-handoff-boundary-coverage) — COMPLETE (verified)
+Phase: 4 (self-audit-that-actually-passes-fails) — COMPLETE (verified)
 Plan: 2 of 2
-Status: Phase 3 verified (3/3 SCs, session-handoff 13/13 + settings 7/7, full suite green) — ready for Phase 4
-Last activity: 2026-07-07 -- Phase 3 execution complete, verification passed
+Status: Phase 4 verified (4/4 SCs, harness-audit 10/10 + live 27 PASS, full suite 7/7) — ready for Phase 5
+Last activity: 2026-07-07 -- Phase 4 execution complete, verification passed
 
-Progress: [██████░░░░] 60%
+Progress: [████████░░] 80%
 
 ## Performance Metrics
 
@@ -73,7 +73,7 @@ None yet.
 
 - Not a git repo (C3): `session-handoff.sh`, `commit.md`, drift stamps assume git — `git init` needed for full state/handoff behavior (surfaces in Phase 3 / Phase 5).
 - Bash-write matcher (GUARD-03) is best-effort by design — Phase 1 planning must scope which shell patterns are covered vs. declared out-of-scope (documented ceiling, not a bug).
-- `/harness-audit` policy→gate mapping (AUDIT-03) has no reference implementation — Phase 4 needs a small design pass.
+- ~~`/harness-audit` policy→gate mapping (AUDIT-03) has no reference implementation~~ — RESOLVED in Phase 4 (safety-critical scope; harness-audit.sh).
 
 ## Deferred Items
 
@@ -85,6 +85,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-07T15:25:00.000Z
-Stopped at: Phase 3 complete (verified) — ready for Phase 4
-Resume file: .planning/phases/03-state-pillar-real-handoff-boundary-coverage/03-VERIFICATION.md
+Last session: 2026-07-07T15:40:00.000Z
+Stopped at: Phase 4 complete (verified) — ready for Phase 5 (final)
+Resume file: .planning/phases/04-self-audit-that-actually-passes-fails/04-VERIFICATION.md

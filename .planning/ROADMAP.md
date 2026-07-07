@@ -13,7 +13,7 @@ The architecture is right; the enforcement leaks. This milestone closes every si
 - [x] **Phase 1: Fail-Closed Enforcement Core** - Guards fail closed, cover every write path, Stop can't loop or silently time out; hooks resolve from project root and critical config is airtight (completed 2026-07-07)
 - [x] **Phase 2: Observability Keystone (JSONL Event Log)** - Every hook fire is structured JSONL in `logs/`; format-hook failures stop being swallowed (completed 2026-07-07)
 - [x] **Phase 3: State Pillar — Real Handoff + Boundary Coverage** - Handoff captures real TODOs/next-steps/decisions and saves on normal session end, not just compaction (completed 2026-07-07)
-- [ ] **Phase 4: Self-Audit That Actually Passes/Fails** - `/harness-audit` mechanically PASS/FAILs jq, hook registration, matcher coverage, rule→gate mapping, and the sentinel handoff
+- [x] **Phase 4: Self-Audit That Actually Passes/Fails** - `/harness-audit` mechanically PASS/FAILs jq, hook registration, matcher coverage, rule→gate mapping, and the sentinel handoff (completed 2026-07-07)
 - [ ] **Phase 5: Additive Hardening + Drop-in Packaging** - Secret content scan, incremental Stop verify, filled stubs, and clean drop-in hygiene (gitignore/license/install/links)
 
 ## Phase Details
@@ -73,8 +73,8 @@ The architecture is right; the enforcement leaks. This milestone closes every si
   3. The audit flags a `rules/*` policy with no enforcing gate and rejects a `[내용없음]` handoff as "not implemented" — pointing it at an orphaned rule or sentinel handoff asserts FAIL.
   4. A fully-configured harness passes the audit with exit 0 — the positive baseline holds.
 **Plans**: 2 plans
-- [ ] 04-01-PLAN.md — Audit core: harness-audit.sh (AUDIT-01 jq/registration/+x/bash-n + AUDIT-02 matcher/Bash-write) + command rewrite + baseline test (AUDIT-01, AUDIT-02)
-- [ ] 04-02-PLAN.md — AUDIT-03: safety-critical policy→gate map + [내용없음] sentinel rejection + negatives (AUDIT-03)
+- [x] 04-01-PLAN.md — Audit core: harness-audit.sh (AUDIT-01 jq/registration/+x/bash-n + AUDIT-02 matcher/Bash-write) + command rewrite + baseline test (AUDIT-01, AUDIT-02)
+- [x] 04-02-PLAN.md — AUDIT-03: safety-critical policy→gate map + [내용없음] sentinel rejection + negatives (AUDIT-03)
 
 ### Phase 5: Additive Hardening + Drop-in Packaging
 **Goal**: With the core trustworthy, add the two additive enforcement capabilities (secret content scan, incremental Stop verify) and finish the template as a clean drop-in: fill remaining generic stubs and add the hygiene files (`.gitignore` with root `.env*` block, `LICENSE`, `install.md`, corrected doc links).
@@ -98,5 +98,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | 1. Fail-Closed Enforcement Core | 4/4 | Complete   | 2026-07-07 |
 | 2. Observability Keystone | 3/3 | Complete   | 2026-07-07 |
 | 3. State Pillar | 2/2 | Complete   | 2026-07-07 |
-| 4. Self-Audit | 0/2 | Planned | - |
+| 4. Self-Audit | 2/2 | Complete   | 2026-07-07 |
 | 5. Additive Hardening + Packaging | 0/TBD | Not started | - |

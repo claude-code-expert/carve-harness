@@ -31,9 +31,9 @@
 
 ### AUDIT — 자가 감사
 
-- [ ] **AUDIT-01**: `/harness-audit`가 jq 존재·훅 등록·스크립트 실행권한(+x)·`bash -n`을 PASS/FAIL로 판정한다
-- [ ] **AUDIT-02**: `/harness-audit`가 매처 커버리지(전 쓰기 도구 + Bash-write)를 검증한다
-- [ ] **AUDIT-03**: `/harness-audit`가 각 `rules/*` 정책이 강제 게이트에 매핑되는지 점검하고 `[내용없음]` 핸드오프를 거부한다
+- [x] **AUDIT-01**: `/harness-audit`가 jq 존재·훅 등록·스크립트 실행권한(+x)·`bash -n`을 PASS/FAIL로 판정한다
+- [x] **AUDIT-02**: `/harness-audit`가 매처 커버리지(전 쓰기 도구 + Bash-write)를 검증한다
+- [x] **AUDIT-03**: `/harness-audit`가 각 `rules/*` 정책이 강제 게이트에 매핑되는지 점검하고 `[내용없음]` 핸드오프를 거부한다
 
 ### CFG — 규칙·설정
 
@@ -79,9 +79,9 @@
 | STATE-01 | Phase 3 | Complete |
 | STATE-02 | Phase 3 | Complete |
 | STATE-03 | Phase 3 | Complete |
-| AUDIT-01 | Phase 4 | Pending |
-| AUDIT-02 | Phase 4 | Pending |
-| AUDIT-03 | Phase 4 | Pending |
+| AUDIT-01 | Phase 4 | Complete |
+| AUDIT-02 | Phase 4 | Complete |
+| AUDIT-03 | Phase 4 | Complete |
 | GUARD-04 | Phase 5 | Pending |
 | GATE-03 | Phase 5 | Pending |
 | CFG-05 | Phase 5 | Pending |
