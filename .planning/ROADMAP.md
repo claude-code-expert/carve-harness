@@ -31,7 +31,7 @@ The architecture is right; the enforcement leaks. This milestone closes every si
   5. `commit` carries `disable-model-invocation: true`, `settings.json` validates against its declared `"$schema"`, and critical rule files have no `paths:` (always-on) — all verifiable by grep/jq assertions.
 **Plans**: 4 plans
 - [x] 01-01-PLAN.md — Fail-closed guard core: preamble + all write tools + Bash-write, single-source pattern (GUARD-01/02/03) [Walking Skeleton]
-- [ ] 01-02-PLAN.md — Stop-gate loop guard: `stop_hook_active` short-circuit + jq-absent best-effort (GATE-01)
+- [x] 01-02-PLAN.md — Stop-gate loop guard: `stop_hook_active` short-circuit + jq-absent best-effort (GATE-01)
 - [ ] 01-03-PLAN.md — Always-on critical rules (remove `paths:`) + `commit` no-auto-invoke (CFG-01, CFG-03)
 - [ ] 01-04-PLAN.md — settings.json wiring: matcher expansion, `${CLAUDE_PROJECT_DIR}`, Stop timeout, `$schema` (GUARD-02, GATE-02, CFG-02, CFG-04)
 
@@ -88,7 +88,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Fail-Closed Enforcement Core | 1/4 | In Progress|  |
+| 1. Fail-Closed Enforcement Core | 2/4 | In Progress|  |
 | 2. Observability Keystone | 0/TBD | Not started | - |
 | 3. State Pillar | 0/TBD | Not started | - |
 | 4. Self-Audit | 0/TBD | Not started | - |
