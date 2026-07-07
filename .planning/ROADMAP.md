@@ -45,7 +45,7 @@ The architecture is right; the enforcement leaks. This milestone closes every si
   2. A format-hook failure (formatter missing or non-zero exit) is written as a failure record in the JSONL log instead of being discarded — running `posttool-format.sh` with a missing formatter asserts a failure record appears.
   3. The append path uses only Bash + `jq` with no new runtime dependency — `bash -n` is clean and no non-`jq` tooling is introduced.
 **Plans**: 3 plans
-- [ ] 02-01-PLAN.md — OBS-01 keystone: log-event.sh helper + lib-protected + .gitignore + pretool-guard wiring (fail-safe append, D-05 exit-code proof)
+- [x] 02-01-PLAN.md — OBS-01 keystone: log-event.sh helper + lib-protected + .gitignore + pretool-guard wiring (fail-safe append, D-05 exit-code proof)
 - [ ] 02-02-PLAN.md — OBS-02: posttool-format failure visibility (missing/error/ok/skip records, hook stays exit 0)
 - [ ] 02-03-PLAN.md — OBS-01 completion: stop-verify + session-handoff logging (all 5 hook entry points, D-03)
 
@@ -92,7 +92,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Fail-Closed Enforcement Core | 4/4 | Complete   | 2026-07-07 |
-| 2. Observability Keystone | 0/3 | Not started | - |
+| 2. Observability Keystone | 1/3 | In Progress|  |
 | 3. State Pillar | 0/TBD | Not started | - |
 | 4. Self-Audit | 0/TBD | Not started | - |
 | 5. Additive Hardening + Packaging | 0/TBD | Not started | - |
