@@ -3,6 +3,21 @@
 # pipefail 필수: `cmd | tail`의 종료코드는 tail(항상 0) 것이므로,
 # 이게 없으면 실제 명령이 실패해도 fail이 set되지 않아 게이트가 무력화된다.
 set -o pipefail
+
+# GATE-01: read stdin once, then short-circuit a forced-continuation loop.
+# On the second Stop pass (stop_hook_active=true) surface once and yield (exit 0).
+input=$(cat)
+if command -v jq >/dev/null 2>&1 && [ "$(printf '%s' "$input" | jq -r '.stop_hook_active // false')" = "true" ]; then
+  echo "[verify] 이미 재검증 continuation 상태 — 루프 방지 위해 종료 허용" >&2
+  exit 0
+fi
+# D-02: jq-absent is best-effort (non-blocking) here — asymmetric with the write guard,
+# which fails closed. Hard-failing verification on a jq-less box would block completion.
+if ! command -v jq >/dev/null 2>&1; then
+  echo "[verify] jq 미설치 → 검증 스킵(best-effort)" >&2
+  exit 0
+fi
+
 fail=0
 
 # --- Java/Spring: 컴파일 + 테스트 ---
