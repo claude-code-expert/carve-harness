@@ -33,5 +33,34 @@ else
   echo "FAIL: set -o pipefail missing"; fail=$((fail + 1))
 fi
 
+# (4) loop-yield logs exactly one line (SC1/D-03) and the exit code is unchanged.
+tmp=$(mktemp -d); L="$tmp/logs/$(date -u +%F).jsonl"
+out=$(printf '%s' '{"stop_hook_active":true}' | CLAUDE_PROJECT_DIR="$tmp" bash "$HOOK" 2>/dev/null)
+code=$?
+if [ "$code" -eq 0 ] \
+   && [ "$(tail -1 "$L" 2>/dev/null | jq -r '.event' 2>/dev/null)" = "Stop" ] \
+   && [ "$(tail -1 "$L" 2>/dev/null | jq -r '.decision' 2>/dev/null)" = "loop-yield" ]; then
+  echo "PASS: loop-yield logs one line (exit 0 + .decision==loop-yield)"; pass=$((pass + 1))
+else
+  echo "FAIL: loop-yield log"; fail=$((fail + 1))
+fi
+rm -rf "$tmp"
+
+# (5) D-05: log failure (unwritable logs) does not change the loop-yield exit 0.
+tmp=$(mktemp -d); touch "$tmp/logs"   # regular file named logs => mkdir fails
+printf '%s' '{"stop_hook_active":true}' | CLAUDE_PROJECT_DIR="$tmp" bash "$HOOK" >/dev/null 2>&1
+[ $? -eq 0 ] && { echo "PASS: unwritable logs -> loop-yield still exit 0"; pass=$((pass + 1)); } \
+             || { echo "FAIL: unwritable logs exit 0"; fail=$((fail + 1)); }
+rm -rf "$tmp"
+
+# (6) source: pass/fail/loop-yield log calls present (jq-absent branch stays log-free).
+if grep -q 'Stop verify loop-yield' "$HOOK" \
+   && grep -q 'Stop verify pass' "$HOOK" \
+   && grep -q 'Stop verify fail' "$HOOK"; then
+  echo "PASS: pass/fail/loop-yield log calls present"; pass=$((pass + 1))
+else
+  echo "FAIL: Stop log calls missing"; fail=$((fail + 1))
+fi
+
 printf -- '---\n%s passed, %s failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]

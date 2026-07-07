@@ -4,11 +4,14 @@
 # 이게 없으면 실제 명령이 실패해도 fail이 set되지 않아 게이트가 무력화된다.
 set -o pipefail
 
+LOG_EVENT="$(dirname "${BASH_SOURCE[0]}")/log-event.sh"
+
 # GATE-01: read stdin once, then short-circuit a forced-continuation loop.
 # On the second Stop pass (stop_hook_active=true) surface once and yield (exit 0).
 input=$(cat)
 if command -v jq >/dev/null 2>&1 && [ "$(printf '%s' "$input" | jq -r '.stop_hook_active // false')" = "true" ]; then
   echo "[verify] 이미 재검증 continuation 상태 — 루프 방지 위해 종료 허용" >&2
+  bash "$LOG_EVENT" Stop verify loop-yield ""
   exit 0
 fi
 # D-02: jq-absent is best-effort (non-blocking) here — asymmetric with the write guard,
@@ -41,5 +44,6 @@ if   [ -f package.json ];          then run_node . || fail=1
 elif [ -f frontend/package.json ]; then run_node frontend || fail=1; fi
 
 # ponytail: 매 Stop마다 전체 테스트 실행 → 큰 레포서 느림. 필요하면 변경모듈 스코프/CI로 이관.
-[ "$fail" -eq 0 ] || { echo "[verify] 검증 실패(빌드/타입/테스트) — 완료 전 수정 필요" >&2; exit 2; }
+[ "$fail" -eq 0 ] || { echo "[verify] 검증 실패(빌드/타입/테스트) — 완료 전 수정 필요" >&2; bash "$LOG_EVENT" Stop verify fail ""; exit 2; }
+bash "$LOG_EVENT" Stop verify pass ""
 exit 0
