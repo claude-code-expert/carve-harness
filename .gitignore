@@ -1,1 +1,6 @@
 logs/
+
+# secrets — never commit env files (HYG-02)
+/.env
+/.env.*
+*.env
