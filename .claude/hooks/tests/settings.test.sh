@@ -20,9 +20,13 @@ jq -e '."$schema"' "$S" >/dev/null 2>&1 && ok '$schema present (CFG-04)' || no '
 jq -e '.hooks.Stop[0].hooks[0].timeout > 600' "$S" >/dev/null 2>&1 \
   && ok "Stop timeout > 600 (GATE-02)" || no "Stop timeout > 600 (GATE-02)"
 
-[ "$(grep -o 'CLAUDE_PROJECT_DIR' "$S" | wc -l | tr -d ' ')" = "5" ] \
-  && ok "5x CLAUDE_PROJECT_DIR across hook commands (CFG-02)" \
-  || no "5x CLAUDE_PROJECT_DIR (CFG-02)"
+[ "$(grep -o 'CLAUDE_PROJECT_DIR' "$S" | wc -l | tr -d ' ')" = "6" ] \
+  && ok "6x CLAUDE_PROJECT_DIR across hook commands (CFG-02)" \
+  || no "6x CLAUDE_PROJECT_DIR (CFG-02)"
+
+[ "$(jq -r '.hooks.SessionEnd[0].hooks[0].command' "$S")" = "bash \${CLAUDE_PROJECT_DIR}/.claude/hooks/session-handoff.sh save SessionEnd" ] \
+  && ok "SessionEnd registered -> session-handoff.sh save SessionEnd (STATE-02/D-09)" \
+  || no "SessionEnd registration (STATE-02/D-09)"
 
 # SC#4: from a non-root cwd, the ${CLAUDE_PROJECT_DIR}-resolved guard still blocks a protected write.
 sub=$(mktemp -d)

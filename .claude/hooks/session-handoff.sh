@@ -57,7 +57,7 @@ case "${1:-}" in
     ;;
   save)
     _collect > "$H" 2>/dev/null
-    bash "$LOG_EVENT" PreCompact handoff save ""
+    bash "$LOG_EVENT" "${2:-PreCompact}" handoff save ""
     ;;
 esac
 exit 0

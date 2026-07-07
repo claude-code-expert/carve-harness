@@ -46,7 +46,7 @@ rm -rf "$cwd" "$logd"
 
 # (4) source: log calls present; sentinel GONE + STATE.md wired (Phase 3 STATE-01); bash -n clean.
 grep -q 'SessionStart handoff start' "$HOOK" && ok "start log call present" || bad "start log call"
-grep -q 'PreCompact handoff save' "$HOOK" && ok "save log call present" || bad "save log call"
+grep -qF '${2:-PreCompact}" handoff save' "$HOOK" && ok "save log call present (label-parametrized)" || bad "save log call"
 if ! grep -q '자동 수집' "$HOOK" && grep -q 'STATE.md' "$HOOK"; then
   ok "sentinel removed + STATE.md wired (STATE-01)"
 else
@@ -104,6 +104,18 @@ rm -rf "$cwd" "$logd"
 cwd=$(mktemp -d); logd=$(mktemp -d); mkdir -p "$cwd/specs"
 ( cd "$cwd" && CLAUDE_PROJECT_DIR="$logd" bash "$HOOK" save >/dev/null 2>&1 ); code=$?
 [ "$code" -eq 0 ] && [ -f "$cwd/specs/HANDOFF.md" ] && ok "no STATE.md -> exit 0 + handoff written (D-14)" || bad "D-14 best-effort"
+rm -rf "$cwd" "$logd"
+
+# (9) STATE-02: `save SessionEnd` reuses the save path, writes HANDOFF.md, logs .event==SessionEnd (SC2/D-10).
+cwd=$(mktemp -d); logd=$(mktemp -d); L="$(daily "$logd")"; mkdir -p "$cwd/specs"
+( cd "$cwd" && CLAUDE_PROJECT_DIR="$logd" bash "$HOOK" save SessionEnd >/dev/null 2>&1 ); code=$?
+if [ "$code" -eq 0 ] && [ -f "$cwd/specs/HANDOFF.md" ] \
+   && [ "$(tail -1 "$L" 2>/dev/null | jq -r '.event' 2>/dev/null)" = "SessionEnd" ] \
+   && [ "$(tail -1 "$L" 2>/dev/null | jq -r '.decision' 2>/dev/null)" = "save" ]; then
+  ok "save SessionEnd -> SessionEnd/save log + HANDOFF.md (exit 0) (STATE-02/SC2)"
+else
+  bad "STATE-02 SessionEnd label"
+fi
 rm -rf "$cwd" "$logd"
 
 printf -- '---\n%s passed, %s failed\n' "$pass" "$fail"

@@ -8,6 +8,7 @@
     "PostToolUse": [ { "matcher": "Write|Edit", "hooks": [ { "type": "command", "command": "bash ${CLAUDE_PROJECT_DIR}/.claude/hooks/posttool-format.sh" } ] } ],
     "Stop":        [ { "hooks": [ { "type": "command", "command": "bash ${CLAUDE_PROJECT_DIR}/.claude/hooks/stop-verify.sh", "timeout": 900 } ] } ],
     "SessionStart":[ { "hooks": [ { "type": "command", "command": "bash ${CLAUDE_PROJECT_DIR}/.claude/hooks/session-handoff.sh start" } ] } ],
-    "PreCompact":  [ { "hooks": [ { "type": "command", "command": "bash ${CLAUDE_PROJECT_DIR}/.claude/hooks/session-handoff.sh save" } ] } ]
+    "PreCompact":  [ { "hooks": [ { "type": "command", "command": "bash ${CLAUDE_PROJECT_DIR}/.claude/hooks/session-handoff.sh save" } ] } ],
+    "SessionEnd":  [ { "hooks": [ { "type": "command", "command": "bash ${CLAUDE_PROJECT_DIR}/.claude/hooks/session-handoff.sh save SessionEnd" } ] } ]
   }
 }
