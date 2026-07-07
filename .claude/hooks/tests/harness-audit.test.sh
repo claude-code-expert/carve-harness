@@ -17,6 +17,11 @@ mkroot() { local r; r=$(mktemp -d); cp -r "$REPO/.claude" "$r/.claude"; mkdir -p
 CLAUDE_PROJECT_DIR="$REPO" bash "$AUDIT" >/dev/null 2>&1
 [ $? -eq 0 ] && ok "live harness passes audit (exit 0, SC4)" || no "live baseline exit 0"
 
+# Snapshot the live files the negatives mutate-in-copy — hash compare proves isolation
+# regardless of git state (a legit uncommitted edit must not read as "test mutated it").
+_livesnap() { cat "$REPO/.claude/settings.json" "$REPO/.claude/hooks/pretool-guard.sh" 2>/dev/null | cksum; }
+PRE_SNAP=$(_livesnap)
+
 # (2) jq absent -> non-zero (PATH holds bash but not jq).
 r=$(mkroot); nob=$(mktemp -d); ln -s "$(command -v bash)" "$nob/bash"
 ( PATH="$nob" CLAUDE_PROJECT_DIR="$r" bash "$AUDIT" ) >/dev/null 2>&1
@@ -71,9 +76,9 @@ CLAUDE_PROJECT_DIR="$r" bash "$AUDIT" >/dev/null 2>&1
 [ $? -eq 0 ] && ok "absent HANDOFF.md -> exit 0 (D-11)" || no "absent HANDOFF exit 0"
 rm -rf "$r"
 
-# (10) isolation: live settings.json + pretool-guard.sh unchanged after all mutations.
-if git -C "$REPO" diff --quiet .claude/settings.json .claude/hooks/pretool-guard.sh 2>/dev/null; then
-  ok "live settings.json + pretool-guard.sh unchanged (isolation)"
+# (10) isolation: live files unchanged after all mutations (hash compare — commit-independent).
+if [ "$(_livesnap)" = "$PRE_SNAP" ]; then
+  ok "live config unchanged by test (isolation)"
 else
   no "live config mutated by test"
 fi

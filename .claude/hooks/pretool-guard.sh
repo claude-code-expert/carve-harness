@@ -51,5 +51,14 @@ if printf '%s' "$p" | grep -Eq "$PROTECTED_RE"; then
   exit 2
 fi
 
+# (3c) GUARD-04: block hardcoded secrets in the write CONTENT (path-independent).
+# Fields differ per tool; SECRETS_RE is length-anchored so benign content passes.
+content=$(printf '%s' "$input" | jq -r '.tool_input.content // .tool_input.new_string // .tool_input.new_source // (.tool_input.edits[]?.new_string) // empty' 2>/dev/null)
+if [ -n "$content" ] && printf '%s' "$content" | grep -Eq "$SECRETS_RE"; then
+  echo "[guard] 시크릿 내용 차단(하드코딩 시크릿 감지)" >&2
+  bash "$LOG_EVENT" PreToolUse "$tool" block "$p"
+  exit 2
+fi
+
 bash "$LOG_EVENT" PreToolUse "$tool" allow "$p"
 exit 0

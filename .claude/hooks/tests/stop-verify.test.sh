@@ -62,5 +62,30 @@ else
   echo "FAIL: Stop log calls missing"; fail=$((fail + 1))
 fi
 
+# (7,8) GATE-03: verification is scoped to changed stacks (SC2). Uses a throwaway
+# git repo with a stub gradlew that touches a marker when the gradle stack runs.
+ABS_HOOK="$(cd "$(dirname "$0")/.." && pwd)/stop-verify.sh"
+if command -v git >/dev/null 2>&1; then
+  gd=$(mktemp -d)
+  (
+    cd "$gd" || exit
+    git init -q
+    printf '#!/usr/bin/env bash\ntouch ran-gradle\n' > gradlew; chmod +x gradlew
+    echo 'plugins {}' > build.gradle
+    git add -A; git -c user.email=t@t -c user.name=t commit -qm init
+  )
+  # (7) only a .md changed -> gradle stack skipped (no marker).
+  ( cd "$gd" && echo note > notes.md && printf '%s' '{}' | CLAUDE_PROJECT_DIR="$gd" bash "$ABS_HOOK" >/dev/null 2>&1 )
+  [ ! -f "$gd/ran-gradle" ] && { echo "PASS: GATE-03 untouched java -> gradle skipped (SC2)"; pass=$((pass + 1)); } \
+                            || { echo "FAIL: GATE-03 skip"; fail=$((fail + 1)); }
+  # (8) a .java changed -> gradle stack runs (marker created).
+  ( cd "$gd" && echo 'class X {}' > X.java && printf '%s' '{}' | CLAUDE_PROJECT_DIR="$gd" bash "$ABS_HOOK" >/dev/null 2>&1 )
+  [ -f "$gd/ran-gradle" ] && { echo "PASS: GATE-03 changed java -> gradle ran (SC2)"; pass=$((pass + 1)); } \
+                          || { echo "FAIL: GATE-03 run"; fail=$((fail + 1)); }
+  rm -rf "$gd"
+else
+  echo "SKIP: GATE-03 fixture (git absent)"
+fi
+
 printf -- '---\n%s passed, %s failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]

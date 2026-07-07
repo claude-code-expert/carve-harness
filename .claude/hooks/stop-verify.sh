@@ -23,12 +23,25 @@ fi
 
 fail=0
 
-# --- Java/Spring: 컴파일 + 테스트 ---
+# GATE-03: scope verification to changed stacks (best-effort). Not a git repo →
+# verify all (never skip when change-detection is impossible).
+have_git=0
+command -v git >/dev/null 2>&1 && git rev-parse --is-inside-work-tree >/dev/null 2>&1 && have_git=1
+java_changed=1; node_changed=1
+if [ "$have_git" -eq 1 ]; then
+  CHANGED=$(git status --porcelain 2>/dev/null | sed 's/^...//')
+  printf '%s\n' "$CHANGED" | grep -Eq '\.(java|kt|gradle)'    && java_changed=1 || java_changed=0
+  printf '%s\n' "$CHANGED" | grep -Eq '\.(ts|tsx)$|package\.json' && node_changed=1 || node_changed=0
+fi
+
+# --- Java/Spring: 컴파일 + 테스트 (변경 시에만) ---
 # 커버리지 80%는 build.gradle의 jacocoTestCoverageVerification으로 강제 → test 태스크가 실패한다.
-if [ -f gradlew ]; then
-  ./gradlew compileJava test -q 2>&1 | tail -20 || fail=1
-elif [ -f backend/gradlew ]; then
-  ( cd backend && ./gradlew compileJava test -q ) 2>&1 | tail -20 || fail=1
+if [ "$java_changed" -eq 1 ]; then
+  if [ -f gradlew ]; then
+    ./gradlew compileJava test -q 2>&1 | tail -20 || fail=1
+  elif [ -f backend/gradlew ]; then
+    ( cd backend && ./gradlew compileJava test -q ) 2>&1 | tail -20 || fail=1
+  fi
 fi
 
 # --- React/Next/TS: 타입체크 + 테스트 ---
@@ -40,10 +53,12 @@ run_node() {  # $1 = 프로젝트 디렉토리
     ( cd "$1" && pnpm test 2>&1 | tail -20 ) || return 1
   fi
 }
-if   [ -f package.json ];          then run_node . || fail=1
-elif [ -f frontend/package.json ]; then run_node frontend || fail=1; fi
+if [ "$node_changed" -eq 1 ]; then
+  if   [ -f package.json ];          then run_node . || fail=1
+  elif [ -f frontend/package.json ]; then run_node frontend || fail=1; fi
+fi
 
-# ponytail: 매 Stop마다 전체 테스트 실행 → 큰 레포서 느림. 필요하면 변경모듈 스코프/CI로 이관.
+# GATE-03: verification is now change-scoped — only stacks whose files changed run above.
 [ "$fail" -eq 0 ] || { echo "[verify] 검증 실패(빌드/타입/테스트) — 완료 전 수정 필요" >&2; bash "$LOG_EVENT" Stop verify fail ""; exit 2; }
 bash "$LOG_EVENT" Stop verify pass ""
 exit 0

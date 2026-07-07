@@ -60,5 +60,17 @@ check 0 "Bash grep secret 2>/dev/null"     '{"tool_name":"Bash","tool_input":{"c
 check 0 "Write foo.txt"                    '{"tool_name":"Write","tool_input":{"file_path":"foo.txt"}}'
 check 0 "Write src/environment.ts"         '{"tool_name":"Write","tool_input":{"file_path":"src/environment.ts"}}'
 
+# --- GUARD-04: hardcoded secret in write CONTENT blocks (exit 2); benign allows (exit 0) ---
+# Fixtures are split so THIS file's source holds no contiguous secret (the guard would
+# block writing one); bash concatenation rebuilds the full secret at runtime.
+akia="AKIA""IOSFODNN7EXAMPLE"
+skkey="sk-""abcdefghijklmnopqrstuvwxyz012345"
+pem="-----BEGIN RSA PRIVATE ""KEY-----"
+check 2 "Write content AWS key"            "{\"tool_name\":\"Write\",\"tool_input\":{\"file_path\":\"a.txt\",\"content\":\"$akia\"}}"
+check 2 "Edit new_string OpenAI key"       "{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"a.ts\",\"new_string\":\"$skkey\"}}"
+check 2 "Write content PEM header"         "{\"tool_name\":\"Write\",\"tool_input\":{\"file_path\":\"k.pem\",\"content\":\"$pem\"}}"
+check 0 "Write benign content"             '{"tool_name":"Write","tool_input":{"file_path":"a.txt","content":"hello world const x = 1"}}'
+check 0 "Write short sk- (no false pos)"   '{"tool_name":"Write","tool_input":{"file_path":"a.txt","content":"key sk-shortkey here"}}'
+
 printf -- '---\n%s passed, %s failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]
