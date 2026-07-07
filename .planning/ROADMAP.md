@@ -11,7 +11,7 @@ The architecture is right; the enforcement leaks. This milestone closes every si
 - Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
 
 - [x] **Phase 1: Fail-Closed Enforcement Core** - Guards fail closed, cover every write path, Stop can't loop or silently time out; hooks resolve from project root and critical config is airtight (completed 2026-07-07)
-- [ ] **Phase 2: Observability Keystone (JSONL Event Log)** - Every hook fire is structured JSONL in `logs/`; format-hook failures stop being swallowed
+- [x] **Phase 2: Observability Keystone (JSONL Event Log)** - Every hook fire is structured JSONL in `logs/`; format-hook failures stop being swallowed (completed 2026-07-07)
 - [ ] **Phase 3: State Pillar — Real Handoff + Boundary Coverage** - Handoff captures real TODOs/next-steps/decisions and saves on normal session end, not just compaction
 - [ ] **Phase 4: Self-Audit That Actually Passes/Fails** - `/harness-audit` mechanically PASS/FAILs jq, hook registration, matcher coverage, rule→gate mapping, and the sentinel handoff
 - [ ] **Phase 5: Additive Hardening + Drop-in Packaging** - Secret content scan, incremental Stop verify, filled stubs, and clean drop-in hygiene (gitignore/license/install/links)
@@ -46,8 +46,8 @@ The architecture is right; the enforcement leaks. This milestone closes every si
   3. The append path uses only Bash + `jq` with no new runtime dependency — `bash -n` is clean and no non-`jq` tooling is introduced.
 **Plans**: 3 plans
 - [x] 02-01-PLAN.md — OBS-01 keystone: log-event.sh helper + lib-protected + .gitignore + pretool-guard wiring (fail-safe append, D-05 exit-code proof)
-- [ ] 02-02-PLAN.md — OBS-02: posttool-format failure visibility (missing/error/ok/skip records, hook stays exit 0)
-- [ ] 02-03-PLAN.md — OBS-01 completion: stop-verify + session-handoff logging (all 5 hook entry points, D-03)
+- [x] 02-02-PLAN.md — OBS-02: posttool-format failure visibility (missing/error/ok/skip records, hook stays exit 0)
+- [x] 02-03-PLAN.md — OBS-01 completion: stop-verify + session-handoff logging (all 5 hook entry points, D-03)
 
 ### Phase 3: State Pillar — Real Handoff + Boundary Coverage
 **Goal**: Make the state pillar real, not theater. The compaction-survival mechanism already works; this fills it with genuine content (unfinished TODOs, next steps, logged decisions — no more `[내용없음]` sentinel) and adds `SessionEnd` so ordinary session exits also save state.
@@ -92,7 +92,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Fail-Closed Enforcement Core | 4/4 | Complete   | 2026-07-07 |
-| 2. Observability Keystone | 1/3 | In Progress|  |
+| 2. Observability Keystone | 3/3 | Complete   | 2026-07-07 |
 | 3. State Pillar | 0/TBD | Not started | - |
 | 4. Self-Audit | 0/TBD | Not started | - |
 | 5. Additive Hardening + Packaging | 0/TBD | Not started | - |
