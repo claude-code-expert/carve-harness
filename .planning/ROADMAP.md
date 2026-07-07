@@ -58,7 +58,9 @@ The architecture is right; the enforcement leaks. This milestone closes every si
   1. A saved handoff contains real unfinished TODOs and next steps collected from project state (no `[내용없음]` sentinel) — running the save path in a fixture with a known open TODO asserts it appears in the output.
   2. Ending a session normally fires the `SessionEnd` hook and writes a handoff, not only `PreCompact` — invoking the `SessionEnd` path asserts the handoff file is written.
   3. Decisions logged in `specs/DECISIONS.md` appear in the handoff output — seeding a decision and running save asserts it surfaces in the saved handoff.
-**Plans**: TBD
+**Plans**: 2 plans
+- [ ] 03-01-PLAN.md — Real save collection: STATE.md TODOs, open plans, git count, DECISIONS recent-5; sentinel removed (STATE-01, STATE-03)
+- [ ] 03-02-PLAN.md — SessionEnd boundary: event-label reuse of save arm + settings.json registration (SAFETY-gated) (STATE-02)
 
 ### Phase 4: Self-Audit That Actually Passes/Fails
 **Goal**: Turn `/harness-audit` from a prose prompt into a mechanical PASS/FAIL that asserts every fix from Phases 1–3 exists — the single highest-leverage piece, re-runnable after every Claude Code upgrade to prove the gates still work.
@@ -93,6 +95,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 |-------|----------------|--------|-----------|
 | 1. Fail-Closed Enforcement Core | 4/4 | Complete   | 2026-07-07 |
 | 2. Observability Keystone | 3/3 | Complete   | 2026-07-07 |
-| 3. State Pillar | 0/TBD | Not started | - |
+| 3. State Pillar | 0/2 | Planned | - |
 | 4. Self-Audit | 0/TBD | Not started | - |
 | 5. Additive Hardening + Packaging | 0/TBD | Not started | - |
