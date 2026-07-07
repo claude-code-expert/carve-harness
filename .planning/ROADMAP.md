@@ -29,7 +29,11 @@ The architecture is right; the enforcement leaks. This milestone closes every si
   3. A Bash write to a protected path — `echo secret > x/.env.production`, `sed -i` on an existing migration, `cp … application-prod.yml` — is blocked with exit 2 via `.tool_input.command` inspection; a benign Bash command is allowed (exit 0).
   4. On the second Stop pass (`stop_hook_active=true`) the Stop gate surfaces the failure once and yields (exit 0) instead of looping; hook commands invoke via `${CLAUDE_PROJECT_DIR}` so the guard still fires when run from a subdirectory.
   5. `commit` carries `disable-model-invocation: true`, `settings.json` validates against its declared `"$schema"`, and critical rule files have no `paths:` (always-on) — all verifiable by grep/jq assertions.
-**Plans**: TBD
+**Plans**: 4 plans
+- [ ] 01-01-PLAN.md — Fail-closed guard core: preamble + all write tools + Bash-write, single-source pattern (GUARD-01/02/03) [Walking Skeleton]
+- [ ] 01-02-PLAN.md — Stop-gate loop guard: `stop_hook_active` short-circuit + jq-absent best-effort (GATE-01)
+- [ ] 01-03-PLAN.md — Always-on critical rules (remove `paths:`) + `commit` no-auto-invoke (CFG-01, CFG-03)
+- [ ] 01-04-PLAN.md — settings.json wiring: matcher expansion, `${CLAUDE_PROJECT_DIR}`, Stop timeout, `$schema` (GUARD-02, GATE-02, CFG-02, CFG-04)
 
 ### Phase 2: Observability Keystone (JSONL Event Log)
 **Goal**: Add the one missing architectural layer — a structured, zero-dependency JSONL event log — so every hook fire is recorded and format-hook failures stop vanishing into `/dev/null`. This is the keystone the real `/harness-audit` (Phase 4) and format-failure visibility (OBS-02) both depend on.
@@ -84,7 +88,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Fail-Closed Enforcement Core | 0/TBD | Not started | - |
+| 1. Fail-Closed Enforcement Core | 0/4 | Not started | - |
 | 2. Observability Keystone | 0/TBD | Not started | - |
 | 3. State Pillar | 0/TBD | Not started | - |
 | 4. Self-Audit | 0/TBD | Not started | - |
