@@ -10,7 +10,7 @@ The architecture is right; the enforcement leaks. This milestone closes every si
 - Integer phases (1, 2, 3): Planned milestone work
 - Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
 
-- [ ] **Phase 1: Fail-Closed Enforcement Core** - Guards fail closed, cover every write path, Stop can't loop or silently time out; hooks resolve from project root and critical config is airtight
+- [x] **Phase 1: Fail-Closed Enforcement Core** - Guards fail closed, cover every write path, Stop can't loop or silently time out; hooks resolve from project root and critical config is airtight (completed 2026-07-07)
 - [ ] **Phase 2: Observability Keystone (JSONL Event Log)** - Every hook fire is structured JSONL in `logs/`; format-hook failures stop being swallowed
 - [ ] **Phase 3: State Pillar — Real Handoff + Boundary Coverage** - Handoff captures real TODOs/next-steps/decisions and saves on normal session end, not just compaction
 - [ ] **Phase 4: Self-Audit That Actually Passes/Fails** - `/harness-audit` mechanically PASS/FAILs jq, hook registration, matcher coverage, rule→gate mapping, and the sentinel handoff
@@ -33,7 +33,7 @@ The architecture is right; the enforcement leaks. This milestone closes every si
 - [x] 01-01-PLAN.md — Fail-closed guard core: preamble + all write tools + Bash-write, single-source pattern (GUARD-01/02/03) [Walking Skeleton]
 - [x] 01-02-PLAN.md — Stop-gate loop guard: `stop_hook_active` short-circuit + jq-absent best-effort (GATE-01)
 - [x] 01-03-PLAN.md — Always-on critical rules (remove `paths:`) + `commit` no-auto-invoke (CFG-01, CFG-03)
-- [ ] 01-04-PLAN.md — settings.json wiring: matcher expansion, `${CLAUDE_PROJECT_DIR}`, Stop timeout, `$schema` (GUARD-02, GATE-02, CFG-02, CFG-04)
+- [x] 01-04-PLAN.md — settings.json wiring: matcher expansion, `${CLAUDE_PROJECT_DIR}`, Stop timeout, `$schema` (GUARD-02, GATE-02, CFG-02, CFG-04)
 
 ### Phase 2: Observability Keystone (JSONL Event Log)
 **Goal**: Add the one missing architectural layer — a structured, zero-dependency JSONL event log — so every hook fire is recorded and format-hook failures stop vanishing into `/dev/null`. This is the keystone the real `/harness-audit` (Phase 4) and format-failure visibility (OBS-02) both depend on.
@@ -88,7 +88,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Fail-Closed Enforcement Core | 3/4 | In Progress|  |
+| 1. Fail-Closed Enforcement Core | 4/4 | Complete   | 2026-07-07 |
 | 2. Observability Keystone | 0/TBD | Not started | - |
 | 3. State Pillar | 0/TBD | Not started | - |
 | 4. Self-Audit | 0/TBD | Not started | - |
