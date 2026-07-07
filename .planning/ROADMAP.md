@@ -12,7 +12,7 @@ The architecture is right; the enforcement leaks. This milestone closes every si
 
 - [x] **Phase 1: Fail-Closed Enforcement Core** - Guards fail closed, cover every write path, Stop can't loop or silently time out; hooks resolve from project root and critical config is airtight (completed 2026-07-07)
 - [x] **Phase 2: Observability Keystone (JSONL Event Log)** - Every hook fire is structured JSONL in `logs/`; format-hook failures stop being swallowed (completed 2026-07-07)
-- [ ] **Phase 3: State Pillar — Real Handoff + Boundary Coverage** - Handoff captures real TODOs/next-steps/decisions and saves on normal session end, not just compaction
+- [x] **Phase 3: State Pillar — Real Handoff + Boundary Coverage** - Handoff captures real TODOs/next-steps/decisions and saves on normal session end, not just compaction (completed 2026-07-07)
 - [ ] **Phase 4: Self-Audit That Actually Passes/Fails** - `/harness-audit` mechanically PASS/FAILs jq, hook registration, matcher coverage, rule→gate mapping, and the sentinel handoff
 - [ ] **Phase 5: Additive Hardening + Drop-in Packaging** - Secret content scan, incremental Stop verify, filled stubs, and clean drop-in hygiene (gitignore/license/install/links)
 
@@ -59,8 +59,8 @@ The architecture is right; the enforcement leaks. This milestone closes every si
   2. Ending a session normally fires the `SessionEnd` hook and writes a handoff, not only `PreCompact` — invoking the `SessionEnd` path asserts the handoff file is written.
   3. Decisions logged in `specs/DECISIONS.md` appear in the handoff output — seeding a decision and running save asserts it surfaces in the saved handoff.
 **Plans**: 2 plans
-- [ ] 03-01-PLAN.md — Real save collection: STATE.md TODOs, open plans, git count, DECISIONS recent-5; sentinel removed (STATE-01, STATE-03)
-- [ ] 03-02-PLAN.md — SessionEnd boundary: event-label reuse of save arm + settings.json registration (SAFETY-gated) (STATE-02)
+- [x] 03-01-PLAN.md — Real save collection: STATE.md TODOs, open plans, git count, DECISIONS recent-5; sentinel removed (STATE-01, STATE-03)
+- [x] 03-02-PLAN.md — SessionEnd boundary: event-label reuse of save arm + settings.json registration (SAFETY-gated) (STATE-02)
 
 ### Phase 4: Self-Audit That Actually Passes/Fails
 **Goal**: Turn `/harness-audit` from a prose prompt into a mechanical PASS/FAIL that asserts every fix from Phases 1–3 exists — the single highest-leverage piece, re-runnable after every Claude Code upgrade to prove the gates still work.
@@ -95,6 +95,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 |-------|----------------|--------|-----------|
 | 1. Fail-Closed Enforcement Core | 4/4 | Complete   | 2026-07-07 |
 | 2. Observability Keystone | 3/3 | Complete   | 2026-07-07 |
-| 3. State Pillar | 0/2 | Planned | - |
+| 3. State Pillar | 2/2 | Complete   | 2026-07-07 |
 | 4. Self-Audit | 0/TBD | Not started | - |
 | 5. Additive Hardening + Packaging | 0/TBD | Not started | - |

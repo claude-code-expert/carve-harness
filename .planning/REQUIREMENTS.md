@@ -25,9 +25,9 @@
 
 ### STATE — 상태 기둥 (state)
 
-- [ ] **STATE-01**: 핸드오프가 실제 미완료 TODO·다음 단계·핵심 결정을 수집한다 (하드코딩 `[내용없음]` 제거, C7)
-- [ ] **STATE-02**: `SessionEnd` 훅으로 정상 종료 시에도 핸드오프를 저장한다
-- [ ] **STATE-03**: `specs/DECISIONS.md` 결정 기록이 핸드오프 출력에 반영된다
+- [x] **STATE-01**: 핸드오프가 실제 미완료 TODO·다음 단계·핵심 결정을 수집한다 (하드코딩 `[내용없음]` 제거, C7)
+- [x] **STATE-02**: `SessionEnd` 훅으로 정상 종료 시에도 핸드오프를 저장한다
+- [x] **STATE-03**: `specs/DECISIONS.md` 결정 기록이 핸드오프 출력에 반영된다
 
 ### AUDIT — 자가 감사
 
@@ -76,9 +76,9 @@
 | CFG-04 | Phase 1 | Pending |
 | OBS-01 | Phase 2 | Pending |
 | OBS-02 | Phase 2 | Pending |
-| STATE-01 | Phase 3 | Pending |
-| STATE-02 | Phase 3 | Pending |
-| STATE-03 | Phase 3 | Pending |
+| STATE-01 | Phase 3 | Complete |
+| STATE-02 | Phase 3 | Complete |
+| STATE-03 | Phase 3 | Complete |
 | AUDIT-01 | Phase 4 | Pending |
 | AUDIT-02 | Phase 4 | Pending |
 | AUDIT-03 | Phase 4 | Pending |
