@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: verifying
-stopped_at: Phase 4 complete (verified)
-last_updated: "2026-07-07T15:40:00.000Z"
-last_activity: 2026-07-07 -- Phase 4 execution complete, verification passed
+status: milestone-complete
+stopped_at: Phase 5 complete (verified) — milestone v1 done
+last_updated: "2026-07-07T15:55:00.000Z"
+last_activity: 2026-07-07 -- Phase 5 execution complete, milestone v1 hardening done
 progress:
   total_phases: 5
-  completed_phases: 4
-  total_plans: 11
-  completed_plans: 11
-  percent: 80
+  completed_phases: 5
+  total_plans: 14
+  completed_plans: 14
+  percent: 100
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-06)
 
 **Core value:** 드롭인 즉시 게이트가 실제로 작동한다 — 위험동작 차단·게이트·상태 인계가 선언이 아니라 검증된 동작.
-**Current focus:** Phase 5 — additive-hardening-and-drop-in-packaging (next, final)
+**Current focus:** Milestone v1 hardening COMPLETE (5/5 phases). Follow-up: add LICENSE (HYG-02 deferred).
 
 ## Current Position
 
-Phase: 4 (self-audit-that-actually-passes-fails) — COMPLETE (verified)
-Plan: 2 of 2
-Status: Phase 4 verified (4/4 SCs, harness-audit 10/10 + live 27 PASS, full suite 7/7) — ready for Phase 5
-Last activity: 2026-07-07 -- Phase 4 execution complete, verification passed
+Phase: 5 (additive-hardening-drop-in-packaging) — COMPLETE (verified). MILESTONE v1 DONE.
+Plan: 3 of 3
+Status: Phase 5 verified (SC1-3 full, SC4 partial — LICENSE deferred); pretool-guard 20/20, stop-verify 8/8, full suite 7/7, self-audit exit 0
+Last activity: 2026-07-07 -- Phase 5 execution complete, milestone v1 hardening done
 
-Progress: [████████░░] 80%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -85,6 +85,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-07T15:40:00.000Z
-Stopped at: Phase 4 complete (verified) — ready for Phase 5 (final)
-Resume file: .planning/phases/04-self-audit-that-actually-passes-fails/04-VERIFICATION.md
+Last session: 2026-07-07T15:55:00.000Z
+Stopped at: Phase 5 complete (verified) — milestone v1 hardening done (5/5)
+Resume file: .planning/phases/05-additive-hardening-drop-in-packaging/05-VERIFICATION.md

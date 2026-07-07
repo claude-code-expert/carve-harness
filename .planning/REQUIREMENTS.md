@@ -10,13 +10,13 @@
 - [ ] **GUARD-01**: 가드 훅은 `jq` 부재 또는 JSON 파싱 실패 시 fail-closed로 차단(exit 2)한다 (현재 fail-open: 파싱 실패→전부 허용)
 - [ ] **GUARD-02**: 가드 매처가 `Write|Edit|MultiEdit|NotebookEdit` 전 쓰기 도구를 포착한다
 - [ ] **GUARD-03**: Bash 쓰기 명령(`echo >`, `cp`, `sed -i`, `tee` 등)이 보호 경로를 대상으로 하면 차단한다 (`.tool_input.command` 검사)
-- [ ] **GUARD-04**: 파일 내용의 하드코딩 시크릿(AKIA/sk-/ghp-/PEM/JWT 패턴)을 감지하면 쓰기를 차단한다
+- [x] **GUARD-04**: 파일 내용의 하드코딩 시크릿(AKIA/sk-/ghp-/PEM/JWT 패턴)을 감지하면 쓰기를 차단한다
 
 ### GATE — 피드백/검증 게이트 (feedback)
 
 - [ ] **GATE-01**: Stop 게이트가 `stop_hook_active`를 확인해 무한 continuation 루프를 방지한다
 - [ ] **GATE-02**: Stop 게이트가 훅 타임아웃(기본 60s)으로 조용히 무력화되지 않도록 인지·대응한다
-- [ ] **GATE-03**: Stop 검증이 변경된 모듈만 대상으로 증분 실행된다 (매 Stop 풀빌드 회피)
+- [x] **GATE-03**: Stop 검증이 변경된 모듈만 대상으로 증분 실행된다 (매 Stop 풀빌드 회피)
 
 ### OBS — 관측성 (observability, 키스톤)
 
@@ -41,13 +41,13 @@
 - [ ] **CFG-02**: 훅 경로를 `${CLAUDE_PROJECT_DIR}` 기준으로 참조한다 (서브디렉토리·모노레포 안전)
 - [ ] **CFG-03**: 부작용 커맨드(`commit`)에 `disable-model-invocation: true`를 설정한다
 - [ ] **CFG-04**: `settings.json`에 `"$schema"`를 추가한다 (버전 드리프트 조기 감지)
-- [ ] **CFG-05**: 남은 스텁(`specs/README`·java/react `[추가 규칙]`·스킬 본문)을 범용 기본값으로 채운다
+- [x] **CFG-05**: 남은 스텁(`specs/README`·java/react `[추가 규칙]`·스킬 본문)을 범용 기본값으로 채운다
 
 ### HYG — 위생
 
-- [ ] **HYG-01**: `install.md`에 설치 절차를 작성한다 (또는 삭제, C1)
-- [ ] **HYG-02**: `.gitignore`(루트 `.env*` 차단 포함) + `LICENSE`를 추가한다 (C11)
-- [ ] **HYG-03**: 매뉴얼의 `docs.claude.com` 링크를 `code.claude.com`으로 갱신한다
+- [x] **HYG-01**: `install.md`에 설치 절차를 작성한다 (또는 삭제, C1) — 삭제 선택(매뉴얼로 대체)
+- [~] **HYG-02**: `.gitignore`(루트 `.env*` 차단 포함) + `LICENSE`를 추가한다 (C11) — gitignore 완료, LICENSE 사용자 보류
+- [x] **HYG-03**: 매뉴얼의 `docs.claude.com` 링크를 `code.claude.com`으로 갱신한다 — 이미 충족(배포 문서 clean)
 
 ## v2 / Deferred
 
@@ -82,12 +82,12 @@
 | AUDIT-01 | Phase 4 | Complete |
 | AUDIT-02 | Phase 4 | Complete |
 | AUDIT-03 | Phase 4 | Complete |
-| GUARD-04 | Phase 5 | Pending |
-| GATE-03 | Phase 5 | Pending |
-| CFG-05 | Phase 5 | Pending |
-| HYG-01 | Phase 5 | Pending |
-| HYG-02 | Phase 5 | Pending |
-| HYG-03 | Phase 5 | Pending |
+| GUARD-04 | Phase 5 | Complete |
+| GATE-03 | Phase 5 | Complete |
+| CFG-05 | Phase 5 | Complete |
+| HYG-01 | Phase 5 | Complete |
+| HYG-02 | Phase 5 | Partial (LICENSE deferred) |
+| HYG-03 | Phase 5 | Complete |
 
 **Coverage:** 23/23 v1 requirements mapped — no orphans, no duplicates.
 
