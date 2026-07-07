@@ -42,11 +42,40 @@ CLAUDE_PROJECT_DIR="$r" bash "$AUDIT" >/dev/null 2>&1
 [ $? -ne 0 ] && ok "matcher drops NotebookEdit -> non-zero (AUDIT-02/SC2)" || no "matcher drop non-zero"
 rm -rf "$r"
 
-# (6) isolation: live settings.json unchanged after all mutations.
-if git -C "$REPO" diff --quiet .claude/settings.json 2>/dev/null; then
-  ok "live settings.json unchanged (isolation)"
+# (6) AUDIT-03: removed safety deny entry -> non-zero (orphan policy, SC3).
+r=$(mkroot)
+jq '.permissions.deny |= map(select(. != "Bash(rm -rf*)"))' "$r/.claude/settings.json" > "$r/s" \
+  && mv "$r/s" "$r/.claude/settings.json"
+CLAUDE_PROJECT_DIR="$r" bash "$AUDIT" >/dev/null 2>&1
+[ $? -ne 0 ] && ok "removed deny entry -> non-zero (AUDIT-03/SC3)" || no "removed deny entry non-zero"
+rm -rf "$r"
+
+# (7) AUDIT-03: stripped PROTECTED_RE from the guard -> non-zero (orphan policy, SC3).
+r=$(mkroot)
+grep -v 'PROTECTED_RE' "$r/.claude/hooks/pretool-guard.sh" > "$r/pg" \
+  && mv "$r/pg" "$r/.claude/hooks/pretool-guard.sh"
+CLAUDE_PROJECT_DIR="$r" bash "$AUDIT" >/dev/null 2>&1
+[ $? -ne 0 ] && ok "stripped PROTECTED_RE -> non-zero (AUDIT-03/SC3)" || no "stripped PROTECTED_RE non-zero"
+rm -rf "$r"
+
+# (8) AUDIT-03: sentinel handoff -> non-zero (SC3).
+r=$(mkroot)
+printf -- '- TODO: [내용없음]\n' > "$r/specs/HANDOFF.md"
+CLAUDE_PROJECT_DIR="$r" bash "$AUDIT" >/dev/null 2>&1
+[ $? -ne 0 ] && ok "sentinel handoff -> non-zero (AUDIT-03/SC3)" || no "sentinel handoff non-zero"
+rm -rf "$r"
+
+# (9) AUDIT-03: absent HANDOFF.md is NOT a failure -> exit 0 (D-11).
+r=$(mkroot)   # mkroot makes an empty specs/ with no HANDOFF.md
+CLAUDE_PROJECT_DIR="$r" bash "$AUDIT" >/dev/null 2>&1
+[ $? -eq 0 ] && ok "absent HANDOFF.md -> exit 0 (D-11)" || no "absent HANDOFF exit 0"
+rm -rf "$r"
+
+# (10) isolation: live settings.json + pretool-guard.sh unchanged after all mutations.
+if git -C "$REPO" diff --quiet .claude/settings.json .claude/hooks/pretool-guard.sh 2>/dev/null; then
+  ok "live settings.json + pretool-guard.sh unchanged (isolation)"
 else
-  no "live settings.json mutated by test"
+  no "live config mutated by test"
 fi
 
 printf -- '---\n%s passed, %s failed\n' "$pass" "$fail"

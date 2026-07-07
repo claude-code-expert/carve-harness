@@ -82,5 +82,44 @@ else
   no "Bash-write inspection missing in pretool-guard.sh (AUDIT-02)"
 fi
 
+# ── AUDIT-03 ────────────────────────────────────────────────────────────────
+# Each safety-critical policy must map to an enforcing gate (safety-critical scope
+# only; code-convention style guides are LLM guidance, not hook-gated — D-09/D-12).
+grep -q 'PROTECTED_RE' "$PG" 2>/dev/null \
+  && ok "policy->gate: protected-path block (safety.md -> PROTECTED_RE) (AUDIT-03)" \
+  || no "orphan policy: protected-path block has no gate (AUDIT-03)"
+
+grep -q 'command -v jq' "$PG" 2>/dev/null && grep -q 'exit 2' "$PG" 2>/dev/null \
+  && ok "policy->gate: fail-closed jq preamble (safety.md) (AUDIT-03)" \
+  || no "orphan policy: fail-closed guard missing (AUDIT-03)"
+
+if jq -e '.permissions.deny
+          | index("Read(./**/.env*)") and index("Bash(rm -rf*)") and index("Bash(git push*--force*)")' \
+     "$S" >/dev/null 2>&1; then
+  ok "policy->gate: deny list (secret-read / rm-rf / force-push) (AUDIT-03)"
+else
+  no "orphan policy: deny list missing an entry (AUDIT-03)"
+fi
+
+if grep -q '<masked>' "$HOOKS_DIR/log-event.sh" 2>/dev/null \
+   || grep -q '<masked>' "$HOOKS_DIR/lib-protected.sh" 2>/dev/null; then
+  ok "policy->gate: PII masking in logs (security.md -> <masked>) (AUDIT-03)"
+else
+  no "orphan policy: PII masking missing (AUDIT-03)"
+fi
+
+jq -e '.hooks.Stop' "$S" >/dev/null 2>&1 \
+  && ok "policy->gate: Stop verification gate registered (AUDIT-03)" \
+  || no "orphan policy: Stop gate unregistered (AUDIT-03)"
+
+# Sentinel handoff rejection (D-11): a [내용없음]/자동 수집 stub is "not implemented".
+# Absent HANDOFF.md is NOT a failure (nothing to reject).
+H="$AUDIT_ROOT/specs/HANDOFF.md"
+if [ -f "$H" ] && grep -Eq '내용없음|자동 수집' "$H" 2>/dev/null; then
+  no "sentinel handoff not implemented ([내용없음]) (AUDIT-03)"
+else
+  ok "handoff free of [내용없음] sentinel (AUDIT-03)"
+fi
+
 printf -- '---\n%s passed, %s failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]
