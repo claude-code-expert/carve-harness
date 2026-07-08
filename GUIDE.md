@@ -31,13 +31,13 @@
 
 | 리스트 항목 | 상태 | 근거 |
 |-------------|:----:|------|
-| A. mattpocock 스킬 세트 | ✅ 설치됨 | `~/.claude/skills` 67종 (handoff·changelog·deep-research 등) |
+| A. mattpocock 스킬 세트 | ✅ 레포 내장 | `.claude/skills/` 19종 (implement·teach·domain-modeling 등) — 2026-07-08 `.agents/skills`에서 이전, 기존 기능과 중복 5종 제외 |
 | B. ECC 보안·평가 에이전트 | ✅ 설치됨 | 프로젝트 `.claude/agents/`: code-reviewer·evaluator·security-reviewer·silent-failure-hunter·state-reviewer |
 | C. GSD (SDD 킷) | ✅ 설치됨 | `~/.claude/agents/` gsd-* 33종 + `/gsd:*` 커맨드 동작 |
 | D-4. caveman (출력 압축) | ✅ 설치됨·활성 | 이 세션에서 caveman/ponytail 모드 동작 중 |
 | 전제 도구 | ✅ jq·node·npm·pnpm·python3·pip·gradle | `command -v` 확인 |
 | D-1 LSP / D-2 codesight / D-3 superpowers / D-5 headroom | ⛔ 미설치(선택) | 토큰 절감용. 필요 시 §9 참고 — 전역/네트워크라 승인 후 수동 |
-| `gh` (GitHub CLI) | ⛔ 없음 | 원격 push 인증에 필요 — 별도 설치 필요 |
+| `gh` (GitHub CLI) | ✅ 설치·인증됨 | `~/.local/bin/gh`, github.com 로그인 확인 (2026-07-08) |
 
 > **자동 실행하지 않은 이유**: `tweakcc`는 실행 중인 Claude Code 바이너리를 패치하고, `curl \| bash`는 원격 스크립트를 그대로 실행하며, 전역 설치는 이 프로젝트 밖(사용자 환경)을 바꾼다. 비가역·시스템 전역 작업은 명시 승인 후에만 실행한다. 원하는 항목을 지정하면 개별 실행한다.
 
@@ -111,7 +111,7 @@ harness/
 
 **에이전트** (`.claude/agents/`, description 자동위임 또는 "use the X agent"): evaluator(SC·타입/계약), code-reviewer(가독성·구조), security-reviewer(시크릿·인가·인젝션), silent-failure-hunter(삼켜진 예외), state-reviewer(상태·트랜잭션 경계). 생성(Generator)과 검증(Evaluator)은 분리 운용.
 
-**스킬** (`.claude/skills/`): handoff(→`specs/HANDOFF.md`), changelog(→`specs/DECISIONS.md`, append-only).
+**스킬** (`.claude/skills/`, 21종): handoff(→`specs/HANDOFF.md`), changelog(→`specs/DECISIONS.md`, append-only) + mattpocock 파생 19종(implement·qa·teach·domain-modeling·codebase-design·prototype·to-prd·to-issues 등 — 대부분 `disable-model-invocation`이라 `/이름` 사용자 호출 전용).
 
 **룰** (`.claude/rules/`, glob 자동적용): `common/**`(항상), `code-convention/*`(스택 표준), `java-spring/`(`**/*.java`), `react-next/`(`**/*.ts,tsx`), `safety.md`(위험동작 승인 게이트).
 

@@ -219,15 +219,17 @@ ECC(github.com/affaan-m/ECC)는 에이전트 67·스킬 **277**의 대형 생태
 | `/commit` | 커밋 (가드 적용) |
 | `/harness-audit` | 하네스 구성 PASS/FAIL 기계 검증 |
 
-### 6-4. 스킬 2 (`.claude/skills`, mattpocock 파생)
+### 6-4. 스킬 21 (`.claude/skills`)
 - `/changelog` — 비가역 결정·근거를 `specs/DECISIONS.md`에 시간순 기록
 - `/handoff` — 세션 종료·압축 직전 `specs/HANDOFF.md`로 인계
+- mattpocock 파생 19종 (2026-07-08 `.agents/skills`에서 이전, 중복 5종 제외): ask-matt·codebase-design·design-an-interface·domain-modeling·edit-article·implement·improve-codebase-architecture·loop-me·migrate-to-shoehorn·prototype·qa·request-refactor-plan·resolving-merge-conflicts·scaffold-exercises·setup-matt-pocock-skills·setup-pre-commit·teach·to-issues·to-prd — 대부분 `disable-model-invocation`이라 `/이름` 사용자 호출 전용
+  - 제외 5종(기존 기능 중복): tdd(superpowers:tdd)·writing-great-skills(superpowers:writing-skills)·research(deep-research)·claude-handoff(레포 handoff)·git-guardrails-claude-code(pretool-guard 훅)
 
 ### 6-5. 규칙 (`.claude/rules`, glob 자동 로드)
 - `common/` (git-workflow·security·testing) — 항상 적용
 - `code-convention/` (java-spring·python·typescript·react·nextjs·fastapi·orm·javascript)
 - `java-spring/`·`react-next/` — 확장자 감지 시 로드
-- `api-routes`·`database`·`frontend`·`safety`·`testing`
+- `database`·`frontend`·`safety`·`testing`
 
 ---
 
@@ -261,7 +263,7 @@ normal mode          둘 다 해제
 
 | 기존 문서 항목 | 실측 상태 |
 |----------------|-----------|
-| mattpocock/skills 37종 | ⏳ **설치 권장** — `npx skills add`가 대화형이라 자동 불가 → 니 터미널 (아래 §9) |
+| mattpocock/skills 37종 | ✅ **레포 내장 19종** (2026-07-08) — `.claude/skills/`로 이전, 중복 5종 제외 (§6-4). 전역 설치 불필요 |
 | ECC 에이전트 (github) | ✅ **선별 설치** (전역 에이전트 5·스킬 2, 2026-07-07). 전체 277은 세션 부하로 제외 |
 | GSD | ✅ 설치됨 (v1.42.3) — 기존 문서엔 "선택"이었으나 실제 주력 |
 | superpowers | ⏳ **설치 권장** — `/plugin install`이 CC 커맨드라 셸 불가 → 니 터미널 (아래 §9) |
@@ -271,7 +273,7 @@ normal mode          둘 다 해제
 | caveman | ✅ 설치됨 |
 | **ponytail·claude-hud·Squad** | ✅ 설치됐으나 **기존 문서에 없음** (신규 반영) |
 
-**결론:** 실제 스택 = GSD(주력) + Squad + caveman/ponytail/claude-hud 플러그인 + 이 레포 하네스 자산. 기존 문서의 mattpocock·ECC·토큰플러그인 계열은 대부분 미설치 상태다.
+**결론:** 실제 스택 = GSD(주력) + Squad + caveman/ponytail/claude-hud 플러그인 + 이 레포 하네스 자산. mattpocock 스킬은 레포 내장(19종, §6-4). 기존 문서의 ECC·토큰플러그인 계열은 대부분 미설치 상태다.
 
 ---
 
@@ -280,9 +282,6 @@ normal mode          둘 다 해제
 아래는 설치 **권장**이나 셸 비대화형/sudo/CC커맨드라 자동화 불가 → 니 실제 터미널에서 실행.
 
 ```bash
-# mattpocock/skills 37종 (대화형 선택 — /setup-matt-pocock-skills 포함해 설치)
-npx skills@latest add mattpocock/skills
-
 # superpowers (Claude Code 안에서 실행 — 셸 아님)
 /plugin marketplace add obra/superpowers-marketplace
 /plugin install superpowers@superpowers-marketplace
@@ -311,13 +310,14 @@ npx codesight --init
 
 | 유형 | 레포 `.claude` | 전역 GSD | Squad(로컬) | 플러그인 | 합계 |
 |------|:---:|:---:|:---:|:---:|:---:|
-| 스킬 | 2 | 67 | — | caveman 6·ponytail 6·claude-hud 2 | 83 |
+| 스킬 | 21 | 67 | — | caveman 6·ponytail 6·claude-hud 2 | 102 |
 | 에이전트 | 5 | 33 | 8 | cavecrew 3 | 49 |
 | 커맨드 | 5 | (스킬로) | 9 | — | 14 |
 | 훅 | 7 | — | — | — | 7 |
 
 > Squad(에이전트 8·커맨드 9)는 **2026-07-08 전역 → 레포 `.claude/` 로컬 이전** (§4). 훅 미설치.
-> + **전역 ECC 선별(2026-07-07):** 에이전트 5·스킬 2 (§4.5) → 스킬 합 85·에이전트 합 54.
+> + mattpocock 19종 **2026-07-08 `.agents/skills` → 레포 `.claude/skills` 이전** (§6-4). `skills-lock.json` 제거.
+> + **전역 ECC 선별(2026-07-07):** 에이전트 5·스킬 2 (§4.5) → 스킬 합 104·에이전트 합 54.
 
 ### A-1. GSD 스킬 67종 (`/gsd:*`)
 
