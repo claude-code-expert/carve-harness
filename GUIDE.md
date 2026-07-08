@@ -35,7 +35,7 @@
 | B. ECC 보안·평가 에이전트 | ✅ 설치됨 | 프로젝트 `.claude/agents/`: code-reviewer·evaluator·security-reviewer·silent-failure-hunter·state-reviewer |
 | C. GSD (SDD 킷) | ✅ 설치됨 | `~/.claude/agents/` gsd-* 33종 + `/gsd:*` 커맨드 동작 |
 | D-4. caveman (출력 압축) | ✅ 설치됨·활성 | 이 세션에서 caveman/ponytail 모드 동작 중 |
-| 전제 도구 | ✅ jq·node·npm·pnpm·python3·pip·gradle | `command -v` 확인 |
+| 전제 도구 | ✅ jq·node·npm·pnpm·python3·pip·gradle | `command -v` 확인. jq·shellcheck는 `vendor/bin` 내장 — 오프라인 머신은 `install.sh`가 배치 |
 | D-1 LSP / D-2 codesight / D-3 superpowers / D-5 headroom | ⛔ 미설치(선택) | 토큰 절감용. 필요 시 §9 참고 — 전역/네트워크라 승인 후 수동 |
 | `gh` (GitHub CLI) | ✅ 설치·인증됨 | `~/.local/bin/gh`, github.com 로그인 확인 (2026-07-08) |
 

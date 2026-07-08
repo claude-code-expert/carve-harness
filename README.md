@@ -2,14 +2,56 @@
 
 Java/Spring · React/Next 공통으로 쓰는 하네스 뼈대. 프로젝트 루트에 그대로 복사해 사용한다.
 
-## 설치 (드롭인)
+## 설치
+
+**어느 방식이든 마지막은 동일**: `install.sh`가 vendor 체크섬 검증 → jq·shellcheck 배치 →
+훅 권한 → git pre-commit 게이트 활성화 → `/harness-audit` 최종 보고까지 자동으로 수행한다 (멱등 — 재실행 안전).
+
+### A. curl 원라이너 (대상 프로젝트 루트에서)
 ```bash
-# 1) 이 템플릿 내용을 프로젝트 루트에 복사
-cp -R claude-harness-template/. /path/to/your-project/
-# 2) 훅 실행 권한
-chmod +x /path/to/your-project/.claude/hooks/*.sh
-# 3) 전제 도구: jq(훅), pnpm(프론트), gradlew(백엔드)
+cd /path/to/your-project
+curl -fsSL https://raw.githubusercontent.com/wevesolutions/harness/main/install.sh | bash
 ```
+사설 레포면 토큰 포함:
+```bash
+curl -fsSL -H "Authorization: token $GITHUB_TOKEN" \
+  https://raw.githubusercontent.com/wevesolutions/harness/main/install.sh \
+  | GITHUB_TOKEN=$GITHUB_TOKEN bash
+```
+옵션 (환경변수):
+
+| 변수 | 기본 | 용도 |
+|------|------|------|
+| `HARNESS_REPO` | `wevesolutions/harness` | 소스 레포 변경 |
+| `HARNESS_REF` | `main` | 브랜치/태그 고정 |
+| `HARNESS_FORCE=1` | off | 기존 파일 덮어쓰기 (기본은 SKIP + 경고) |
+| `HARNESS_SRC_DIR` | — | 네트워크 대신 로컬 복사본에서 설치 (오프라인) |
+
+### B. 오프라인 (에어갭)
+```bash
+# 온라인 머신에서 레포를 통째로 반입한 뒤:
+cd /path/to/your-project
+HARNESS_SRC_DIR=/path/to/harness-copy bash /path/to/harness-copy/install.sh
+# 또는 그냥 내용물을 복사해 넣고:
+cp -R /path/to/harness-copy/. . && bash install.sh
+```
+인터넷 불필요 — jq(amd64/arm64)·shellcheck 정적 바이너리 내장(`vendor/bin`, SHA256 검증).
+jq 없는 머신이면 `~/.local/bin/jq`로 설치된다(sudo 불필요) — PATH 안내가 나오면 반영 후 재실행.
+
+### 설치 동작 원칙
+- **기존 파일 불가침**: 대상 프로젝트에 이미 있는 파일(예: 자체 `CLAUDE.md`)은 건드리지 않고 SKIP 보고. 실제 설치된 목록만 `.claude/harness-manifest.txt`에 기록.
+- `.gitignore`에 마커 블록(`# >>> harness ... <<<`)으로 런타임 산출물(logs/, .claude/bin/ 등) 무시 규칙 추가.
+- 스택 도구(pnpm/gradle/ruff)는 대상 프로젝트 소관 — 없으면 해당 게이트는 skip 기록 후 통과.
+
+### 제거 (uninstall)
+```bash
+bash uninstall.sh          # 드라이런 — 삭제될 목록만 출력
+bash uninstall.sh --yes    # 실제 제거
+```
+- 제거 범위 = 설치 시 manifest에 기록된 것**만**. 설치 때 SKIP된 원래 파일은 안전.
+- `core.hooksPath` 해제 + `.gitignore` 하네스 블록 제거까지 원복.
+- `logs/`(감사 기록)·`specs/` 산출물은 사용자 데이터로 남긴다 — 필요 없으면 직접 삭제.
+- 검증: `.claude/hooks/tests/remote-install.test.sh` (설치→보존→드라이런→제거 5케이스).
 
 ## GSD로 하네스 구성 (SDD)
 ```bash
@@ -23,15 +65,20 @@ npx get-shit-done-cc --local
 ## 구조
 ```
 ├── CLAUDE.md            # 제약: 전역 가드레일
-├── AGENTS.md            # 에이전트 표준
+├── AGENTS.md            # 에이전트 표준 (크로스 에이전트 정본)
 ├── RULES.md             # 룰 인덱스
+├── install.sh           # 설치기: curl 원격 fetch + 로컬 부트스트랩 (멱등)
+├── uninstall.sh         # 제거기: manifest 기반, 드라이런 기본
+├── vendor/bin/          # 내장 정적 바이너리: jq(amd64/arm64)·shellcheck + SHA256SUMS
+├── .githooks/pre-commit # 에이전트 무관 커밋 게이트 (jq 불필요, bash+git만)
 ├── specs/               # 상태: SDD 산출물 + HANDOFF/DECISIONS
 └── .claude/
     ├── settings.json    # 훅 등록 (Pre/Post/Stop/Session/PreCompact)
-    ├── hooks/           # 언어 자동감지 훅 4종
-    ├── skills/          # handoff, changelog
-    ├── commands/        # plan, verify, review, commit, harness-audit
-    ├── agents/          # evaluator, code/security/silent-failure/state reviewer
+    ├── bin/             # install.sh가 vendor에서 배치 (gitignore)
+    ├── hooks/           # 가드·검증·핸드오프·감사·로그리포트 + tests/
+    ├── skills/          # handoff, changelog + mattpocock 파생 19종
+    ├── commands/        # plan, verify, review, commit, harness-audit, squad*
+    ├── agents/          # evaluator, code/security/silent-failure/state reviewer, squad 8종
     └── rules/           # common + java-spring + react-next (paths glob)
 ```
 
@@ -41,3 +88,38 @@ npx get-shit-done-cc --local
 - 상태: session-handoff.sh + specs/
 
 > ⚠️ 훅 문법·이벤트는 Claude Code 버전에 따라 바뀔 수 있으니 도입 시 `/hooks`로 확인.
+
+## 장점 (왜 이 하네스인가)
+
+- **결정적 강제**: 규칙 위반을 모델의 "자발적 준수"가 아니라 PreToolUse 훅 `exit 2`로 차단. jq 부재·JSON 파손 시 fail-closed(쓰기 전면 차단) — 설득으로 뚫리는 가드레일이 아니다.
+- **완료 게이트**: Stop 훅이 빌드·타입·테스트 실패 시 완료 선언을 차단. 변경된 스택만 검증(증분)해 불필요한 대기 없음.
+- **상태 연속성**: PreCompact/SessionEnd에 `specs/HANDOFF.md` 자동 저장, SessionStart에 복원 — 컨텍스트 리셋·세션 교체에도 작업이 이어진다.
+- **관측성**: 모든 가드 판정이 `logs/*.jsonl`에 남고, 보호 경로는 `<masked>` 처리 — 차단·허용 이력을 사후 감사 가능.
+- **자가 검증**: `/harness-audit` 27개 기계 체크 — 하네스 자체의 오구성(훅 미등록·권한 누락·정책-게이트 미매핑)을 PASS/FAIL로 탐지.
+- **언어 무관 드롭인**: 파일 복사만으로 이식, 스택은 확장자(glob)로 자동 감지·자동 로드.
+- **크로스 에이전트 정본**: 규칙은 `AGENTS.md` 한 곳에 집약, `.cursorrules`·`codex.md`는 포인터만 — 규칙 이중화 없음.
+
+## 한계 (알고 써라)
+
+- **훅 차단은 Claude Code 전용.** 다른 에이전트(Cursor·Codex·Aider)는 AGENTS.md 자율 준수 + **git pre-commit 게이트**(`.githooks/`)가 커밋 시점에 최종 차단 — 커밋 전 단계의 실시간 차단은 없다.
+- **런타임 의존**: bash 필수(Windows는 WSL). jq는 `vendor/bin` 내장 + `install.sh`가 배치하므로 오프라인에서도 해결 — 단 install.sh를 안 돌리면 jq 없는 머신에서 fail-closed로 쓰기 전면 차단.
+- **Bash 쓰기 가드는 best-effort**: 리다이렉트·sed -i·cp/mv는 잡지만 파이프·변수·heredoc 간접 우회는 미탐(문서화된 상한). 우회분은 pre-commit이 2차 차단.
+- **deny 프리픽스 매칭 한계**: `rm -rf*`는 막아도 `rm -r -f` 변형은 패턴 밖.
+- **Stop 게이트 스택 커버리지**: Java/Node/Python/bash. Python은 ruff·pytest가 프로젝트 환경에 있을 때만(best-effort), 그 외 스택은 미검증 통과.
+- **컨텍스트 비용**: `rules/` 상시 로드 + 스킬 21종 목록으로 세션 시작 토큰 증가.
+- **정책↔게이트 이중 관리**: 규칙(md) 추가 시 훅(sh) 반영은 수동. `/harness-audit`은 안전 핵심 항목 + 위생(중복·빈 파일·프런트매터)만 기계 검사.
+- **스킬 충돌 검사는 이름 수준**: repo↔전역 같은 이름만 탐지. 트리거 문구(description) 수준 중복은 미탐.
+
+## 디벨롭 이력 (v1.1 — 2026-07-08 전부 구현·오프라인화)
+
+| # | 항목 | 구현 | 검증 |
+|---|------|------|------|
+| 1 | 에이전트 무관 강제 | `.githooks/pre-commit` — 보호경로·시크릿을 커밋 시점 차단 (jq 불필요) | `tests/pre-commit.test.sh` 6건 |
+| 2 | Stop 게이트 확장 | Python(ruff·pytest)·bash(shellcheck `-S error` + 훅 자가테스트) 추가 | `tests/stop-verify.test.sh` 9건 |
+| 3 | audit 크로스 에이전트 체크 | AUDIT-04: AGENTS.md 포인터·pre-commit·hooksPath·vendor 체크섬 | `tests/harness-audit.test.sh` 14건 |
+| 4 | 로그 회전·리포트 | `hooks/logs-report.sh [days]` 요약 · `--rotate N` 삭제 | `tests/logs-report.test.sh` 4건 |
+| 5 | 규칙 정합 린트 | AUDIT-05: 빈 파일·' copy'·바이트 동일 중복 탐지 | 동상 |
+| 6 | install.sh 부트스트랩 | vendor 검증→바이너리 배치→권한→hooksPath→audit, 오프라인·멱등 | jq 없는 머신 시뮬 통과 |
+| 7 | 스킬 충돌 점검 | AUDIT-06: 프런트매터 검증 + repo↔전역 이름 충돌 탐지 | 동상 |
+
+오프라인 자산: `vendor/bin/`(jq 1.8.2 amd64/arm64 · shellcheck 0.11.0, SHA256SUMS 검증) — 상세는 `vendor/README.md`.
