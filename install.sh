@@ -13,6 +13,10 @@
 #               bash install.sh rollback
 #               최신 백업(logs/harness-backup/v<이전>/) 복원 + 버전 스탬프 복귀.
 #               백업은 소비된다 — 연속 실행 시 그 이전 백업으로 내려간다.
+#   [setup]     대화형 초기 설정 — 설치 후 프로젝트 맞춤 (모든 항목 엔터로 skip)
+#               bash install.sh setup
+#               git init · PATH · LICENSE 생성 · 보호경로 추가 · 도메인 규칙 ·
+#               스택 감지 리포트 · GSD 설치 제안
 #   [bootstrap] 하네스 파일이 이미 있으면 → 머신 준비만
 #               1) vendor 체크섬 검증  2) .claude/bin 배치(jq·shellcheck)
 #               3) jq 없으면 ~/.local/bin/jq  4) 훅 권한 + core.hooksPath
@@ -32,7 +36,120 @@ say()  { printf '%s\n' "$*"; }
 fail() { printf 'FAIL: %s\n' "$*" >&2; exit 1; }
 
 MODE="${1:-install}"
-case "$MODE" in install|update|rollback) ;; *) fail "알 수 없는 모드: $MODE (install|update|rollback)" ;; esac
+case "$MODE" in install|update|rollback|setup) ;; *) fail "알 수 없는 모드: $MODE (install|update|rollback|setup)" ;; esac
+
+# ── [setup] 대화형 초기 설정 ──────────────────────────────────────────────────
+# 입력은 /dev/tty (curl|bash에서도 동작). 테스트는 HARNESS_SETUP_STDIN=1 로 stdin 주입.
+# tty 없으면 read 실패 → 빈 응답 → 전 항목 skip (행 걸림 없음).
+ASK_IN="/dev/tty"
+[ "${HARNESS_SETUP_STDIN:-0}" = "1" ] && ASK_IN="/dev/stdin"
+ask() { # $1=프롬프트 → $REPLY (입력 불가 시 빈 값)
+  printf '%s' "$1"
+  IFS= read -r REPLY < "$ASK_IN" 2>/dev/null || REPLY=""
+}
+
+run_setup() {
+  say "── 대화형 설정 (엔터 = 건너뜀) ──"
+
+  # 1) git 레포
+  if ! git -C "$HERE" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    ask "git 레포가 아님 — git init 할까? (pre-commit 게이트에 필요) [y/N] "
+    if [ "$REPLY" = "y" ]; then
+      git -C "$HERE" init && git -C "$HERE" config core.hooksPath .githooks \
+        && say "OK: git init + pre-commit 게이트 활성"
+    fi
+  fi
+
+  # 2) jq PATH
+  if ! command -v jq >/dev/null 2>&1 && [ -f "$HOME/.local/bin/jq" ]; then
+    case ":$PATH:" in *":$HOME/.local/bin:"*) ;; *)
+      rcfile="$HOME/.$(basename "${SHELL:-bash}")rc"
+      ask "~/.local/bin 을 PATH에 추가할까? ($rcfile 에 1줄) [y/N] "
+      if [ "$REPLY" = "y" ]; then
+        printf '\nexport PATH="$HOME/.local/bin:$PATH"\n' >> "$rcfile" \
+          && say "OK: $rcfile — 새 셸부터 적용"
+      fi
+    ;; esac
+  fi
+
+  # 3) LICENSE
+  if [ ! -e "$HERE/LICENSE" ]; then
+    ask "LICENSE 없음 — 생성할까? [1=MIT(내장) 2=Apache-2.0(네트워크) 엔터=skip] "
+    case "$REPLY" in
+      1)
+        yr=$(date +%Y); owner=$(git -C "$HERE" config user.name 2>/dev/null || echo "${USER:-}")
+        sed -e "s/{{YEAR}}/$yr/" -e "s/{{OWNER}}/$owner/" \
+          "$HERE/vendor/licenses/MIT.txt" > "$HERE/LICENSE" \
+          && say "OK: LICENSE (MIT, $owner $yr)" ;;
+      2)
+        # 법률 텍스트는 전사하지 않는다 — 공식 원문만
+        if curl -fsSL https://www.apache.org/licenses/LICENSE-2.0.txt -o "$HERE/LICENSE" 2>/dev/null; then
+          say "OK: LICENSE (Apache-2.0)"
+        else
+          say "WARN: 다운로드 실패(오프라인?) — apache.org/licenses/LICENSE-2.0.txt 수동 저장"
+        fi ;;
+    esac
+  fi
+
+  # 4) 보호 경로 추가 (update-안전: protected-extra.regex는 manifest 밖 → 갱신에도 보존)
+  ask "추가 보호 경로 정규식? (예: config/prod/|\\.pem$ — 엔터=skip) "
+  if [ -n "$REPLY" ]; then
+    printf 'x' | grep -Eq "$REPLY" 2>/dev/null
+    if [ $? -le 1 ]; then   # 0=match 1=no-match 2=broken regex
+      printf '%s\n' "$REPLY" >> "$HERE/.claude/hooks/protected-extra.regex"
+      say "OK: protected-extra.regex 추가 — 가드·pre-commit 즉시 반영, 업데이트에도 보존"
+    else
+      say "WARN: 잘못된 정규식 — 무시됨"
+    fi
+  fi
+
+  # 5) 도메인 규칙 (여러 줄, 빈 줄로 종료)
+  first=1
+  while :; do
+    ask "CLAUDE.md 도메인 규칙 1줄? (예: 주문 금액 음수 불가 — 엔터=끝) "
+    [ -n "$REPLY" ] || break
+    if [ "$first" -eq 1 ] && ! grep -q '^## 도메인 규칙' "$HERE/CLAUDE.md" 2>/dev/null; then
+      printf '\n## 도메인 규칙\n' >> "$HERE/CLAUDE.md"
+    fi
+    printf -- '- %s\n' "$REPLY" >> "$HERE/CLAUDE.md"
+    say "OK: 도메인 규칙 추가"
+    first=0
+  done
+
+  # 6) 스택 감지 리포트 (질문 없음)
+  say "── 스택 감지 (Stop 게이트 상태) ──"
+  found=0
+  if [ -f "$HERE/package.json" ]; then
+    found=1
+    if [ -x "$HERE/node_modules/.bin/prettier" ] || command -v prettier >/dev/null 2>&1; then
+      say "Node: 게이트 활성 (prettier OK)"
+    else
+      say "Node: prettier 미설치 — 포맷 skip 통과 (npm i -D prettier 권장)"
+    fi
+  fi
+  if [ -f "$HERE/gradlew" ] || [ -f "$HERE/build.gradle" ] || [ -f "$HERE/build.gradle.kts" ]; then
+    found=1; say "Java: gradle 게이트 활성"
+  fi
+  if find "$HERE" -maxdepth 3 -name '*.py' -not -path '*/.git/*' -not -path '*/node_modules/*' 2>/dev/null | grep -q .; then
+    found=1
+    command -v ruff >/dev/null 2>&1 && say "Python: 게이트 활성 (ruff OK)" \
+      || say "Python: ruff 미설치 — 검증 best-effort (pip install ruff pytest 권장)"
+  fi
+  for ext in go rs rb; do
+    if find "$HERE" -maxdepth 3 -name "*.$ext" -not -path '*/.git/*' -not -path '*/node_modules/*' 2>/dev/null | grep -q .; then
+      say "미지원 스택 감지(.$ext): Stop 게이트 없음 — README '스택 규칙' 참고"
+    fi
+  done
+  [ "$found" -eq 0 ] && say "지원 스택 미감지 — 코드 추가 시 게이트 자동 동작"
+
+  # 7) GSD (SDD 킷)
+  if command -v npx >/dev/null 2>&1; then
+    ask "GSD(SDD 킷) 설치? npx get-shit-done-cc --local [y/N] "
+    [ "$REPLY" = "y" ] && ( cd "$HERE" && npx get-shit-done-cc --local )
+  fi
+
+  say "── 설정 끝. 남은 수동 항목: 팀에 AGENTS.md 정본 공지 · 미지원 스택 게이트 추가 ──"
+}
 
 # 설치 대상 목록 — uninstall.sh는 설치 시 기록되는 manifest만 신뢰한다.
 HARNESS_PATHS=(
@@ -235,12 +352,18 @@ else
   warn=1
 fi
 
+# (4.5) interactive project setup.
+[ "$MODE" = "setup" ] && run_setup
+
 # (5) final state report.
 say "---"
 if CLAUDE_PROJECT_DIR="$HERE" bash "$HERE/.claude/hooks/harness-audit.sh"; then
   say "---"
   [ "$warn" -eq 0 ] && say "설치 완료 — 하네스 전 게이트 활성." \
                     || say "설치 완료(경고 있음) — 위 WARN/ACTION/SKIP 항목 확인."
+  if [ "$MODE" = "install" ]; then
+    say "다음 단계: bash install.sh setup — 대화형 초기 설정 (git·PATH·LICENSE·보호경로·도메인 규칙·GSD)"
+  fi
 else
   say "---"
   say "설치됐으나 audit FAIL 항목 존재 — 위 FAIL 라인 해결 후 재실행."

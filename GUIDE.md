@@ -2,7 +2,7 @@
 
 > Claude Code 드롭인 하네스 — 전체 사용 설명 + 설치 내역.
 > 대상: 이 하네스를 쓰거나 다른 프로젝트에 이식하려는 사용자.
-> 기준: 릴리스 **v0.0.2** (하드닝 마일스톤 Phase 1–5 + 오프라인·크로스에이전트 확장 + update 패치). `/harness-audit` = 38 PASS.
+> 기준: 릴리스 **v0.0.3** (하드닝 마일스톤 Phase 1–5 + 오프라인·크로스에이전트 확장 + update/rollback/setup). `/harness-audit` = 38 PASS.
 > 최종 갱신: 2026-07-08.
 
 이 문서는 `docs/md/HARNESS-TEMPLATE-MANUAL.md`(초기 뼈대 매뉴얼)와 `docs/md/harness-install-list.md`(외부 도구 설치 리스트)를 대체·갱신한다. 초기 매뉴얼은 하드닝 이전 상태(훅 4종·프로즈 감사·빈 스텁)를 기술하므로, **현재 상태는 이 GUIDE를 정본으로 본다.**
@@ -54,7 +54,7 @@ harness/
 ├── RULES.md                  # 룰 인덱스
 ├── GUIDE.md                  # (이 문서)
 ├── VERSION                   # 릴리스 버전 (update 비교 기준)
-├── install.sh                # 설치기: curl 원격/오프라인 부트스트랩 + update 패치 (멱등)
+├── install.sh                # 설치기: curl 원격/오프라인 부트스트랩 + update/rollback/setup (멱등)
 ├── uninstall.sh              # 제거기: manifest 기반, 드라이런 기본
 ├── vendor/bin/               # 내장 정적 바이너리: jq·shellcheck + SHA256SUMS
 ├── .githooks/pre-commit      # 에이전트 무관 커밋 게이트 (jq 불필요)
@@ -188,11 +188,96 @@ for t in .claude/hooks/tests/*.test.sh; do bash "$t"; done   # 10 스위트 전�
 | 하고 싶은 것 | 수정 위치 |
 |-------------|-----------|
 | 도메인 금지 규칙 추가 | `CLAUDE.md` "절대 금지" / `.claude/rules/*` |
-| 보호 경로·시크릿 패턴 추가 | `.claude/hooks/lib-protected.sh` (`PROTECTED_RE`/`SECRETS_RE` 단일 소스) |
+| 보호 경로·시크릿 패턴 추가 | `.claude/hooks/protected-extra.regex` / `secrets-extra.regex` (1줄 1정규식, 업데이트에도 보존 — lib 직접 수정은 update 시 덮임) 또는 `install.sh setup` |
 | 포맷터 변경 | `.claude/hooks/posttool-format.sh` case |
 | 검증 명령 변경 | `.claude/hooks/stop-verify.sh` (증분 스코프 유지) |
 | 새 스택 추가(예: Python) | `.claude/rules/<stack>/` + 훅 case |
 | settings.json 변경 | **safety.md 승인 게이트** — 임의 변경 금지 |
+
+### 8.1 도메인 규칙 보강 — 어떻게 쌓나
+
+**언제**: 코드리뷰·대화에서 같은 지적이 2번 나오면 그 즉시 규칙화한다 (AGENTS.md §1). "그때그때 말해주지"는 3번째 위반을 못 막는다.
+
+**어디에·어떤 형식으로**: `CLAUDE.md`의 `## 도메인 규칙` 섹션(`install.sh setup`이 생성)에 1줄 1규칙, **검증 가능한 금지/필수 문장**으로:
+
+```markdown
+## 도메인 규칙
+- 주문 금액 음수 불가 — Order.amount 검증은 도메인 계층에서
+- 결제 승인 없이 배송상태 변경 금지
+- 회원 삭제는 soft delete만 (deletedAt) — 물리 DELETE 금지
+```
+
+나쁜 예: "금액 처리 조심" (검증 불가). 좋은 예: "X 불가 / Y 없이 Z 금지" (위반 판별 가능).
+
+**강제 승격** — 규칙(md)은 설득이고, 훅은 차단이다. 규칙이 아래 형태로 표현되면 게이트로 올려라:
+
+| 규칙 유형 | 승격 위치 | 예 |
+|-----------|-----------|-----|
+| 특정 파일/경로 수정 금지 | `.claude/hooks/protected-extra.regex` 1줄 | `deploy/prod/` |
+| 특정 문자열 커밋 금지 | `.claude/hooks/secrets-extra.regex` 1줄 | `INTERNAL_API_KEY_[A-Z0-9]{8}` |
+| 특정 명령 실행 금지 | `settings.json` `permissions.deny` (safety.md 승인 필요) | `Bash(kubectl delete*)` |
+| 코드 패턴 (음수 금액 등) | 훅으로 못 잡음 — **테스트로 강제** (`.claude/rules/common/testing.md`) | 도메인 단위 테스트 |
+
+### 8.2 미지원 스택 게이트 추가 — Go 예시 (그대로 복붙 후 치환)
+
+3파일 수정이면 끝. Rust/Ruby도 명령만 바꿔 동일.
+
+**① 규칙 파일** — `.claude/rules/go/conventions.md` 생성 (`paths` glob이 자동 로드 트리거):
+
+```markdown
+---
+paths: ["**/*.go"]
+---
+# Go 규칙 (자동 로드)
+- gofmt 통과 필수. 에러는 반드시 처리 (`_ =` 무시 금지).
+- 패키지명 소문자 단수. context.Context는 첫 파라미터.
+```
+
+**② Stop 게이트** — `.claude/hooks/stop-verify.sh`의 변경 감지부(30행 부근)와 게이트부에 각각 추가:
+
+```bash
+# 감지부 — 기존 java/node/py/sh 라인 아래에:
+go_changed=1
+[ -n "$CHANGED" ] && { printf '%s\n' "$CHANGED" | grep -Eq '\.go$|go\.mod' && go_changed=1 || go_changed=0; }
+
+# 게이트부 — 기존 스택 블록들 아래에 (도구 없으면 skip = 기존 관례):
+if [ "$go_changed" -eq 1 ] && [ -f go.mod ]; then
+  if command -v go >/dev/null 2>&1; then
+    test -z "$(gofmt -l . 2>/dev/null)" || { echo "gofmt 미준수"; fail=1; }
+    go vet ./... 2>&1 | tail -20 || fail=1
+    go test ./... 2>&1 | tail -20 || fail=1
+  fi
+fi
+```
+
+**③ 검증** — 게이트가 진짜 무는지 확인하고 끝:
+
+```bash
+bash -n .claude/hooks/stop-verify.sh                    # 문법
+echo 'package main' > /tmp/bad.go                        # 일부러 gofmt 위반 파일로
+CLAUDE_PROJECT_DIR=$PWD bash .claude/hooks/stop-verify.sh # exit 2 나오면 성공
+bash .claude/hooks/harness-audit.sh                      # 38 PASS 유지 확인
+```
+
+> 주의: `stop-verify.sh`는 manifest 파일 — 하네스 `update` 시 덮이고 백업(`logs/harness-backup/`)에 남는다. 업데이트 후 커스텀 case를 백업에서 재적용하라 (UPDATED 로그에 표시됨).
+
+### 8.3 팀 공지 — 복붙용
+
+Slack/위키에 그대로:
+
+```
+[공지] 이 레포는 코딩 에이전트 하네스가 적용되어 있습니다.
+
+- Claude Code 사용자: 할 일 없음 — 훅이 자동으로 차단·검증합니다.
+- Cursor / Codex / Aider 등: 레포 루트 AGENTS.md가 규칙 정본입니다.
+  (.cursorrules와 codex.md가 자동으로 가리키므로 대부분 자동 인식)
+- 전원 공통: 커밋 시 .githooks/pre-commit이 보호경로·시크릿·버전정합을
+  검사합니다. git commit --no-verify 우회는 금지 (AGENTS.md §0).
+- 규칙 추가 제안: CLAUDE.md 도메인 규칙 또는
+  .claude/hooks/protected-extra.regex 수정 PR로 올려주세요.
+```
+
+신규 입장 확인법: `bash .claude/hooks/harness-audit.sh` 가 38 PASS면 정상 세팅.
 
 ---
 

@@ -101,6 +101,36 @@ else
   no "rollback-empty (exit $code)"
 fi
 
+# (3f) setup wizard: LICENSE(MIT) + protected-extra + domain rule via injected answers.
+# Answer order in T (git repo + jq on PATH → q1/q2 skipped):
+#   LICENSE=1(MIT), extra regex, domain rule, empty(end rules), n(GSD if npx exists)
+printf '1\nvault-keys/\n주문 금액 음수 불가\n\nn\n' \
+  | ( cd "$T" && HARNESS_SETUP_STDIN=1 bash install.sh setup ) >/dev/null 2>&1
+code=$?
+if [ "$code" -eq 0 ] \
+   && grep -q "MIT License" "$T/LICENSE" 2>/dev/null \
+   && grep -qx 'vault-keys/' "$T/.claude/hooks/protected-extra.regex" \
+   && grep -q "주문 금액 음수 불가" "$T/CLAUDE.md"; then
+  ok "setup: LICENSE(MIT) + protected-extra + domain rule (exit 0)"
+else
+  no "setup wizard (exit $code)"
+fi
+
+# (3g) guard honors protected-extra.regex immediately (no base-pattern overlap).
+printf '%s' '{"tool_name":"Write","tool_input":{"file_path":"vault-keys/id.txt","content":"x"}}' \
+  | bash "$T/.claude/hooks/pretool-guard.sh" >/dev/null 2>&1
+code=$?
+[ "$code" -eq 2 ] && ok "guard blocks extra-regex path (exit 2)" || no "extra-regex guard (exit $code)"
+
+# (3h) setup with no input: all questions skipped, exit 0, nothing created.
+( cd "$T2" && HARNESS_SETUP_STDIN=1 bash install.sh setup ) </dev/null >/dev/null 2>&1
+code=$?
+if [ "$code" -eq 0 ] && [ ! -e "$T2/LICENSE" ] && [ ! -e "$T2/.claude/hooks/protected-extra.regex" ]; then
+  ok "setup empty-input -> all skip, no side effects (exit 0)"
+else
+  no "setup non-interactive safety (exit $code)"
+fi
+
 # (4) uninstall dry-run removes nothing.
 ( cd "$T2" && bash uninstall.sh ) >/dev/null 2>&1
 [ -f "$T2/AGENTS.md" ] && [ -f "$T2/.claude/settings.json" ] \

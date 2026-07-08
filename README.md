@@ -6,6 +6,7 @@ Java/Spring · React/Next 공통으로 쓰는 하네스 뼈대. 프로젝트 루
 
 | 버전 | 날짜 | 변경사항 |
 |------|------|----------|
+| v0.0.3 | 2026-07-08 | 대화형 초기 설정 `install.sh setup` — git init·jq PATH·LICENSE 생성(MIT/Apache-2.0)·보호경로·도메인 규칙·스택 감지·GSD 제안 · update-안전 패턴 확장(`protected-extra.regex`/`secrets-extra.regex`) · 설치 후 수동 TODO 10→3개 |
 | v0.0.2 | 2026-07-08 | CLI 업데이트 패치 + 롤백 — `install.sh update`(VERSION 비교·manifest 범위 갱신·자동 백업·사용자 파일 불가침) · `install.sh rollback`(직전 버전 백업 복원) · VERSION 변경 시 CHANGELOG 강제(pre-commit) · `/version-changelog` 스킬 · `RELEASE.md`/`CHANGELOG.md` |
 | v0.0.1 | 2026-07-08 | 최초 완성본 — fail-closed 가드(전 쓰기도구+Bash-write+시크릿 내용 스캔) · Stop 증분 검증 게이트 · JSONL 관측 · 실데이터 핸드오프(SessionEnd 포함) · 자가감사 38체크 · 오프라인 설치기(vendor jq/shellcheck, SHA256 검증)+uninstall · 크로스에이전트 pre-commit 게이트 · squad 커맨드/에이전트 · 테스트 10 스위트 95건 |
 
@@ -50,20 +51,26 @@ jq 없는 머신이면 `~/.local/bin/jq`로 설치된다(sudo 불필요) — PAT
 - `.gitignore`에 마커 블록(`# >>> harness ... <<<`)으로 런타임 산출물(logs/, .claude/bin/ 등) 무시 규칙 추가.
 - 스택 도구(pnpm/gradle/ruff)는 대상 프로젝트 소관 — 없으면 해당 게이트는 skip 기록 후 통과.
 
-### 설치 후 사용자 TODO
+### 설치 후 설정 — 대화형 (`install.sh setup`)
 
-설치기는 배선까지만 한다. 아래는 **사용자가 직접** 해야 게이트가 프로젝트에 맞게 동작한다.
+설치기가 `/harness-audit`(38체크)까지 자동 실행한다. 프로젝트 맞춤 설정은 대화형으로 — 모든 항목 엔터로 skip:
+```bash
+bash install.sh setup
+```
 
-- [ ] **git 저장소 확인** — `git init` 안 된 프로젝트면 pre-commit 게이트·핸드오프 git 정보·증분 검증이 제한 동작.
-- [ ] **jq PATH 반영** — 설치 로그에 `~/.local/bin` PATH 안내가 나왔다면 셸 rc에 반영 후 `bash install.sh` 재실행.
-- [ ] **`/harness-audit` 실행** — 38 PASS(exit 0) 확인. 하나라도 FAIL이면 그 항목부터 해결.
-- [ ] **CLAUDE.md에 도메인 규칙 추가** — "작업 원칙" 자리에 프로젝트 불변식 기입 (예: "주문 금액 음수 불가").
-- [ ] **보호 경로·시크릿 패턴 조정** — `.claude/hooks/lib-protected.sh`의 `PROTECTED_RE`/`SECRETS_RE`에 프로젝트 고유 경로(배포 설정, 키 파일 등) 추가.
-- [ ] **스택 도구 설치** — 포맷·검증 게이트는 대상 프로젝트의 도구를 쓴다: prettier/eslint(Node), spotless/gradle(Java), ruff/pytest(Python). 없으면 해당 게이트는 skip 기록 후 통과.
-- [ ] **스택 규칙 확인** — 내 스택이 `.claude/rules/`에 없으면(예: Go) 규칙 디렉토리 + `stop-verify.sh` case 추가.
-- [ ] **팀 에이전트 정본 공지** — Cursor/Codex 등 비-Claude 에이전트 사용자는 `AGENTS.md`가 정본임을 인지 (훅 차단은 Claude Code 전용, 나머지는 pre-commit이 최종 차단).
-- [ ] **(선택) SDD 시작** — `/plan`으로 첫 작업을 SC 단위로 분해, 산출물은 `specs/`에 축적. GSD 쓰려면 `npx get-shit-done-cc --local`.
-- [ ] **(선택) LICENSE 추가** — 템플릿에 미포함. 배포할 프로젝트면 라이선스 결정 후 추가.
+| 항목 | setup이 하는 일 |
+|------|-----------------|
+| git 레포 아님 | `git init` + pre-commit 게이트 활성 제안 |
+| jq PATH 미반영 | 셸 rc에 1줄 추가 제안 |
+| LICENSE 없음 | MIT(내장, 연도·이름 자동) / Apache-2.0(공식 원문 다운로드) 선택 생성 |
+| 보호 경로 추가 | 정규식 입력 → `protected-extra.regex` — 가드·pre-commit 즉시 반영, **업데이트에도 보존** |
+| 도메인 규칙 | 입력 → `CLAUDE.md`에 축적 (예: "주문 금액 음수 불가") |
+| 스택 감지 | Node/Java/Python 게이트 상태 + 미설치 도구·미지원 스택 리포트 |
+| GSD (SDD 킷) | `npx get-shit-done-cc --local` 설치 제안 |
+
+시크릿 패턴 추가도 같은 방식: `.claude/hooks/secrets-extra.regex`에 1줄 1정규식 (수동).
+
+> 도메인 규칙 보강, 언어별 스택 게이트 추가, 팀 공지 등은 `GUIDE.md` §8을 참고하여 프로젝트에 맞게 추가로 보강해주십시오.
 
 > Windows는 WSL 필수 (훅이 bash).
 
