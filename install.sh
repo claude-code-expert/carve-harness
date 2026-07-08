@@ -1,26 +1,38 @@
 #!/usr/bin/env bash
 # install.sh — 하네스 설치기. 프로젝트 루트에서 실행 (멱등).
 #
-# 두 모드 자동 판별:
+# 모드:
 #   [fetch]     현재 디렉토리에 하네스가 없으면 → GitHub에서 받아 설치
 #               curl -fsSL https://raw.githubusercontent.com/wevesolutions/harness/main/install.sh | bash
 #               (사설 레포: GITHUB_TOKEN=... 필요 · 오프라인: HARNESS_SRC_DIR=/path/to/harness)
+#   [update]    설치된 하네스를 새 버전으로 패치 — manifest 범위만 갱신
+#               curl -fsSL https://raw.githubusercontent.com/wevesolutions/harness/main/install.sh | bash -s -- update
+#               VERSION 비교(같으면 no-op) · 변경 파일은 logs/harness-backup/v<이전>/ 백업
+#               설치 때 SKIP된 사용자 파일은 건드리지 않음 · 신규 파일은 설치+manifest 추가
+#   [rollback]  직전 업데이트 되돌리기 — 네트워크 불필요
+#               bash install.sh rollback
+#               최신 백업(logs/harness-backup/v<이전>/) 복원 + 버전 스탬프 복귀.
+#               백업은 소비된다 — 연속 실행 시 그 이전 백업으로 내려간다.
 #   [bootstrap] 하네스 파일이 이미 있으면 → 머신 준비만
 #               1) vendor 체크섬 검증  2) .claude/bin 배치(jq·shellcheck)
 #               3) jq 없으면 ~/.local/bin/jq  4) 훅 권한 + core.hooksPath
 #               5) harness-audit 최종 보고
 #
 # 환경변수: HARNESS_REPO(기본 wevesolutions/harness) · HARNESS_REF(기본 main)
-#           HARNESS_SRC_DIR(로컬 소스 — 네트워크 생략) · HARNESS_FORCE=1(기존 파일 덮어쓰기)
+#           HARNESS_SRC_DIR(로컬 소스 — 네트워크 생략) · HARNESS_FORCE=1(기존 파일 덮어쓰기/재패치)
 set -u
 
 HERE="$PWD"
 VBIN="$HERE/vendor/bin"
 CBIN="$HERE/.claude/bin"
 MANIFEST="$HERE/.claude/harness-manifest.txt"
+VSTAMP="$HERE/.claude/harness-version"
 warn=0
 say()  { printf '%s\n' "$*"; }
 fail() { printf 'FAIL: %s\n' "$*" >&2; exit 1; }
+
+MODE="${1:-install}"
+case "$MODE" in install|update|rollback) ;; *) fail "알 수 없는 모드: $MODE (install|update|rollback)" ;; esac
 
 # 설치 대상 목록 — uninstall.sh는 설치 시 기록되는 manifest만 신뢰한다.
 HARNESS_PATHS=(
@@ -31,8 +43,37 @@ HARNESS_PATHS=(
   .githooks vendor specs/README.md
 )
 
-# ── [fetch] ──────────────────────────────────────────────────────────────────
-if [ ! -f "$HERE/.claude/hooks/pretool-guard.sh" ]; then
+# ── [rollback] ───────────────────────────────────────────────────────────────
+if [ "$MODE" = "rollback" ]; then
+  [ -f "$MANIFEST" ] || fail "manifest 없음 — 설치된 하네스가 아님. install.sh(설치)를 먼저 실행"
+  BAKROOT="$HERE/logs/harness-backup"
+  LATEST=$(ls -td "$BAKROOT"/v*/ 2>/dev/null | head -1)
+  [ -n "$LATEST" ] || fail "백업 없음 ($BAKROOT/v*/) — 롤백할 업데이트 이력이 없다"
+  PREV=$(basename "$LATEST")   # vX.Y.Z = 업데이트 직전 버전
+  CURV=$(cat "$VSTAMP" 2>/dev/null | tr -d '[:space:]'); CURV="${CURV:-unknown}"
+  say "rollback: v$CURV -> $PREV (복원: logs/harness-backup/$PREV/)"
+  # install.sh/uninstall.sh는 tmp+mv로 복원 — 실행 중인 스크립트 truncate 방지
+  ( cd "$LATEST" && tar -cf - --exclude=./install.sh --exclude=./uninstall.sh . ) \
+    | tar -xf - -C "$HERE" || fail "백업 복원 실패 — $LATEST 확인"
+  for f in install.sh uninstall.sh; do
+    [ -f "$LATEST/$f" ] || continue
+    cp "$LATEST/$f" "$HERE/$f.hnew" && mv "$HERE/$f.hnew" "$HERE/$f"
+  done
+  printf '%s\n' "${PREV#v}" > "$VSTAMP"
+  rm -rf "$LATEST"
+  say "OK: v${PREV#v} 복원 완료 — 백업 소비됨 (연속 rollback은 그 이전 백업으로)"
+  say "NOTE: 업데이트로 새로 추가된 파일은 남는다(무해) — 필요 시 수동 삭제"
+fi
+
+# ── [fetch / update] ─────────────────────────────────────────────────────────
+NEED_FETCH=0
+if [ "$MODE" = "update" ]; then
+  [ -f "$MANIFEST" ] || fail "manifest 없음 — 설치된 하네스가 아님. install.sh(설치)를 먼저 실행"
+  NEED_FETCH=1
+elif [ "$MODE" = "install" ] && [ ! -f "$HERE/.claude/hooks/pretool-guard.sh" ]; then
+  NEED_FETCH=1
+fi
+if [ "$NEED_FETCH" -eq 1 ]; then
   SRC="${HARNESS_SRC_DIR:-}"
   TMPD=""
   if [ -z "$SRC" ]; then
@@ -55,32 +96,73 @@ if [ ! -f "$HERE/.claude/hooks/pretool-guard.sh" ]; then
   fi
   [ -f "$SRC/.claude/hooks/pretool-guard.sh" ] || fail "소스에 하네스 없음: $SRC"
 
-  mkdir -p "$HERE/.claude"   # 나머지 경로는 복사 루프가 생성 — 미리 만들면 SKIP 오탐
-  : > "$MANIFEST"
-  for p in "${HARNESS_PATHS[@]}"; do
-    [ -e "$SRC/$p" ] || continue
-    if [ -e "$HERE/$p" ] && [ "${HARNESS_FORCE:-0}" != "1" ]; then
-      say "SKIP: $p 이미 존재 (덮어쓰려면 HARNESS_FORCE=1)"
-      warn=1
-      continue
+  if [ "$MODE" = "update" ]; then
+    NEWV=$(cat "$SRC/VERSION" 2>/dev/null | tr -d '[:space:]')
+    [ -n "$NEWV" ] || fail "소스에 VERSION 없음 — 업데이트 불가"
+    OLDV=$(cat "$VSTAMP" 2>/dev/null | tr -d '[:space:]'); OLDV="${OLDV:-unknown}"
+    if [ "$NEWV" = "$OLDV" ] && [ "${HARNESS_FORCE:-0}" != "1" ]; then
+      say "이미 최신 버전 (v$OLDV) — 변경 없음"
+      exit 0
     fi
-    mkdir -p "$HERE/$(dirname "$p")"
-    cp -R "$SRC/$p" "$HERE/$p"
-    printf '%s\n' "$p" >> "$MANIFEST"
-    say "OK: $p"
-  done
+    say "update: v$OLDV -> v$NEWV"
+    BAK="$HERE/logs/harness-backup/v$OLDV"   # logs/는 gitignore — 백업 소음 없음
+    # ponytail: 경로 목록은 실행 중인 스크립트 기준 — 신규 경로까지 받으려면 curl|bash 업데이트가 정본
+    for p in "${HARNESS_PATHS[@]}"; do
+      [ -e "$SRC/$p" ] || continue
+      if grep -qx "$p" "$MANIFEST" 2>/dev/null; then
+        diff -rq "$SRC/$p" "$HERE/$p" >/dev/null 2>&1 && continue   # 동일 → 그대로
+        mkdir -p "$BAK/$(dirname "$p")"
+        cp -R "$HERE/$p" "$BAK/$p" 2>/dev/null
+        if [ -d "$SRC/$p" ]; then
+          # 오버레이 복사 — 사용자가 디렉토리 안에 추가한 파일은 보존
+          mkdir -p "$HERE/$p" && cp -R "$SRC/$p/." "$HERE/$p/"
+        else
+          # tmp+mv — 실행 중인 install.sh 자기 갱신 안전
+          mkdir -p "$HERE/$(dirname "$p")"
+          cp "$SRC/$p" "$HERE/$p.hnew" && mv "$HERE/$p.hnew" "$HERE/$p"
+        fi
+        say "UPDATED: $p (백업: logs/harness-backup/v$OLDV/$p)"
+      elif [ ! -e "$HERE/$p" ]; then
+        mkdir -p "$HERE/$(dirname "$p")"
+        cp -R "$SRC/$p" "$HERE/$p"
+        printf '%s\n' "$p" >> "$MANIFEST"
+        say "NEW: $p"
+      else
+        say "SKIP: $p 사용자 파일 (manifest 밖 — 불가침)"
+      fi
+    done
+    printf '%s\n' "$NEWV" > "$VSTAMP"
+    say "OK: 버전 스탬프 v$NEWV"
+  else
+    mkdir -p "$HERE/.claude"   # 나머지 경로는 복사 루프가 생성 — 미리 만들면 SKIP 오탐
+    : > "$MANIFEST"
+    for p in "${HARNESS_PATHS[@]}"; do
+      [ -e "$SRC/$p" ] || continue
+      if [ -e "$HERE/$p" ] && [ "${HARNESS_FORCE:-0}" != "1" ]; then
+        say "SKIP: $p 이미 존재 (덮어쓰려면 HARNESS_FORCE=1)"
+        warn=1
+        continue
+      fi
+      mkdir -p "$HERE/$(dirname "$p")"
+      cp -R "$SRC/$p" "$HERE/$p"
+      printf '%s\n' "$p" >> "$MANIFEST"
+      say "OK: $p"
+    done
+    [ -f "$SRC/VERSION" ] && tr -d '[:space:]' < "$SRC/VERSION" > "$VSTAMP"
 
-  # .gitignore — 하네스 런타임 산출물 무시 블록 (마커로 관리, uninstall이 제거)
-  if ! grep -q '>>> harness' "$HERE/.gitignore" 2>/dev/null; then
-    {
-      echo '# >>> harness (managed by install.sh) >>>'
-      echo 'logs/'
-      echo '.claude/bin/'
-      echo '.claude/harness-manifest.txt'
-      echo 'specs/HANDOFF.md'
-      echo '# <<< harness <<<'
-    } >> "$HERE/.gitignore"
-    say "OK: .gitignore 하네스 블록 추가"
+    # .gitignore — 하네스 런타임 산출물 무시 블록 (마커로 관리, uninstall이 제거)
+    if ! grep -q '>>> harness' "$HERE/.gitignore" 2>/dev/null; then
+      {
+        echo '# >>> harness (managed by install.sh) >>>'
+        echo 'logs/'
+        echo '.claude/bin/'
+        echo '.claude/harness-manifest.txt'
+        echo '.claude/harness-version'
+        echo 'specs/HANDOFF.md'
+        echo '# <<< harness <<<'
+      } >> "$HERE/.gitignore"
+      say "OK: .gitignore 하네스 블록 추가"
+    fi
   fi
 fi
 
@@ -89,6 +171,10 @@ fi
 if [ ! -f "$MANIFEST" ]; then
   mkdir -p "$HERE/.claude"
   printf '%s\n' "${HARNESS_PATHS[@]}" > "$MANIFEST"
+fi
+# 버전 스탬프가 없으면(복사-붙여넣기 설치·원본 레포) 루트 VERSION에서 생성 — update가 비교에 사용.
+if [ ! -f "$VSTAMP" ] && [ -f "$HERE/VERSION" ]; then
+  tr -d '[:space:]' < "$HERE/VERSION" > "$VSTAMP"
 fi
 
 # (1) vendor integrity — tampered/corrupt binaries must never be installed.

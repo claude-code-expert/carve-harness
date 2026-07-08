@@ -2,6 +2,13 @@
 
 Java/Spring · React/Next 공통으로 쓰는 하네스 뼈대. 프로젝트 루트에 그대로 복사해 사용한다.
 
+## 버전 이력
+
+| 버전 | 날짜 | 변경사항 |
+|------|------|----------|
+| v0.0.2 | 2026-07-08 | CLI 업데이트 패치 + 롤백 — `install.sh update`(VERSION 비교·manifest 범위 갱신·자동 백업·사용자 파일 불가침) · `install.sh rollback`(직전 버전 백업 복원) · VERSION 변경 시 CHANGELOG 강제(pre-commit) · `/version-changelog` 스킬 · `RELEASE.md`/`CHANGELOG.md` |
+| v0.0.1 | 2026-07-08 | 최초 완성본 — fail-closed 가드(전 쓰기도구+Bash-write+시크릿 내용 스캔) · Stop 증분 검증 게이트 · JSONL 관측 · 실데이터 핸드오프(SessionEnd 포함) · 자가감사 38체크 · 오프라인 설치기(vendor jq/shellcheck, SHA256 검증)+uninstall · 크로스에이전트 pre-commit 게이트 · squad 커맨드/에이전트 · 테스트 10 스위트 95건 |
+
 ## 설치
 
 **어느 방식이든 마지막은 동일**: `install.sh`가 vendor 체크섬 검증 → jq·shellcheck 배치 →
@@ -43,6 +50,46 @@ jq 없는 머신이면 `~/.local/bin/jq`로 설치된다(sudo 불필요) — PAT
 - `.gitignore`에 마커 블록(`# >>> harness ... <<<`)으로 런타임 산출물(logs/, .claude/bin/ 등) 무시 규칙 추가.
 - 스택 도구(pnpm/gradle/ruff)는 대상 프로젝트 소관 — 없으면 해당 게이트는 skip 기록 후 통과.
 
+### 설치 후 사용자 TODO
+
+설치기는 배선까지만 한다. 아래는 **사용자가 직접** 해야 게이트가 프로젝트에 맞게 동작한다.
+
+- [ ] **git 저장소 확인** — `git init` 안 된 프로젝트면 pre-commit 게이트·핸드오프 git 정보·증분 검증이 제한 동작.
+- [ ] **jq PATH 반영** — 설치 로그에 `~/.local/bin` PATH 안내가 나왔다면 셸 rc에 반영 후 `bash install.sh` 재실행.
+- [ ] **`/harness-audit` 실행** — 38 PASS(exit 0) 확인. 하나라도 FAIL이면 그 항목부터 해결.
+- [ ] **CLAUDE.md에 도메인 규칙 추가** — "작업 원칙" 자리에 프로젝트 불변식 기입 (예: "주문 금액 음수 불가").
+- [ ] **보호 경로·시크릿 패턴 조정** — `.claude/hooks/lib-protected.sh`의 `PROTECTED_RE`/`SECRETS_RE`에 프로젝트 고유 경로(배포 설정, 키 파일 등) 추가.
+- [ ] **스택 도구 설치** — 포맷·검증 게이트는 대상 프로젝트의 도구를 쓴다: prettier/eslint(Node), spotless/gradle(Java), ruff/pytest(Python). 없으면 해당 게이트는 skip 기록 후 통과.
+- [ ] **스택 규칙 확인** — 내 스택이 `.claude/rules/`에 없으면(예: Go) 규칙 디렉토리 + `stop-verify.sh` case 추가.
+- [ ] **팀 에이전트 정본 공지** — Cursor/Codex 등 비-Claude 에이전트 사용자는 `AGENTS.md`가 정본임을 인지 (훅 차단은 Claude Code 전용, 나머지는 pre-commit이 최종 차단).
+- [ ] **(선택) SDD 시작** — `/plan`으로 첫 작업을 SC 단위로 분해, 산출물은 `specs/`에 축적. GSD 쓰려면 `npx get-shit-done-cc --local`.
+- [ ] **(선택) LICENSE 추가** — 템플릿에 미포함. 배포할 프로젝트면 라이선스 결정 후 추가.
+
+> Windows는 WSL 필수 (훅이 bash).
+
+### 업데이트 (버전 패치)
+
+새 버전이 나오면 재설치 없이 변경분만 패치:
+```bash
+curl -fsSL https://raw.githubusercontent.com/wevesolutions/harness/main/install.sh | bash -s -- update
+# 오프라인: cd /path/to/your-project && HARNESS_SRC_DIR=/path/to/new-harness bash install.sh update
+```
+- **버전 비교**: 원격 `VERSION` vs 로컬 `.claude/harness-version` — 같으면 no-op ("이미 최신"). 강제 재패치는 `HARNESS_FORCE=1`.
+- **갱신 범위 = manifest만**: 설치 때 SKIP된 사용자 파일(자체 `CLAUDE.md` 등)은 업데이트에서도 불가침. 관리 디렉토리 안에 사용자가 추가한 파일도 보존(오버레이 복사).
+- **자동 백업**: 내용이 바뀌는 파일은 교체 전 `logs/harness-backup/v<이전버전>/`에 백업 — 커스터마이징(`lib-protected.sh` 패턴 등)을 덮어썼으면 백업에서 복원해 병합.
+- **신규 파일**: 새 릴리스에 추가된 파일은 설치 + manifest 기록. 신규 경로까지 받으려면 `curl | bash -s -- update`(새 설치기 기준) 사용 권장.
+- 패치 후 부트스트랩(권한·바이너리)·`/harness-audit`까지 자동 재실행.
+
+**롤백** (직전 업데이트 되돌리기 — 네트워크 불필요):
+```bash
+bash install.sh rollback
+```
+- 최신 백업(`logs/harness-backup/v<이전>/`) 복원 + 버전 스탬프 복귀. 백업은 소비 — 연속 실행 시 그 이전 버전으로 내려간다.
+- 업데이트로 새로 추가된 파일은 남는다(무해) — 필요 시 수동 삭제.
+- 검증: `remote-install.test.sh` — 동일버전 no-op / 패치+백업+스탬프 / 사용자 파일 보존 / 롤백 복원·소비 / 백업 없으면 clean FAIL.
+
+버전별 변경 내역은 `CHANGELOG.md`, 새 버전 배포 절차는 `RELEASE.md` 참고.
+
 ### 제거 (uninstall)
 ```bash
 bash uninstall.sh          # 드라이런 — 삭제될 목록만 출력
@@ -51,7 +98,7 @@ bash uninstall.sh --yes    # 실제 제거
 - 제거 범위 = 설치 시 manifest에 기록된 것**만**. 설치 때 SKIP된 원래 파일은 안전.
 - `core.hooksPath` 해제 + `.gitignore` 하네스 블록 제거까지 원복.
 - `logs/`(감사 기록)·`specs/` 산출물은 사용자 데이터로 남긴다 — 필요 없으면 직접 삭제.
-- 검증: `.claude/hooks/tests/remote-install.test.sh` (설치→보존→드라이런→제거 5케이스).
+- 검증: `.claude/hooks/tests/remote-install.test.sh` (설치→보존→업데이트→롤백→드라이런→제거 10케이스).
 
 ## GSD로 하네스 구성 (SDD)
 ```bash
@@ -67,7 +114,10 @@ npx get-shit-done-cc --local
 ├── CLAUDE.md            # 제약: 전역 가드레일
 ├── AGENTS.md            # 에이전트 표준 (크로스 에이전트 정본)
 ├── RULES.md             # 룰 인덱스
-├── install.sh           # 설치기: curl 원격 fetch + 로컬 부트스트랩 (멱등)
+├── VERSION              # 릴리스 버전 (update가 비교, 변경 시 CHANGELOG 강제)
+├── CHANGELOG.md         # 버전별 변경 기록 (/version-changelog 스킬로 작성)
+├── RELEASE.md           # 배포 절차
+├── install.sh           # 설치기: curl 원격 fetch + 로컬 부트스트랩 + update/rollback (멱등)
 ├── uninstall.sh         # 제거기: manifest 기반, 드라이런 기본
 ├── vendor/bin/          # 내장 정적 바이너리: jq(amd64/arm64)·shellcheck + SHA256SUMS
 ├── .githooks/pre-commit # 에이전트 무관 커밋 게이트 (jq 불필요, bash+git만)
@@ -76,7 +126,7 @@ npx get-shit-done-cc --local
     ├── settings.json    # 훅 등록 (Pre/Post/Stop/Session/PreCompact)
     ├── bin/             # install.sh가 vendor에서 배치 (gitignore)
     ├── hooks/           # 가드·검증·핸드오프·감사·로그리포트 + tests/
-    ├── skills/          # handoff, changelog + mattpocock 파생 19종
+    ├── skills/          # handoff, changelog, version-changelog + mattpocock 파생 19종
     ├── commands/        # plan, verify, review, commit, harness-audit, squad*
     ├── agents/          # evaluator, code/security/silent-failure/state reviewer, squad 8종
     └── rules/           # common + java-spring + react-next (paths glob)
@@ -95,7 +145,7 @@ npx get-shit-done-cc --local
 - **완료 게이트**: Stop 훅이 빌드·타입·테스트 실패 시 완료 선언을 차단. 변경된 스택만 검증(증분)해 불필요한 대기 없음.
 - **상태 연속성**: PreCompact/SessionEnd에 `specs/HANDOFF.md` 자동 저장, SessionStart에 복원 — 컨텍스트 리셋·세션 교체에도 작업이 이어진다.
 - **관측성**: 모든 가드 판정이 `logs/*.jsonl`에 남고, 보호 경로는 `<masked>` 처리 — 차단·허용 이력을 사후 감사 가능.
-- **자가 검증**: `/harness-audit` 27개 기계 체크 — 하네스 자체의 오구성(훅 미등록·권한 누락·정책-게이트 미매핑)을 PASS/FAIL로 탐지.
+- **자가 검증**: `/harness-audit` 38개 기계 체크 — 하네스 자체의 오구성(훅 미등록·권한 누락·정책-게이트 미매핑)을 PASS/FAIL로 탐지.
 - **언어 무관 드롭인**: 파일 복사만으로 이식, 스택은 확장자(glob)로 자동 감지·자동 로드.
 - **크로스 에이전트 정본**: 규칙은 `AGENTS.md` 한 곳에 집약, `.cursorrules`·`codex.md`는 포인터만 — 규칙 이중화 없음.
 
@@ -106,11 +156,11 @@ npx get-shit-done-cc --local
 - **Bash 쓰기 가드는 best-effort**: 리다이렉트·sed -i·cp/mv는 잡지만 파이프·변수·heredoc 간접 우회는 미탐(문서화된 상한). 우회분은 pre-commit이 2차 차단.
 - **deny 프리픽스 매칭 한계**: `rm -rf*`는 막아도 `rm -r -f` 변형은 패턴 밖.
 - **Stop 게이트 스택 커버리지**: Java/Node/Python/bash. Python은 ruff·pytest가 프로젝트 환경에 있을 때만(best-effort), 그 외 스택은 미검증 통과.
-- **컨텍스트 비용**: `rules/` 상시 로드 + 스킬 21종 목록으로 세션 시작 토큰 증가.
+- **컨텍스트 비용**: `rules/` 상시 로드 + 스킬 22종 목록으로 세션 시작 토큰 증가.
 - **정책↔게이트 이중 관리**: 규칙(md) 추가 시 훅(sh) 반영은 수동. `/harness-audit`은 안전 핵심 항목 + 위생(중복·빈 파일·프런트매터)만 기계 검사.
 - **스킬 충돌 검사는 이름 수준**: repo↔전역 같은 이름만 탐지. 트리거 문구(description) 수준 중복은 미탐.
 
-## 디벨롭 이력 (v1.1 — 2026-07-08 전부 구현·오프라인화)
+## 디벨롭 이력 (v0.0.1 상세 — 2026-07-08 전부 구현·오프라인화)
 
 | # | 항목 | 구현 | 검증 |
 |---|------|------|------|

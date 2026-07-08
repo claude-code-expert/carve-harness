@@ -62,5 +62,21 @@ r=$(fresh_repo); rm "$r/.claude/hooks/lib-protected.sh"
 echo "hello" > "$r/a.txt"; git -C "$r" add a.txt
 check 1 "missing lib fail-closed" "$r"
 
+# --- VERSION bump without CHANGELOG entry blocks ---
+r=$(fresh_repo); echo "# Changelog" > "$r/CHANGELOG.md"
+git -C "$r" add CHANGELOG.md && git -C "$r" commit -qm base
+echo "0.0.9" > "$r/VERSION"; git -C "$r" add VERSION
+check 1 "VERSION bump w/o CHANGELOG entry blocks" "$r"
+
+# --- VERSION bump with staged CHANGELOG entry allows ---
+r=$(fresh_repo); echo "0.0.9" > "$r/VERSION"
+printf '# Changelog\n## [0.0.9] - 2026-07-08\n- stuff\n' > "$r/CHANGELOG.md"
+git -C "$r" add VERSION CHANGELOG.md
+check 0 "VERSION bump with CHANGELOG entry allows" "$r"
+
+# --- VERSION change in repo without CHANGELOG convention allows (scope guard) ---
+r=$(fresh_repo); echo "1.2.3" > "$r/VERSION"; git -C "$r" add VERSION
+check 0 "VERSION w/o CHANGELOG.md convention allows" "$r"
+
 printf -- '---\n%s passed, %s failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]

@@ -36,6 +36,17 @@ if git diff --cached -U0 | grep -E '^\+' | grep -Eq "$SECRETS_RE"; then
   fail=1
 fi
 
+# (3) Version bump requires a matching staged CHANGELOG entry (release discipline).
+# Scope guard: fires only when VERSION is staged AND the repo keeps a CHANGELOG.md —
+# projects using this gate without that convention are unaffected.
+if git diff --cached --name-only | grep -qx 'VERSION' && [ -e "$ROOT/CHANGELOG.md" ]; then
+  newv=$(git show :VERSION 2>/dev/null | tr -d '[:space:]')
+  if [ -n "$newv" ] && ! git show :CHANGELOG.md 2>/dev/null | grep -qF "[$newv]"; then
+    echo "[pre-commit] VERSION $newv 변경 — 스테이징된 CHANGELOG.md에 [$newv] 항목 필요 (/version-changelog 스킬 사용)" >&2
+    fail=1
+  fi
+fi
+
 if [ "$fail" -ne 0 ]; then
   echo "[pre-commit] 차단됨. --no-verify 우회는 AGENTS.md §0에서 금지." >&2
   exit 1

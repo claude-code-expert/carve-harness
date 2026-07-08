@@ -49,7 +49,7 @@ if [ "$APPLY" -eq 1 ]; then
     sed -i '/# >>> harness (managed by install.sh) >>>/,/# <<< harness <<</d' "$HERE/.gitignore"
     say "OK: .gitignore 하네스 블록 제거"
   fi
-  rm -f "$MANIFEST"
+  rm -f "$MANIFEST" "$HERE/.claude/harness-version"
   rmdir "$HERE/.claude" "$HERE/specs" "$HERE/.githooks" 2>/dev/null
   say "제거 완료. 남긴 것: logs/ (감사 기록), specs/ 산출물 — 필요 없으면 직접 삭제."
 else

@@ -40,6 +40,67 @@ else
   no "no-clobber"
 fi
 
+# (3a) update, same version: no-op, exit 0, "이미 최신".
+out=$( cd "$T" && HARNESS_SRC_DIR="$REPO" bash install.sh update 2>&1 )
+code=$?
+if [ "$code" -eq 0 ] && printf '%s' "$out" | grep -q "이미 최신"; then
+  ok "update same version -> no-op (exit 0)"
+else
+  no "update same version (exit $code)"
+fi
+
+# (3b) update, newer version: manifest files patched + backup + version stamp.
+SRC2=$(mktemp -d)
+( cd "$REPO" && tar -c --exclude=.git --exclude=logs --exclude=.planning . ) | tar -x -C "$SRC2"
+echo "9.9.9" > "$SRC2/VERSION"
+echo "# UPDATE-MARKER" >> "$SRC2/AGENTS.md"
+echo "# UPDATE-MARKER" >> "$SRC2/.claude/rules/common/git-workflow.md"
+OLDV=$(cat "$T/.claude/harness-version")
+( cd "$T" && HARNESS_SRC_DIR="$SRC2" bash install.sh update ) >/dev/null 2>&1
+code=$?
+if [ "$code" -eq 0 ] \
+   && grep -q "UPDATE-MARKER" "$T/AGENTS.md" \
+   && grep -q "UPDATE-MARKER" "$T/.claude/rules/common/git-workflow.md" \
+   && [ -e "$T/logs/harness-backup/v$OLDV/AGENTS.md" ] \
+   && [ "$(cat "$T/.claude/harness-version")" = "9.9.9" ]; then
+  ok "update patches manifest files + backup + stamp 9.9.9"
+else
+  no "update patch (exit $code)"
+fi
+
+# (3c) update never touches user files: skipped CLAUDE.md + user-added file in managed dir.
+echo "# my custom rule" > "$T2/.claude/rules/my-custom.md"
+( cd "$T2" && HARNESS_SRC_DIR="$SRC2" bash install.sh update ) >/dev/null 2>&1
+if grep -q "MY OWN RULES" "$T2/CLAUDE.md" \
+   && [ -f "$T2/.claude/rules/my-custom.md" ] \
+   && ! grep -q "UPDATE-MARKER" "$T2/CLAUDE.md"; then
+  ok "update preserves user CLAUDE.md + user-added rule file"
+else
+  no "update user-file preservation"
+fi
+rm -rf "$SRC2"
+
+# (3d) rollback: previous version restored, marker gone, stamp reverted, backup consumed.
+( cd "$T" && bash install.sh rollback ) >/dev/null 2>&1
+code=$?
+if [ "$code" -eq 0 ] \
+   && ! grep -q "UPDATE-MARKER" "$T/AGENTS.md" \
+   && [ "$(cat "$T/.claude/harness-version")" = "$OLDV" ] \
+   && [ ! -d "$T/logs/harness-backup/v$OLDV" ]; then
+  ok "rollback restores v$OLDV + consumes backup"
+else
+  no "rollback (exit $code)"
+fi
+
+# (3e) rollback with no backup left: clean FAIL, nothing changed.
+( cd "$T" && bash install.sh rollback ) >/dev/null 2>&1
+code=$?
+if [ "$code" -ne 0 ] && [ "$(cat "$T/.claude/harness-version")" = "$OLDV" ]; then
+  ok "rollback without backup fails cleanly (exit $code)"
+else
+  no "rollback-empty (exit $code)"
+fi
+
 # (4) uninstall dry-run removes nothing.
 ( cd "$T2" && bash uninstall.sh ) >/dev/null 2>&1
 [ -f "$T2/AGENTS.md" ] && [ -f "$T2/.claude/settings.json" ] \

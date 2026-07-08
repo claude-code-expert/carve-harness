@@ -2,8 +2,8 @@
 
 > Claude Code 드롭인 하네스 — 전체 사용 설명 + 설치 내역.
 > 대상: 이 하네스를 쓰거나 다른 프로젝트에 이식하려는 사용자.
-> 기준: v1 하드닝 마일스톤 완료 상태(Phase 1–5). `/harness-audit` = 27 PASS.
-> 최종 갱신: 2026-07-07.
+> 기준: 릴리스 **v0.0.2** (하드닝 마일스톤 Phase 1–5 + 오프라인·크로스에이전트 확장 + update 패치). `/harness-audit` = 38 PASS.
+> 최종 갱신: 2026-07-08.
 
 이 문서는 `docs/md/HARNESS-TEMPLATE-MANUAL.md`(초기 뼈대 매뉴얼)와 `docs/md/harness-install-list.md`(외부 도구 설치 리스트)를 대체·갱신한다. 초기 매뉴얼은 하드닝 이전 상태(훅 4종·프로즈 감사·빈 스텁)를 기술하므로, **현재 상태는 이 GUIDE를 정본으로 본다.**
 
@@ -36,7 +36,9 @@
 | C. GSD (SDD 킷) | ✅ 설치됨 | `~/.claude/agents/` gsd-* 33종 + `/gsd:*` 커맨드 동작 |
 | D-4. caveman (출력 압축) | ✅ 설치됨·활성 | 이 세션에서 caveman/ponytail 모드 동작 중 |
 | 전제 도구 | ✅ jq·node·npm·pnpm·python3·pip·gradle | `command -v` 확인. jq·shellcheck는 `vendor/bin` 내장 — 오프라인 머신은 `install.sh`가 배치 |
-| D-1 LSP / D-2 codesight / D-3 superpowers / D-5 headroom | ⛔ 미설치(선택) | 토큰 절감용. 필요 시 §9 참고 — 전역/네트워크라 승인 후 수동 |
+| D-2 codesight | ✅ 설치됨 | `.codesight/CODESIGHT.md` + `skills.md` 생성됨 (2026-07-07 스캔) |
+| D-3 superpowers | ✅ 설치됨·활성 | 플러그인 목록 확인 (`superpowers@superpowers-marketplace`), 세션에서 스킬 동작 |
+| D-1 LSP / D-5 headroom | ⛔ 미설치(선택) | 토큰 절감용. 필요 시 §9 참고 — 전역/네트워크라 승인 후 수동 |
 | `gh` (GitHub CLI) | ✅ 설치·인증됨 | `~/.local/bin/gh`, github.com 로그인 확인 (2026-07-08) |
 
 > **자동 실행하지 않은 이유**: `tweakcc`는 실행 중인 Claude Code 바이너리를 패치하고, `curl \| bash`는 원격 스크립트를 그대로 실행하며, 전역 설치는 이 프로젝트 밖(사용자 환경)을 바꾼다. 비가역·시스템 전역 작업은 명시 승인 후에만 실행한다. 원하는 항목을 지정하면 개별 실행한다.
@@ -48,28 +50,35 @@
 ```
 harness/
 ├── CLAUDE.md                 # 제약: 전역 가드레일 (3기둥·스택감지)
-├── AGENTS.md                 # 에이전트 공통 표준
+├── AGENTS.md                 # 에이전트 공통 표준 (크로스 에이전트 정본)
 ├── RULES.md                  # 룰 인덱스
 ├── GUIDE.md                  # (이 문서)
-├── .gitignore                # logs/ · 루트 .env* · specs/HANDOFF.md
+├── VERSION                   # 릴리스 버전 (update 비교 기준)
+├── install.sh                # 설치기: curl 원격/오프라인 부트스트랩 + update 패치 (멱등)
+├── uninstall.sh              # 제거기: manifest 기반, 드라이런 기본
+├── vendor/bin/               # 내장 정적 바이너리: jq·shellcheck + SHA256SUMS
+├── .githooks/pre-commit      # 에이전트 무관 커밋 게이트 (jq 불필요)
+├── .gitignore                # logs/ · 루트 .env* · specs/HANDOFF.md · .claude/bin/
 ├── specs/                    # 상태: SDD 산출물 (HANDOFF/DECISIONS는 훅·스킬이 생성)
 │   └── README.md
 ├── logs/                     # 관측: 날짜별 JSONL 이벤트 로그 (gitignore)
-├── docs/md/                  # 매뉴얼·설치 리스트 (참고용, 비배포 핵심)
+├── docs/md/                  # 초기 매뉴얼·설치 리스트 (역사 보존용 — 정본은 이 GUIDE)
 └── .claude/
     ├── settings.json         # 훅 6이벤트 + permissions.deny + $schema
+    ├── bin/                  # install.sh가 vendor에서 배치 (gitignore)
     ├── hooks/                # 훅 스크립트 + 라이브러리 + 자가감사
     │   ├── pretool-guard.sh      # PreToolUse 차단
     │   ├── posttool-format.sh    # PostToolUse 포맷
     │   ├── stop-verify.sh        # Stop 증분 검증
     │   ├── session-handoff.sh    # SessionStart/PreCompact/SessionEnd 핸드오프
     │   ├── log-event.sh          # JSONL append 헬퍼 (PII 마스킹)
+    │   ├── logs-report.sh        # JSONL 요약 리포트 + --rotate 회전
     │   ├── lib-protected.sh      # PROTECTED_RE + SECRETS_RE 단일 소스
     │   ├── harness-audit.sh      # 기계적 자가감사
-    │   └── tests/*.test.sh       # 훅별 어서션 (7 스위트)
-    ├── commands/             # /plan /verify /review /commit /harness-audit
-    ├── agents/               # evaluator·code/security/silent-failure/state-reviewer
-    ├── skills/               # handoff · changelog
+    │   └── tests/*.test.sh       # 훅별 어서션 (10 스위트)
+    ├── commands/             # /plan /verify /review /commit /harness-audit /squad*
+    ├── agents/               # evaluator·code/security/silent-failure/state-reviewer + squad 8종
+    ├── skills/               # handoff · changelog · version-changelog + mattpocock 파생 19종
     └── rules/
         ├── common/           # security·testing·git-workflow (항상 적용)
         ├── code-convention/  # 스택별 코딩 표준 8종
@@ -108,10 +117,12 @@ harness/
 | `/review` | 타입·보안·예외·상태 관점 검토 |
 | `/commit` | Conventional Commits 메시지 준비 (자동호출 비활성) |
 | `/harness-audit` | 3기둥 구성 기계적 PASS/FAIL (§7) |
+| `/squad <member>` | Squad 에이전트 디스패처 |
+| `/squad-plan` `/squad-review` `/squad-qa` `/squad-refactor` `/squad-debug` `/squad-audit` `/squad-docs` `/squad-gitops` | 기획→리뷰→QA→리팩토링→디버그→보안감사→문서→Git 파이프라인 전담 8종 |
 
-**에이전트** (`.claude/agents/`, description 자동위임 또는 "use the X agent"): evaluator(SC·타입/계약), code-reviewer(가독성·구조), security-reviewer(시크릿·인가·인젝션), silent-failure-hunter(삼켜진 예외), state-reviewer(상태·트랜잭션 경계). 생성(Generator)과 검증(Evaluator)은 분리 운용.
+**에이전트** (`.claude/agents/`, description 자동위임 또는 "use the X agent"): evaluator(SC·타입/계약), code-reviewer(가독성·구조), security-reviewer(시크릿·인가·인젝션), silent-failure-hunter(삼켜진 예외), state-reviewer(상태·트랜잭션 경계) + squad 8종(plan·review·qa·refactor·debug·audit·docs·gitops). 생성(Generator)과 검증(Evaluator)은 분리 운용.
 
-**스킬** (`.claude/skills/`, 21종): handoff(→`specs/HANDOFF.md`), changelog(→`specs/DECISIONS.md`, append-only) + mattpocock 파생 19종(implement·qa·teach·domain-modeling·codebase-design·prototype·to-prd·to-issues 등 — 대부분 `disable-model-invocation`이라 `/이름` 사용자 호출 전용).
+**스킬** (`.claude/skills/`, 22종): handoff(→`specs/HANDOFF.md`), changelog(→`specs/DECISIONS.md`, append-only), version-changelog(→`CHANGELOG.md`, 버전 변경 시 필수) + mattpocock 파생 19종(implement·qa·teach·domain-modeling·codebase-design·prototype·to-prd·to-issues 등 — 대부분 `disable-model-invocation`이라 `/이름` 사용자 호출 전용).
 
 **룰** (`.claude/rules/`, glob 자동적용): `common/**`(항상), `code-convention/*`(스택 표준), `java-spring/`(`**/*.java`), `react-next/`(`**/*.ts,tsx`), `safety.md`(위험동작 승인 게이트).
 
@@ -119,16 +130,16 @@ harness/
 
 ## 6. 사용 워크플로
 
-**드롭인 설치** (다른 프로젝트로 이식):
+**드롭인 설치** (다른 프로젝트로 이식) — `install.sh`가 체크섬 검증→jq/shellcheck 배치→권한→pre-commit 게이트→audit까지 자동 (상세: README):
 ```bash
-cp -R .claude specs CLAUDE.md AGENTS.md RULES.md /path/to/your-project/
-chmod +x /path/to/your-project/.claude/hooks/*.sh
-jq --version   # 필수. 없으면 가드가 fail-closed로 전부 차단됨
+cd /path/to/your-project
+curl -fsSL https://raw.githubusercontent.com/wevesolutions/harness/main/install.sh | bash
+# 오프라인: HARNESS_SRC_DIR=/path/to/harness-copy bash /path/to/harness-copy/install.sh
 ```
 
 **GSD SDD 흐름** (설치돼 있음):
 ```
-/gsd-new-project → /gsd-plan-phase N → /gsd-execute-phase N → /gsd-verify-work
+/gsd:new-project → /gsd:plan-phase N → /gsd:execute-phase N → /gsd:verify-work
 ```
 (이 프로젝트 자체가 이 흐름의 산출물 — `.planning/`에 5개 페이즈 기록.)
 
@@ -159,12 +170,15 @@ bash .claude/hooks/harness-audit.sh      # 또는 슬래시 /harness-audit
 - **AUDIT-01**: jq 존재 · 6개 훅 이벤트 등록 · 참조 훅 `+x` · 전 훅 `bash -n` clean.
 - **AUDIT-02**: 쓰기 매처(`Write|Edit|MultiEdit|NotebookEdit|Bash`) · Bash-write 검사 존재.
 - **AUDIT-03**: 안전규칙(safety.md/security.md)→게이트 매핑 · `[내용없음]` 스텐티널 핸드오프 거부.
+- **AUDIT-04**: 크로스 에이전트 — AGENTS.md 포인터(`.cursorrules`/`codex.md`) · pre-commit 게이트 `+x` · `core.hooksPath` · vendor 체크섬.
+- **AUDIT-05**: 규칙 위생 — 빈 파일 · ' copy' 파일 · 바이트 동일 중복.
+- **AUDIT-06**: 스킬 — 프런트매터 검증 · repo↔전역 이름 충돌.
 
-Claude Code 업그레이드마다 재실행해 게이트가 여전히 작동하는지 증명. 현재: **27 PASS, 0 FAIL**.
+Claude Code 업그레이드마다 재실행해 게이트가 여전히 작동하는지 증명. 현재: **38 PASS, 0 FAIL**.
 
 테스트 스위트도 함께:
 ```bash
-for t in .claude/hooks/tests/*.test.sh; do bash "$t"; done   # 7 스위트 전부 green
+for t in .claude/hooks/tests/*.test.sh; do bash "$t"; done   # 10 스위트 전부 green
 ```
 
 ---
@@ -185,13 +199,11 @@ for t in .claude/hooks/tests/*.test.sh; do bash "$t"; done   # 7 스위트 전�
 ## 9. 외부 도구 생태계 (선택, 미설치분)
 
 `harness-install-list.md` 중 이 환경에 없는 토큰 절감 도구. **전역/네트워크 작업이므로 승인 후 수동 실행** 권장.
+(gh CLI·codesight·superpowers는 설치 완료 — §2 표 참조.)
 
 | 도구 | 용도 | 설치(수동) | 위험 |
 |------|------|-----------|------|
-| gh CLI | GitHub push 인증 | 배포판 패키지매니저 | 낮음 (원격 push에 필요) |
 | LSP | 코드탐색 토큰 절감 | `npx tweakcc --apply` + `npm i -g @vtsls/language-server` | **높음** — Claude Code 바이너리 패치 |
-| codesight | 구조맵 토큰 절감 | `npx codesight --init` | 낮음 |
-| superpowers | 스킬 프레임워크 | `/plugin install superpowers@...` | 낮음 |
 | headroom | API 페이로드 압축 | `pip install --user headroom` | 중간 (전역 pip) |
 
 > 필요한 도구를 지정하면 개별 승인 후 설치한다. `tweakcc`는 실행 환경을 패치하므로 특히 신중히.
@@ -200,7 +212,7 @@ for t in .claude/hooks/tests/*.test.sh; do bash "$t"; done   # 7 스위트 전�
 
 ## 10. 검증 / 한계
 
-- 훅 7개 `bash -n` clean · 테스트 7 스위트 전부 통과 · `/harness-audit` 27 PASS.
+- 훅 8개 `bash -n` clean · 테스트 10 스위트 전부 통과 · `/harness-audit` 38 PASS. (2026-07-08 실검증)
 - **한계(문서화된 천장)**: Bash 파이프/heredoc 간접 쓰기의 시크릿 스캔은 best-effort; 코드 `TODO/FIXME` 스캔은 범위 밖; `LICENSE` 미추가(보류). 추적: `.planning/REQUIREMENTS.md`.
 - 훅/스킬 규약은 Claude Code 버전에 따라 바뀔 수 있음 — 도입 전 `/hooks`·`/plugins`로 현행 확인, `code.claude.com/docs` 대조.
 

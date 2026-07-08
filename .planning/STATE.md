@@ -67,13 +67,11 @@ Recent decisions affecting current work:
 
 ### Pending Todos
 
-None yet.
+- LICENSE 파일 추가 (HYG-02, 사용자 유예) — 라이선스 종류 결정 후 추가.
 
 ### Blockers/Concerns
 
-- Not a git repo (C3): `session-handoff.sh`, `commit.md`, drift stamps assume git — `git init` needed for full state/handoff behavior (surfaces in Phase 3 / Phase 5).
-- Bash-write matcher (GUARD-03) is best-effort by design — Phase 1 planning must scope which shell patterns are covered vs. declared out-of-scope (documented ceiling, not a bug).
-- ~~`/harness-audit` policy→gate mapping (AUDIT-03) has no reference implementation~~ — RESOLVED in Phase 4 (safety-critical scope; harness-audit.sh).
+None — v1 blockers all resolved (C3 git-init done 2026-07-08; GUARD-03 ceiling documented in README 한계; AUDIT-03 implemented in Phase 4).
 
 ## Deferred Items
 
