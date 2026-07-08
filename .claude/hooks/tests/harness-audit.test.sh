@@ -11,7 +11,15 @@ ok() { printf 'PASS: %s\n' "$1"; pass=$((pass + 1)); }
 no() { printf 'FAIL: %s\n' "$1"; fail=$((fail + 1)); }
 
 # Fresh temp copy of the harness (+ empty specs/); echoes the root path.
-mkroot() { local r; r=$(mktemp -d); cp -r "$REPO/.claude" "$r/.claude"; mkdir -p "$r/specs"; printf '%s' "$r"; }
+# Includes the cross-agent entry files + .githooks so AUDIT-04 passes on the copy
+# (no .git / no vendor in the copy -> hooksPath & vendor checks self-skip).
+mkroot() {
+  local r; r=$(mktemp -d)
+  cp -r "$REPO/.claude" "$r/.claude"; mkdir -p "$r/specs"
+  cp "$REPO/AGENTS.md" "$REPO/.cursorrules" "$REPO/codex.md" "$r/" 2>/dev/null
+  cp -r "$REPO/.githooks" "$r/.githooks" 2>/dev/null
+  printf '%s' "$r"
+}
 
 # (1) positive baseline: live harness -> exit 0.
 CLAUDE_PROJECT_DIR="$REPO" bash "$AUDIT" >/dev/null 2>&1
@@ -74,6 +82,30 @@ rm -rf "$r"
 r=$(mkroot)   # mkroot makes an empty specs/ with no HANDOFF.md
 CLAUDE_PROJECT_DIR="$r" bash "$AUDIT" >/dev/null 2>&1
 [ $? -eq 0 ] && ok "absent HANDOFF.md -> exit 0 (D-11)" || no "absent HANDOFF exit 0"
+rm -rf "$r"
+
+# (11) AUDIT-04: entry file loses its AGENTS.md pointer -> non-zero.
+r=$(mkroot); echo "no pointer here" > "$r/.cursorrules"
+CLAUDE_PROJECT_DIR="$r" bash "$AUDIT" >/dev/null 2>&1
+[ $? -ne 0 ] && ok "cursorrules w/o AGENTS.md pointer -> non-zero (AUDIT-04)" || no "entry pointer non-zero"
+rm -rf "$r"
+
+# (12) AUDIT-05: empty rule file -> non-zero.
+r=$(mkroot); : > "$r/.claude/rules/empty-rule.md"
+CLAUDE_PROJECT_DIR="$r" bash "$AUDIT" >/dev/null 2>&1
+[ $? -ne 0 ] && ok "empty rule file -> non-zero (AUDIT-05)" || no "empty rule non-zero"
+rm -rf "$r"
+
+# (13) AUDIT-05: byte-identical ' copy' duplicate -> non-zero.
+r=$(mkroot); cp "$r/.claude/rules/safety.md" "$r/.claude/rules/safety copy.md"
+CLAUDE_PROJECT_DIR="$r" bash "$AUDIT" >/dev/null 2>&1
+[ $? -ne 0 ] && ok "' copy' duplicate rule -> non-zero (AUDIT-05)" || no "copy dup non-zero"
+rm -rf "$r"
+
+# (14) AUDIT-06: skill without frontmatter -> non-zero.
+r=$(mkroot); mkdir -p "$r/.claude/skills/broken-skill"; echo "# no frontmatter" > "$r/.claude/skills/broken-skill/SKILL.md"
+CLAUDE_PROJECT_DIR="$r" bash "$AUDIT" >/dev/null 2>&1
+[ $? -ne 0 ] && ok "skill w/o frontmatter -> non-zero (AUDIT-06)" || no "skill frontmatter non-zero"
 rm -rf "$r"
 
 # (10) isolation: live files unchanged after all mutations (hash compare — commit-independent).

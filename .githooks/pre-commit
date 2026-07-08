@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+# Agent-agnostic commit gate (README Dev-1). Runs for ANYTHING that commits via
+# git — Claude Code, Cursor, Codex, Aider, or a human — so the core rules hold
+# even where Claude Code hooks don't exist. Deliberately jq-free: bash+git only,
+# offline-safe. Enable with `git config core.hooksPath .githooks` (install.sh).
+# Patterns are single-sourced from lib-protected.sh — do not redefine here.
+
+ROOT="$(git rev-parse --show-toplevel 2>/dev/null)" || exit 0
+if ! source "$ROOT/.claude/hooks/lib-protected.sh" 2>/dev/null; then
+  echo "[pre-commit] lib-protected.sh 없음 → fail-closed 차단" >&2
+  exit 1
+fi
+
+fail=0
+
+# (1) Protected paths staged. Modify/delete/rename always blocks; a NEW file
+# under db/migration/ is allowed — adding a new migration version is the
+# sanctioned change path, and running `git commit` is the human approval.
+while IFS=$'\t' read -r status p1 p2; do
+  [ -n "$p1" ] || continue
+  for path in "$p1" "$p2"; do
+    [ -n "$path" ] || continue
+    if printf '%s' "$path" | grep -Eq "$PROTECTED_RE"; then
+      if [ "${status:0:1}" = "A" ] && printf '%s' "$path" | grep -q 'db/migration/'; then
+        continue
+      fi
+      echo "[pre-commit] 보호 경로 커밋 차단 ($status): $path" >&2
+      fail=1
+    fi
+  done
+done < <(git diff --cached --name-status)
+
+# (2) Hardcoded secrets in staged ADDED lines (binary diffs produce none).
+if git diff --cached -U0 | grep -E '^\+' | grep -Eq "$SECRETS_RE"; then
+  echo "[pre-commit] 스테이징된 변경에 하드코딩 시크릿 감지 — 커밋 차단" >&2
+  fail=1
+fi
+
+if [ "$fail" -ne 0 ]; then
+  echo "[pre-commit] 차단됨. --no-verify 우회는 AGENTS.md §0에서 금지." >&2
+  exit 1
+fi
+exit 0

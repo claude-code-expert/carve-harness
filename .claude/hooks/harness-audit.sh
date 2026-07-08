@@ -121,5 +121,87 @@ else
   ok "handoff free of [내용없음] sentinel (AUDIT-03)"
 fi
 
+# ── AUDIT-04 ────────────────────────────────────────────────────────────────
+# Cross-agent + offline readiness (README Dev-1/3/6). Entry files for non-Claude
+# agents must reach AGENTS.md; the git-level gate must exist; vendored binaries,
+# when shipped, must match their recorded checksums (tamper/corruption detection).
+[ -f "$AUDIT_ROOT/AGENTS.md" ] \
+  && ok "AGENTS.md present (AUDIT-04)" \
+  || no "AGENTS.md missing (AUDIT-04)"
+
+for ef in .cursorrules codex.md; do
+  if [ -f "$AUDIT_ROOT/$ef" ] && grep -q 'AGENTS.md' "$AUDIT_ROOT/$ef" 2>/dev/null; then
+    ok "$ef points at AGENTS.md (AUDIT-04)"
+  else
+    no "$ef missing or lacks AGENTS.md pointer (AUDIT-04)"
+  fi
+done
+
+PC="$AUDIT_ROOT/.githooks/pre-commit"
+if [ -f "$PC" ] && [ -x "$PC" ] && grep -q 'PROTECTED_RE' "$PC" 2>/dev/null; then
+  ok "agent-agnostic pre-commit gate present +x (AUDIT-04)"
+else
+  no "pre-commit gate missing/not +x/no PROTECTED_RE (AUDIT-04)"
+fi
+
+# hooksPath is per-clone install state — only checkable inside a git repo.
+if [ -d "$AUDIT_ROOT/.git" ] && command -v git >/dev/null 2>&1; then
+  hp=$(git -C "$AUDIT_ROOT" config core.hooksPath 2>/dev/null)
+  [ "$hp" = ".githooks" ] \
+    && ok "core.hooksPath=.githooks (AUDIT-04)" \
+    || no "core.hooksPath unset — run install.sh (AUDIT-04)"
+fi
+
+# Vendored offline binaries: verify only when shipped (absence is a valid,
+# online-only deployment; install.sh hard-fails offline without them).
+if [ -f "$AUDIT_ROOT/vendor/bin/SHA256SUMS" ]; then
+  if ( cd "$AUDIT_ROOT/vendor/bin" && sha256sum -c SHA256SUMS ) >/dev/null 2>&1; then
+    ok "vendor binaries match SHA256SUMS (AUDIT-04)"
+  else
+    no "vendor binary checksum MISMATCH (AUDIT-04)"
+  fi
+fi
+
+# ── AUDIT-05 ────────────────────────────────────────────────────────────────
+# Rules hygiene (README Dev-5): empty rule files and duplicate copies load into
+# every session as dead/conflicting context.
+rules_bad=0
+while IFS= read -r f; do
+  if [ ! -s "$f" ]; then
+    no "empty rule file: $(basename "$f") (AUDIT-05)"; rules_bad=1
+  fi
+  case "$(basename "$f")" in
+    *" copy"*) no "' copy' duplicate filename: $(basename "$f") (AUDIT-05)"; rules_bad=1 ;;
+  esac
+done < <(find "$AUDIT_ROOT/.claude/rules" -name '*.md' -type f 2>/dev/null)
+[ "$rules_bad" -eq 0 ] && ok "rules hygiene: no empty / ' copy' files (AUDIT-05)"
+
+dups=$(find "$AUDIT_ROOT/.claude/rules" -name '*.md' -type f -exec md5sum {} + 2>/dev/null \
+         | sort | awk '{print $1}' | uniq -d)
+[ -z "$dups" ] \
+  && ok "rules hygiene: no byte-identical duplicates (AUDIT-05)" \
+  || no "byte-identical duplicate rule files (AUDIT-05)"
+
+# ── AUDIT-06 ────────────────────────────────────────────────────────────────
+# Skills wiring (README Dev-7): every skill needs discoverable frontmatter; a
+# repo skill shadowing a global (~/.claude/skills) name makes triggers ambiguous.
+sk_bad=0
+for sk in "$AUDIT_ROOT/.claude/skills"/*/; do
+  [ -e "$sk" ] || continue
+  if [ ! -f "$sk/SKILL.md" ] || ! grep -q '^name:' "$sk/SKILL.md" 2>/dev/null \
+     || ! grep -q '^description:' "$sk/SKILL.md" 2>/dev/null; then
+    no "skill frontmatter missing: $(basename "$sk") (AUDIT-06)"; sk_bad=1
+  fi
+done
+[ "$sk_bad" -eq 0 ] && ok "skills frontmatter valid (AUDIT-06)"
+
+if [ -d "$HOME/.claude/skills" ]; then
+  coll=$(comm -12 <(ls "$AUDIT_ROOT/.claude/skills" 2>/dev/null | sort) \
+                  <(ls "$HOME/.claude/skills" 2>/dev/null | sort))
+  [ -z "$coll" ] \
+    && ok "no repo<->global skill name collision (AUDIT-06)" \
+    || no "skill name collision with ~/.claude/skills: $(printf '%s' "$coll" | tr '\n' ' ') (AUDIT-06)"
+fi
+
 printf -- '---\n%s passed, %s failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]

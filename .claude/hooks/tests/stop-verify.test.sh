@@ -87,5 +87,23 @@ else
   echo "SKIP: GATE-03 fixture (git absent)"
 fi
 
+# (9) bash gate (Dev-2): a broken .sh in the change-set fails the gate (exit 2).
+# Skips when no shellcheck is reachable (best-effort by design) — install.sh
+# places the vendored binary at .claude/bin/shellcheck.
+SCBIN="$(cd "$(dirname "$0")/../.." && pwd)/bin/shellcheck"
+command -v "$SCBIN" >/dev/null 2>&1 || SCBIN=$(command -v shellcheck)
+if [ -n "$SCBIN" ] && command -v git >/dev/null 2>&1; then
+  bd=$(mktemp -d)
+  ( cd "$bd" && git init -q && git -c user.email=t@t -c user.name=t commit -qm init --allow-empty )
+  printf 'if [ ] then\n' > "$bd/bad.sh"   # parse error => -S error fires
+  ( cd "$bd" && printf '%s' '{}' | CLAUDE_PROJECT_DIR="$bd" bash "$ABS_HOOK" >/dev/null 2>&1 )
+  code=$?
+  [ "$code" -eq 2 ] && { echo "PASS: bash gate broken .sh -> exit 2 (Dev-2)"; pass=$((pass + 1)); } \
+                    || { echo "FAIL: bash gate (exit $code)"; fail=$((fail + 1)); }
+  rm -rf "$bd"
+else
+  echo "SKIP: bash gate fixture (shellcheck absent)"
+fi
+
 printf -- '---\n%s passed, %s failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]

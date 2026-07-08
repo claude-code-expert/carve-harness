@@ -27,11 +27,13 @@ fail=0
 # verify all (never skip when change-detection is impossible).
 have_git=0
 command -v git >/dev/null 2>&1 && git rev-parse --is-inside-work-tree >/dev/null 2>&1 && have_git=1
-java_changed=1; node_changed=1
+java_changed=1; node_changed=1; py_changed=1; sh_changed=1
 if [ "$have_git" -eq 1 ]; then
   CHANGED=$(git status --porcelain 2>/dev/null | sed 's/^...//')
   printf '%s\n' "$CHANGED" | grep -Eq '\.(java|kt|gradle)'    && java_changed=1 || java_changed=0
   printf '%s\n' "$CHANGED" | grep -Eq '\.(ts|tsx)$|package\.json' && node_changed=1 || node_changed=0
+  printf '%s\n' "$CHANGED" | grep -Eq '\.py$|pyproject\.toml'  && py_changed=1 || py_changed=0
+  printf '%s\n' "$CHANGED" | grep -Eq '\.sh$|^\.githooks/'     && sh_changed=1 || sh_changed=0
 fi
 
 # --- Java/Spring: 컴파일 + 테스트 (변경 시에만) ---
@@ -56,6 +58,46 @@ run_node() {  # $1 = 프로젝트 디렉토리
 if [ "$node_changed" -eq 1 ]; then
   if   [ -f package.json ];          then run_node . || fail=1
   elif [ -f frontend/package.json ]; then run_node frontend || fail=1; fi
+fi
+
+# --- Python: 린트 + 테스트 (변경 시에만, 도구 있을 때만 — best-effort).
+# pytest exit 5 = "no tests collected" — 테스트 없는 프로젝트의 false fail 방지.
+if [ "$py_changed" -eq 1 ] && [ -f pyproject.toml ]; then
+  if command -v ruff >/dev/null 2>&1; then
+    ruff check . 2>&1 | tail -20 || fail=1
+  fi
+  if command -v pytest >/dev/null 2>&1; then
+    py_out=$(pytest -q 2>&1); py_rc=$?
+    printf '%s\n' "$py_out" | tail -20
+    [ "$py_rc" -ne 0 ] && [ "$py_rc" -ne 5 ] && fail=1
+  fi
+fi
+
+# --- Bash: 훅/스크립트 정적분석 + 훅 자가 테스트 (변경 시에만).
+# 분석기는 .claude/bin(vendor 설치본, 오프라인) 우선 → PATH 순. 없으면 스킵(best-effort).
+# -S error만 게이트 — 경고는 비차단.
+if [ "$sh_changed" -eq 1 ]; then
+  if [ "$have_git" -eq 1 ]; then
+    sh_files=$(printf '%s\n' "$CHANGED" | grep -E '\.sh$|^\.githooks/' | while read -r f; do [ -f "$f" ] && echo "$f"; done)
+    hooks_changed=0
+    printf '%s\n' "$CHANGED" | grep -Eq '^\.claude/hooks/|^\.githooks/' && hooks_changed=1
+  else
+    # git 없음 → 전체 검사 (change-detection 불가 시 skip 금지 — GATE-03과 동일 원칙)
+    sh_files=$(ls .claude/hooks/*.sh .githooks/* 2>/dev/null)
+    hooks_changed=1
+  fi
+  SC="$(dirname "${BASH_SOURCE[0]}")/../bin/shellcheck"
+  command -v "$SC" >/dev/null 2>&1 || SC=$(command -v shellcheck)
+  if [ -n "$SC" ] && [ -n "$sh_files" ]; then
+    # shellcheck disable=SC2086
+    "$SC" -S error $sh_files 2>&1 | tail -20 || fail=1
+  fi
+  if [ "$hooks_changed" -eq 1 ]; then
+    for t in "$(dirname "${BASH_SOURCE[0]}")"/tests/*.test.sh; do
+      [ -e "$t" ] || continue
+      bash "$t" >/dev/null 2>&1 || { echo "[verify] 훅 테스트 실패: $(basename "$t")" >&2; fail=1; }
+    done
+  fi
 fi
 
 # GATE-03: verification is now change-scoped — only stacks whose files changed run above.
