@@ -1,9 +1,4 @@
-# Project Context
+# Guardrails
 
-This is a javascript project using raw-http.
-
-
-See .codesight/skills.md for additional skills context.
-
-Read .codesight/wiki/index.md for orientation (WHERE things live). Then read actual source files before implementing. Wiki articles are navigation aids, not implementation guides.
-Read .codesight/CODESIGHT.md for the complete AI context map including all routes, schema, components, libraries, config, middleware, and dependency graph.
+Read AGENTS.md at the repo root — it is the canonical cross-agent rulebook for this project.
+Stack-specific rules live in `.claude/rules/` (see AGENTS.md §9 for the mapping).
