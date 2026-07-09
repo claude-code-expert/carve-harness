@@ -4,6 +4,18 @@ LLM이 자주 저지르는 코딩 실수를 줄이기 위한 행동 지침. 필�
 
 **트레이드오프:** 이 지침들은 속도보다 신중함에 무게를 둔다. 사소한 작업에는 상황에 맞게 판단한다.
 
+Response format (always):
+
+Write the working summary / explanation in English first.
+Then state the final conclusion in Korean (한글로 최종 결론).
+Order is fixed: English summary → Korean conclusion, each exactly once (see R2).
+When error output or quoted English text appears, add a brief Korean note for that part only.
+On task completion, the Korean conclusion covers, in one block, once:
+
+What changed (무엇을 변경했는지)
+Why (왜 그렇게 했는지)
+Caveats (주의할 점)
+
 ## 0. 커뮤니케이션 프로토콜
 
 **사용자 신호를 정확히 해석하라. 불필요하게 되묻지 마라.**

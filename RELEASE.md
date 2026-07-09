@@ -29,7 +29,7 @@
    main 머지는 사용자(리뷰어)가 한다 — main 직접 푸시 금지.
 7. **머지 후 확인** — 대상 프로젝트에서 수신 테스트:
    ```bash
-   curl -fsSL https://raw.githubusercontent.com/wevesolutions/harness/main/install.sh | bash -s -- update
+   curl -fsSL https://raw.githubusercontent.com/claude-code-expert/carve-harness/main/install.sh | bash -s -- update
    ```
 
 ## 잘못된 릴리스 대응
