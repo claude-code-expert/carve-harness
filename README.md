@@ -44,12 +44,32 @@ git init · jq PATH · LICENSE 생성(MIT/Apache-2.0) · 보호 경로 추가 ·
 
 ## 업데이트 / 롤백
 
+모든 명령은 **대상 프로젝트 루트에서** 실행.
+
 ```bash
+# 현재 설치 버전 확인
+cat .claude/harness-version
+
+# 업데이트 — 온라인 (권장: 새 설치기 기준이라 신규 파일까지 수신)
 curl -fsSL https://raw.githubusercontent.com/claude-code-expert/carve-harness/main/install.sh | bash -s -- update
-bash install.sh rollback   # 직전 버전 복원 (네트워크 불필요)
+
+# 업데이트 — 로컬 설치본의 설치기로
+bash install.sh update
+
+# 업데이트 — 오프라인 (새 버전 복사본 지정)
+HARNESS_SRC_DIR=/path/to/new-harness bash install.sh update
+
+# 특정 브랜치/태그 고정
+curl -fsSL https://raw.githubusercontent.com/claude-code-expert/carve-harness/main/install.sh | HARNESS_REF=v0.0.4 bash -s -- update
+
+# 같은 버전 강제 재패치 (파일 복구 용도)
+HARNESS_FORCE=1 bash install.sh update
+
+# 롤백 — 직전 버전 복원 (네트워크 불필요, 연속 실행 시 한 단계씩 과거로)
+bash install.sh rollback
 ```
 
-- update: 원격 `VERSION` 비교(같으면 no-op) → manifest 범위만 패치, 변경 파일은 `logs/harness-backup/v<이전>/` 자동 백업, 사용자 파일 불가침.
+- update: 원격 `VERSION` vs 로컬 `.claude/harness-version` 비교(같으면 no-op) → manifest 범위만 패치, 변경 파일은 `logs/harness-backup/v<이전>/` 자동 백업, 사용자 파일(설치 때 SKIP분) 불가침.
 - rollback: 최신 백업 복원 + 버전 스탬프 복귀. 백업은 소비 — 연속 실행 시 그 이전 버전으로.
 - 배포 절차는 `RELEASE.md`.
 
