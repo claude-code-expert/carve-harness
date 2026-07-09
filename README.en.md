@@ -25,7 +25,10 @@ Drop it into your project root and it works immediately.
 
 ```bash
 cd /path/to/your-project
-curl -fsSL https://raw.githubusercontent.com/claude-code-expert/carve-harness/main/install.sh | bash
+# Private repo — token required (see "Token for the private source repo"). Offline: HARNESS_SRC_DIR.
+curl -fsSL -H "Authorization: token $GITHUB_TOKEN" \
+  https://raw.githubusercontent.com/wevesolutions/harness/main/install.sh \
+  | GITHUB_TOKEN=$GITHUB_TOKEN bash
 ```
 
 - Existing files are never touched (reported as SKIP) — installed paths are recorded in `.claude/harness-manifest.txt`.
@@ -85,8 +88,9 @@ Run every command **from the target project root**.
 # Check the installed version
 cat .claude/harness-version
 
-# Update — online (recommended: runs the new installer, so new files are received too)
-curl -fsSL https://raw.githubusercontent.com/claude-code-expert/carve-harness/main/install.sh | bash -s -- update
+# Update — online (recommended) · private repo, token required
+curl -fsSL -H "Authorization: token $GITHUB_TOKEN" \
+  https://raw.githubusercontent.com/wevesolutions/harness/main/install.sh | GITHUB_TOKEN=$GITHUB_TOKEN bash -s -- update
 
 # Update — using the locally installed installer
 bash install.sh update
@@ -94,8 +98,9 @@ bash install.sh update
 # Update — offline (point at a copy of the new version)
 HARNESS_SRC_DIR=/path/to/new-harness bash install.sh update
 
-# Pin a branch/tag
-curl -fsSL https://raw.githubusercontent.com/claude-code-expert/carve-harness/main/install.sh | HARNESS_REF=v0.0.4 bash -s -- update
+# Pin a branch/tag (token required)
+curl -fsSL -H "Authorization: token $GITHUB_TOKEN" \
+  https://raw.githubusercontent.com/wevesolutions/harness/main/install.sh | HARNESS_REF=v0.0.4 GITHUB_TOKEN=$GITHUB_TOKEN bash -s -- update
 
 # Force re-patch of the same version (file recovery)
 HARNESS_FORCE=1 bash install.sh update

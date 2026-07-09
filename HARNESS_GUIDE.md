@@ -266,7 +266,7 @@ bash .claude/hooks/logs-report.sh 7                         # 최근 7일 판정
 
 | 작업 | 명령 |
 |------|------|
-| 설치 | `curl -fsSL https://raw.githubusercontent.com/claude-code-expert/carve-harness/main/install.sh \| bash` |
+| 설치 | 사설 레포 — 토큰 필요: `curl -fsSL -H "Authorization: token $GITHUB_TOKEN" .../wevesolutions/harness/main/install.sh \| GITHUB_TOKEN=$GITHUB_TOKEN bash` (상세 README) |
 | 오프라인 설치 | `HARNESS_SRC_DIR=/path/to/copy bash /path/to/copy/install.sh` |
 | 초기 설정 | `bash install.sh setup` — git init·PATH·LICENSE·보호경로·도메인규칙·스택감지·GSD (전 항목 엔터 skip) |
 | 업데이트 | `curl ... \| bash -s -- update` — VERSION 비교, manifest 범위만, 자동 백업 |

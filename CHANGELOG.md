@@ -15,7 +15,7 @@
 ## [0.0.6] - 2026-07-09
 
 ### Fixed (reverted in 0.0.7 — 잘못된 수정)
-- ~~`install.sh` 기본 소스 레포를 사설 `wevesolutions/harness`에서 공개 `claude-code-expert/carve-harness`로 교체.~~ 지시 없이 소스 레포를 바꾼 잘못된 수정. 사설 레포는 정상이고 토큰이 정답 — 0.0.7에서 원복.
+- ~~`install.sh` 기본 소스 레포를 사설 `wevesolutions/harness`에서 다른 공개 레포로 교체.~~ 지시 없이 소스 레포를 바꾼 잘못된 수정. 사설 레포는 정상이고 토큰이 정답 — 0.0.7에서 원복.
 
 ## [0.0.8] - 2026-07-09
 

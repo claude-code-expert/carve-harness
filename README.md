@@ -25,7 +25,10 @@
 
 ```bash
 cd /path/to/your-project
-curl -fsSL https://raw.githubusercontent.com/claude-code-expert/carve-harness/main/install.sh | bash
+# 사설 레포 — 토큰 필요(아래 "사설 소스 레포 토큰"). 오프라인은 HARNESS_SRC_DIR.
+curl -fsSL -H "Authorization: token $GITHUB_TOKEN" \
+  https://raw.githubusercontent.com/wevesolutions/harness/main/install.sh \
+  | GITHUB_TOKEN=$GITHUB_TOKEN bash
 ```
 
 - 기존 파일은 건드리지 않는다(SKIP 보고) — 설치 목록은 `.claude/harness-manifest.txt`에 기록.
@@ -85,17 +88,19 @@ git init · jq PATH · LICENSE 생성(MIT/Apache-2.0) · 보호 경로 추가 ·
 # 현재 설치 버전 확인
 cat .claude/harness-version
 
-# 업데이트 — 온라인 (권장: 새 설치기 기준이라 신규 파일까지 수신)
-curl -fsSL https://raw.githubusercontent.com/claude-code-expert/carve-harness/main/install.sh | bash -s -- update
+# 업데이트 — 온라인 (권장: 새 설치기 기준이라 신규 파일까지 수신) · 사설 레포라 토큰 필요
+curl -fsSL -H "Authorization: token $GITHUB_TOKEN" \
+  https://raw.githubusercontent.com/wevesolutions/harness/main/install.sh | GITHUB_TOKEN=$GITHUB_TOKEN bash -s -- update
 
-# 업데이트 — 로컬 설치본의 설치기로
+# 업데이트 — 로컬 설치본의 설치기로 (토큰 불필요)
 bash install.sh update
 
 # 업데이트 — 오프라인 (새 버전 복사본 지정)
 HARNESS_SRC_DIR=/path/to/new-harness bash install.sh update
 
-# 특정 브랜치/태그 고정
-curl -fsSL https://raw.githubusercontent.com/claude-code-expert/carve-harness/main/install.sh | HARNESS_REF=v0.0.4 bash -s -- update
+# 특정 브랜치/태그 고정 (토큰 필요)
+curl -fsSL -H "Authorization: token $GITHUB_TOKEN" \
+  https://raw.githubusercontent.com/wevesolutions/harness/main/install.sh | HARNESS_REF=v0.0.4 GITHUB_TOKEN=$GITHUB_TOKEN bash -s -- update
 
 # 같은 버전 강제 재패치 (파일 복구 용도)
 HARNESS_FORCE=1 bash install.sh update
