@@ -2,7 +2,7 @@
 
 > 코딩 에이전트를 "잘 설득하는" 단계를 지나, **어기면 물리적으로 실패하는 시스템**으로 만드는 방법.
 > 이 문서 하나로 개념 → 구조 → 단계별 구축 → 실증 → 운영 워크플로우까지 완주한다.
-> 실습 환경: 이 레포(v0.0.3). 모든 실행 예시는 실제 실행 결과다.
+> 실습 환경: 이 레포(v0.0.8). 모든 실행 예시는 실제 실행 결과다.
 
 **대상 독자**: Claude Code(또는 임의 코딩 에이전트)로 실무 개발을 하며, 에이전트의 사고(규칙 무시·미검증 완료 선언·컨텍스트 소실)를 구조적으로 막고 싶은 사람.
 
@@ -63,7 +63,7 @@ your-project/
     │   ├── session-handoff.sh   # [상태] 저장/복원
     │   ├── log-event.sh         # [관측] JSONL append
     │   ├── lib-protected.sh     # 패턴 단일 소스 (가드·pre-commit 공유)
-    │   └── harness-audit.sh     # [자가감사] 38체크
+    │   └── harness-audit.sh     # [자가감사] 40체크
     ├── rules/             # 스택별 규칙 (glob 자동 로드)
     ├── commands/          # /plan /verify /review 등 슬래시 커맨드
     ├── agents/            # 검증 전담 서브에이전트 (생성/검증 분리)
@@ -193,9 +193,10 @@ AUDIT-03  안전규칙(md) → 게이트(sh) 매핑 · 스텐티널 핸드오프
 AUDIT-04  크로스 에이전트: AGENTS.md 포인터 · pre-commit · vendor 체크섬
 AUDIT-05  규칙 위생: 빈 파일 · 중복
 AUDIT-06  스킬: 프런트매터 · 이름 충돌
+AUDIT-07  게이트웨이 룰 ↔ Stop 게이트(GATE-04) 매핑 (게이트웨이 하네스만)
 ```
 
-각 게이트에는 **테스트 스위트**도 붙인다 — 이 레포는 10 스위트 106건 (차단은 exit 2, 통과는 exit 0을 어서션).
+각 게이트에는 **테스트 스위트**도 붙인다 — 이 레포는 11 스위트 125건 (차단은 exit 2, 통과는 exit 0을 어서션).
 
 ### 6단계. 패키징 — 드롭인·업데이트·롤백
 
@@ -251,8 +252,8 @@ $ tail -3 logs/$(date -u +%F).jsonl
 ### 4.4 직접 해보기
 
 ```bash
-bash .claude/hooks/harness-audit.sh                        # 38 PASS / exit 0
-for t in .claude/hooks/tests/*.test.sh; do bash "$t"; done  # 10 스위트 106건 green
+bash .claude/hooks/harness-audit.sh                        # 40 PASS / exit 0
+for t in .claude/hooks/tests/*.test.sh; do bash "$t"; done  # 11 스위트 125건 green
 bash .claude/hooks/logs-report.sh 7                         # 최근 7일 판정 요약
 ```
 
@@ -284,7 +285,7 @@ jq·shellcheck는 `vendor/bin`에 정적 바이너리 내장(SHA256 검증) — 
 | 에이전트 | 13종 | 검증 전담: evaluator·code/security/silent-failure/state-reviewer — "use the security-reviewer agent"로 호출, 생성/검증 분리 |
 | 스킬 | 22종 | `handoff`(수동 핸드오프) `changelog`(결정 기록→DECISIONS.md) `version-changelog`(릴리스 필수) + mattpocock 파생 19종(`/implement` `/teach` `/domain-modeling` 등) |
 | 규칙 | 17파일 | `common/` 상시 + 스택별 glob 자동 로드 (java-spring·react-next·python·ts·orm 등 8 스택 표준) |
-| 테스트 | 10 스위트 106건 | 게이트 회귀 — 훅 수정 후 반드시 실행 |
+| 테스트 | 11 스위트 125건 | 게이트 회귀 — 훅 수정 후 반드시 실행 |
 
 ### 5.3 함께 설치된 외부 생태계 (선택)
 
@@ -336,7 +337,7 @@ extra 파일은 manifest 밖 — **하네스를 업데이트해도 보존**된�
 
 - 규칙 정본은 `AGENTS.md` 하나 — Cursor는 `.cursorrules`, Codex는 `codex.md`가 자동 포인팅.
 - 비-Claude 에이전트·사람은 pre-commit이 커밋 시점에 잡는다. `--no-verify` 금지가 팀 규약.
-- 신규 합류자 온보딩 = `bash .claude/hooks/harness-audit.sh` 38 PASS 확인 1줄. 공지문 템플릿: `GUIDE.md` §8.3.
+- 신규 합류자 온보딩 = `bash .claude/hooks/harness-audit.sh` 40 PASS 확인 1줄. 공지문 템플릿: `GUIDE.md` §8.3.
 
 ### 6.4 릴리스 워크플로우
 
@@ -392,4 +393,4 @@ extra 파일은 manifest 밖 — **하네스를 업데이트해도 보존**된�
 
 ---
 
-*근거: 이 레포 실코드(`.claude/hooks/*`)·실행 결과(4장 캡처, 2026-07-09)·`.planning/` 페이즈 기록. 버전 기준 v0.0.3.*
+*근거: 이 레포 실코드(`.claude/hooks/*`)·실행 결과(4장 캡처, 2026-07-09)·`.planning/` 페이즈 기록. 버전 기준 v0.0.8.*
