@@ -1,6 +1,6 @@
 # Claude Harness (language-agnostic drop-in)
 
-[한국어](README.md) · Current version **v0.0.3** · Changes: [CHANGELOG.md](CHANGELOG.md)
+[한국어](README.md) · Current version **v0.0.4** · Changes: [CHANGELOG.md](CHANGELOG.md) · Course: [HARNESS_GUIDE.md](HARNESS_GUIDE.md) (Korean)
 
 A guardrail template that stops coding-agent rule violations with **hook exit 2 blocking** — not persuasion.
 Drop it into your project root and it works immediately.
@@ -108,6 +108,7 @@ For customization (protected paths, formatters, verify commands, new stacks) and
 
 | Version | Date | Summary |
 |---------|------|---------|
+| v0.0.4 | 2026-07-09 | fix: ship VERSION in the install list — installed-copy self-test failures and chained-install version loss · harness course (HARNESS_GUIDE.md) |
 | v0.0.3 | 2026-07-08 | Interactive `setup` · update-safe pattern extension files · LICENSE generation |
 | v0.0.2 | 2026-07-08 | `update`/`rollback` CLI · VERSION↔CHANGELOG pre-commit gate · release docs |
 | v0.0.1 | 2026-07-08 | First complete build — fail-closed guard, Stop gate, JSONL observability, handoff, self-audit, offline installer |

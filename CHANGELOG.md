@@ -4,6 +4,17 @@
 
 > **규칙**: `VERSION` 파일이 바뀌는 커밋에는 반드시 해당 버전 항목(`[X.Y.Z]`)이 이 파일에 함께 스테이징되어야 한다 — `.githooks/pre-commit`이 기계적으로 차단, 작성은 `/version-changelog` 스킬. 배포 절차는 `RELEASE.md`.
 
+## [0.0.4] - 2026-07-09
+
+### Fixed
+- `VERSION`을 `HARNESS_PATHS`에 추가 — 설치본에 루트 VERSION이 빠져서 생기던 두 버그 수정:
+  1. 설치본 셀프테스트 실패: 함께 실리는 `remote-install.test.sh`가 자기 루트를 설치 소스로 재사용하는데 update 모드가 `$SRC/VERSION`을 요구 → 모든 설치본에서 update/rollback 4케이스 연쇄 실패.
+  2. 체인 설치 버전 소실: 설치본 A를 `HARNESS_SRC_DIR` 소스로 프로젝트 B에 설치하면 B에 버전 스탬프가 안 생겨 B가 영원히 update 불가("unknown").
+  대상 프로젝트에 자체 `VERSION`이 이미 있으면 기존 SKIP 시맨틱이 보호(불가침).
+
+### Added
+- `HARNESS_GUIDE.md` — 하네스 엔지니어링 강좌 (개념·구조·단계별 구축·실증·워크플로우).
+
 ## [0.0.3] - 2026-07-08
 
 ### Added
