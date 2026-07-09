@@ -133,7 +133,7 @@ harness/
 **드롭인 설치** (다른 프로젝트로 이식) — `install.sh`가 체크섬 검증→jq/shellcheck 배치→권한→pre-commit 게이트→audit까지 자동 (상세: README):
 ```bash
 cd /path/to/your-project
-curl -fsSL https://raw.githubusercontent.com/wevesolutions/harness/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/claude-code-expert/carve-harness/main/install.sh | bash
 # 오프라인: HARNESS_SRC_DIR=/path/to/harness-copy bash /path/to/harness-copy/install.sh
 ```
 
