@@ -32,8 +32,38 @@ CBIN="$HERE/.claude/bin"
 MANIFEST="$HERE/.claude/harness-manifest.txt"
 VSTAMP="$HERE/.claude/harness-version"
 warn=0
+MERGE_SETTINGS_SRC=""   # set in copy loop when the target already has settings.json
 say()  { printf '%s\n' "$*"; }
 fail() { printf 'FAIL: %s\n' "$*" >&2; exit 1; }
+
+# Merge harness hook registrations into an EXISTING user settings.json instead of
+# skipping it — else the hooks (SessionStart banner, PreToolUse guard, Stop verify,
+# handoff) are never registered and the whole harness is silently inert (root cause
+# of "banner doesn't show"). Idempotent: hook groups dedup by tojson. User keys
+# (permissions.allow, model, own hooks) are preserved; $schema + deny are unioned.
+merge_settings_hooks() {  # $1=harness settings (source)  $2=user settings (in place)
+  local hs="$1" us="$2" tmp
+  command -v jq >/dev/null 2>&1 || { say "ACTION: jq 없어 settings.json 병합 실패 — 훅 수동 등록 필요"; warn=1; return; }
+  jq empty "$us" >/dev/null 2>&1 || { say "WARN: 기존 settings.json 파싱 실패 — 병합 건너뜀(훅 수동 등록 필요)"; warn=1; return; }
+  tmp=$(mktemp)
+  if jq -s '
+      .[0] as $h | .[1] as $u |
+      $u
+      + { "$schema": ($u["$schema"] // $h["$schema"]) }
+      + { hooks: (
+          ($h.hooks // {}) as $hh | ($u.hooks // {}) as $uh |
+          reduce (($hh|keys) + ($uh|keys) | unique)[] as $e
+            ({}; .[$e] = (($uh[$e] // []) + ($hh[$e] // []) | unique_by(tojson)))
+        ) }
+      + { permissions: (($u.permissions // {})
+          + { deny: ((($u.permissions.deny // []) + ($h.permissions.deny // [])) | unique) }) }
+    ' "$hs" "$us" > "$tmp" 2>/dev/null && [ -s "$tmp" ] && jq empty "$tmp" >/dev/null 2>&1; then
+    mv "$tmp" "$us"
+    say "OK: .claude/settings.json — 하네스 훅 6이벤트 병합 (사용자 설정 보존)"
+  else
+    rm -f "$tmp"; say "WARN: settings.json 병합 실패 — 훅 수동 등록 필요 (jq/파일 확인)"; warn=1
+  fi
+}
 
 MODE="${1:-install}"
 case "$MODE" in install|update|rollback|setup) ;; *) fail "알 수 없는 모드: $MODE (install|update|rollback|setup)" ;; esac
@@ -255,6 +285,13 @@ if [ "$NEED_FETCH" -eq 1 ]; then
     : > "$MANIFEST"
     for p in "${HARNESS_PATHS[@]}"; do
       [ -e "$SRC/$p" ] || continue
+      # settings.json은 훅 등록의 유일한 자리 — 기존 파일이면 스킵이 아니라 병합한다
+      # (스킵하면 훅 미등록 → 배너·가드·검증 전부 무력화). 병합은 jq 보장 후 (4.5)에서.
+      if [ "$p" = ".claude/settings.json" ] && [ -e "$HERE/$p" ] && [ "${HARNESS_FORCE:-0}" != "1" ]; then
+        MERGE_SETTINGS_SRC="$SRC/$p"
+        say "MERGE 예약: .claude/settings.json — 기존 파일에 하네스 훅 병합 (부트스트랩 후)"
+        continue
+      fi
       if [ -e "$HERE/$p" ] && [ "${HARNESS_FORCE:-0}" != "1" ]; then
         say "SKIP: $p 이미 존재 (덮어쓰려면 HARNESS_FORCE=1)"
         warn=1
@@ -350,6 +387,11 @@ if git -C "$HERE" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
 else
   say "WARN: git 레포 아님 — 커밋 게이트 비활성. git init 후 재실행 권장"
   warn=1
+fi
+
+# (4.4) merge harness hooks into a pre-existing settings.json (jq now guaranteed).
+if [ -n "$MERGE_SETTINGS_SRC" ] && [ -f "$MERGE_SETTINGS_SRC" ]; then
+  merge_settings_hooks "$MERGE_SETTINGS_SRC" "$HERE/.claude/settings.json"
 fi
 
 # (4.5) interactive project setup.

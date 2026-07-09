@@ -131,6 +131,27 @@ else
   no "setup non-interactive safety (exit $code)"
 fi
 
+# (3i) ROOT-CAUSE regression: consumer with a PRE-EXISTING settings.json must get
+# harness hooks MERGED (not skipped) — else SessionStart/guard/verify never register
+# and the whole harness is inert ("banner doesn't show"). Also preserve user keys.
+T3=$(mktemp -d); git -C "$T3" init -q
+mkdir -p "$T3/.claude"
+printf '{"model":"opus","permissions":{"allow":["Bash(npm run test)"]}}\n' > "$T3/.claude/settings.json"
+( cd "$T3" && HARNESS_SRC_DIR="$REPO" bash "$REPO/install.sh" ) >/dev/null 2>&1
+if jq -e '.hooks.SessionStart and .hooks.PreToolUse and .hooks.Stop' "$T3/.claude/settings.json" >/dev/null 2>&1 \
+   && [ "$(jq -r '.model' "$T3/.claude/settings.json")" = "opus" ] \
+   && jq -e '.permissions.allow | index("Bash(npm run test)")' "$T3/.claude/settings.json" >/dev/null 2>&1; then
+  ok "existing settings.json -> hooks merged, user keys preserved (banner root-cause)"
+else
+  no "settings.json merge (hooks unregistered = harness inert)"
+fi
+# idempotency: second install must not duplicate hook groups.
+n1=$(jq '.hooks.SessionStart | length' "$T3/.claude/settings.json")
+( cd "$T3" && HARNESS_SRC_DIR="$REPO" bash "$REPO/install.sh" ) >/dev/null 2>&1
+n2=$(jq '.hooks.SessionStart | length' "$T3/.claude/settings.json")
+[ "$n1" = "$n2" ] && ok "settings merge idempotent (no dup hooks on re-install)" || no "merge dup ($n1->$n2)"
+rm -rf "$T3"
+
 # (4) uninstall dry-run removes nothing.
 ( cd "$T2" && bash uninstall.sh ) >/dev/null 2>&1
 [ -f "$T2/AGENTS.md" ] && [ -f "$T2/.claude/settings.json" ] \

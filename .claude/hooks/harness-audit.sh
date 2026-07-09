@@ -224,5 +224,19 @@ if [ -f "$GWR" ]; then
   fi
 fi
 
+# ── AUDIT-08 ────────────────────────────────────────────────────────────────
+# Java/Spring deterministic evaluator (v3): if the scorer ships, its ArchUnit
+# rule template + build snippet must ship too — else the scorer has no rules to
+# score against (orphan tool). Absent scorer = evaluator not adopted, skip.
+EJ="$HOOKS_DIR/eval-java.sh"
+if [ -f "$EJ" ]; then
+  ARCHDIR="$AUDIT_ROOT/.claude/rules/java-spring/archunit"
+  if [ -x "$EJ" ] && [ -f "$ARCHDIR/HarnessArchRulesTest.java" ] && [ -f "$ARCHDIR/build-eval.gradle.kts" ]; then
+    ok "eval-java scorer +x with ArchUnit template + build snippet (AUDIT-08)"
+  else
+    no "orphan tool: eval-java.sh ships but ArchUnit template/build snippet missing or not +x (AUDIT-08)"
+  fi
+fi
+
 printf -- '---\n%s passed, %s failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]

@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Evaluation-Driven Development 완전 가이드 — 개념·이론·실증·구축 10장</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  /* 폰트 선택 이유: IBM Plex Sans KR — 기술 문서 전용 설계로 한/영 혼용 정합이 좋고,
+     동일 패밀리 Plex Mono와 본문-코드 전환이 시각적으로 일관됨. */
+  :root {
+    --ink: #1a1a1a;
+    --ink-soft: #555555;
+    --line: #d9d9d9;
+    --bg: #ffffff;
+    --bg-soft: #f6f6f6;
+    --accent: #0f4bd8; /* 액센트 1색: 장 번호·결정 지점·출처 링크 등 '위계와 판정'에만 사용 */
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'IBM Plex Sans KR', 'Noto Sans KR', sans-serif; color: var(--ink); background: var(--bg); line-height: 1.7; font-size: 15px; }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 48px 24px 96px; }
+
+  header { border-bottom: 1px solid var(--ink); padding-bottom: 24px; margin-bottom: 32px; }
+  .kicker { font-size: 12px; letter-spacing: 0.08em; color: var(--ink-soft); text-transform: uppercase; margin-bottom: 8px; }
+  h1 { font-size: 26px; font-weight: 700; line-height: 1.4; }
+  .subtitle { margin-top: 10px; color: var(--ink-soft); font-size: 14px; }
+
+  nav.toc { border: 1px solid var(--line); border-radius: 4px; padding: 18px 22px; margin-bottom: 8px; font-size: 13.5px; }
+  nav.toc .label { font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-soft); font-weight: 600; margin-bottom: 10px; }
+  nav.toc ol { margin: 0 0 0 20px; columns: 2; column-gap: 32px; }
+  nav.toc a { color: var(--ink); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+
+  h2 { font-size: 20px; font-weight: 700; margin: 56px 0 6px; padding-top: 28px; border-top: 1px solid var(--line); }
+  h2 .no { color: var(--accent); font-family: 'IBM Plex Mono', monospace; font-size: 15px; margin-right: 10px; }
+  .chapter-lead { color: var(--ink-soft); font-size: 13.5px; margin-bottom: 18px; }
+  h3 { font-size: 15.5px; font-weight: 600; margin: 26px 0 8px; }
+  h4 { font-size: 14px; font-weight: 600; margin: 18px 0 6px; }
+  p { margin-bottom: 12px; }
+  p.note, li.note { font-size: 13px; color: var(--ink-soft); }
+  .src { font-size: 12px; color: var(--ink-soft); }
+  .src a, p a { color: var(--accent); text-decoration: none; }
+  .src a:hover, p a:hover { text-decoration: underline; }
+
+  table { width: 100%; border-collapse: collapse; margin: 14px 0 18px; font-size: 13.5px; }
+  th, td { border: 1px solid var(--line); padding: 8px 11px; text-align: left; vertical-align: top; }
+  th { background: var(--bg-soft); font-weight: 600; }
+  td .key { font-weight: 600; }
+
+  pre { background: var(--bg-soft); border: 1px solid var(--line); border-radius: 4px; padding: 14px 16px; overflow-x: auto; margin: 12px 0 16px; }
+  code { font-family: 'IBM Plex Mono', monospace; font-size: 12.5px; line-height: 1.6; }
+  p code, li code, td code { background: var(--bg-soft); border: 1px solid var(--line); border-radius: 3px; padding: 1px 5px; font-size: 12.5px; }
+
+  ul, ol { margin: 0 0 14px 22px; }
+  li { margin-bottom: 7px; }
+
+  dl.terms { margin: 16px 0; }
+  dl.terms dt { font-weight: 600; margin-top: 14px; }
+  dl.terms dt code { font-weight: 500; }
+  dl.terms dd { margin-left: 0; padding-left: 16px; border-left: 1px solid var(--line); margin-top: 4px; font-size: 14px; }
+  dl.terms dd .easy { display: block; color: var(--ink-soft); font-size: 13px; margin-top: 3px; }
+
+  .box { border: 1px solid var(--line); border-radius: 4px; padding: 16px 18px; margin: 16px 0; }
+  .box .label { font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-soft); margin-bottom: 8px; font-weight: 600; }
+  .box.gate { border-color: var(--accent); }
+  .box.gate .label { color: var(--accent); }
+  .box.case { background: var(--bg-soft); }
+
+  .level { border: 1px solid var(--line); border-radius: 4px; margin-bottom: 12px; }
+  .level .head { display: flex; align-items: baseline; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+  .level .lv { font-family: 'IBM Plex Mono', monospace; font-weight: 500; color: var(--accent); font-size: 13px; white-space: nowrap; }
+  .level .name { font-weight: 600; }
+  .level .body { padding: 12px 16px; font-size: 13.5px; }
+  .level .body .row { margin-bottom: 8px; }
+  .level .body .row:last-child { margin-bottom: 0; }
+  .level .body .tag { display: inline-block; min-width: 92px; font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-soft); font-weight: 600; }
+
+  .flow { list-style: none; margin: 16px 0; counter-reset: step; }
+  .flow > li { counter-increment: step; border: 1px solid var(--line); border-radius: 4px; padding: 12px 16px 12px 52px; margin-bottom: 8px; position: relative; }
+  .flow > li::before { content: counter(step); position: absolute; left: 16px; top: 12px; font-family: 'IBM Plex Mono', monospace; font-weight: 500; color: var(--accent); }
+  .flow .t { font-weight: 600; display: block; margin-bottom: 2px; }
+  .flow .d { font-size: 13.5px; color: var(--ink-soft); }
+
+  .metric-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 10px; margin: 16px 0; }
+  .metric { border: 1px solid var(--line); border-radius: 4px; padding: 12px 14px; }
+  .metric .name { font-family: 'IBM Plex Mono', monospace; font-size: 12.5px; font-weight: 500; margin-bottom: 4px; }
+  .metric .desc { font-size: 13px; color: var(--ink-soft); }
+
+  .check { list-style: none; margin-left: 0; }
+  .check li { padding-left: 26px; position: relative; font-size: 14px; }
+  .check li::before { content: "☐"; position: absolute; left: 2px; color: var(--ink-soft); }
+
+  footer { margin-top: 56px; border-top: 1px solid var(--ink); padding-top: 20px; font-size: 13px; color: var(--ink-soft); }
+  footer a { color: var(--accent); text-decoration: none; word-break: break-all; }
+  footer a:hover { text-decoration: underline; }
+  footer li { margin-bottom: 9px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="kicker">Evaluation-Driven Development · 완전 가이드</div>
+  <h1>Eval의 개념부터 EDD 구축까지:<br>이론 · 근거 · 성숙도 레벨 · 실증 사례 10장</h1>
+  <p class="subtitle">이 문서는 (1) 용어와 개념을 쉬운 설명으로 정의하고, (2) eval 적용 전후에 실제로 목격되는 현상을 공개된 근거로 대조하며, (3) 하네스의 한계가 EDD로 해결된다는 주장의 학술적 근거를 제시하고, (4) 레벨 0→5 성숙도 모델과 10단계 구축 프로세스로 실행 방법을 정리한다. 모든 사실 주장에는 출처 링크를 병기했다.</p>
+</header>
+
+<nav class="toc">
+  <div class="label">목차</div>
+  <ol>
+    <li><a href="#ch1">용어 정의 — 쉬운 설명과 비유</a></li>
+    <li><a href="#ch2">Eval의 개념과 3가지 본질적 특징</a></li>
+    <li><a href="#ch3">적용 전 vs 적용 후 — 목격되는 현상</a></li>
+    <li><a href="#ch4">왜 지금 EDD가 부각되는가</a></li>
+    <li><a href="#ch5">하네스의 한계와 EDD가 해결한다는 근거</a></li>
+    <li><a href="#ch6">성숙도 레벨 0→5 — 단계별 실증과 분석</a></li>
+    <li><a href="#ch7">측정의 이론 — 노이즈 속에서 점수 읽기</a></li>
+    <li><a href="#ch8">실전 구현 — 코드 예시와 사용 방법</a></li>
+    <li><a href="#ch9">가드레일 — 평가를 런타임 방어선으로</a></li>
+    <li><a href="#ch10">10단계 구축 프로세스와 안티패턴</a></li>
+  </ol>
+</nav>
+
+<!-- ==================== 1장 ==================== -->
+<h2 id="ch1"><span class="no">1장</span>용어 정의 — 쉬운 설명과 비유</h2>
+<p class="chapter-lead">이후 모든 장에서 사용하는 용어를 먼저 고정한다. 각 용어에 한 줄 정의와 비유를 병기했다.</p>
+
+<dl class="terms">
+  <dt>Eval (평가)</dt>
+  <dd>LLM 애플리케이션의 출력 품질을 <strong>체계적·반복적으로 측정</strong>하는 절차와 그 산출물(점수). 단일 숫자를 넘어 해석 가능한 결과를 내야 한다.
+  <span class="easy">쉬운 비유: 요리사(모델)가 만든 음식을 매번 같은 심사표로 채점하는 "고정 심사위원단". 오늘 기분에 따라 평이 바뀌는 손님 리뷰(바이브 체크)와 다르다.</span></dd>
+
+  <dt>테스트 하네스 (Test Harness)</dt>
+  <dd>프롬프트·모델·도구·데이터를 꽂아서 <strong>실행하고 결과를 수집하는 인프라</strong>. Inspect.AI, DeepEval 같은 프레임워크가 이 역할을 한다.
+  <span class="easy">쉬운 비유: 자동차 성능을 재는 "다이나모 측정 장비". 장비가 있다고 해서 언제·무엇을·어떤 기준으로 잴지, 결과로 무엇을 결정할지가 정해지는 건 아니다.</span></dd>
+
+  <dt>EDD (Evaluation-Driven Development)</dt>
+  <dd>평가 결과를 개발 사이클의 <strong>일급(first-class) 신호</strong>로 삼아 프롬프트 수정·모델 교체·배포 승인·런타임 차단을 결정하는 방법론. 학술적으로는 설계–빌드–운영 전 구간의 연속 평가를 포함해 EDDOps라고도 부른다.
+  <span class="easy">쉬운 비유: 장비(하네스)만 있는 정비소가 아니라, 측정→진단→수리→재측정이 규정으로 돌아가는 "인증 검사 시스템".</span></dd>
+
+  <dt>골든 데이터셋 (Golden Dataset)</dt>
+  <dd>입력과 "정답(golden answer)" 쌍의 모음. 모델 출력을 이 기준과 비교해 채점한다.
+  <span class="easy">쉬운 비유: 채점 기준 답안지가 있는 모의고사 문제은행.</span></dd>
+
+  <dt>Grader (채점자)</dt>
+  <dd>출력에 점수를 매기는 주체. <strong>코드 기반</strong>(정확 일치·정규식·실행 테스트), <strong>LLM 기반</strong>(LLM-as-Judge), <strong>인간</strong>의 3종이 있으며, 속도·비용·뉘앙스 처리 능력이 다르다.</dd>
+
+  <dt>LLM-as-Judge</dt>
+  <dd>별도의 LLM이 명시적 루브릭(채점 기준표)에 따라 다른 LLM의 출력을 채점하는 패턴. 정성적 기준(톤, 정책 준수, 근거성)을 정량화할 수 있고, 실시간 가드레일로도 겸용된다.
+  <span class="easy">쉬운 비유: 선생님(인간)이 만든 채점 기준표를 들고 채점하는 조교. 조교가 기준표를 잘 따르는지(인간 라벨과의 일치율)를 먼저 검증해야 한다.</span></dd>
+
+  <dt>가드레일 (Guardrail)</dt>
+  <dd>파이프라인의 크리티컬 패스에서 실행되어 출력을 <strong>차단·재시도·폴백</strong>시킬 수 있는 평가. 워크플로를 막지 않고 관찰만 하는 것은 모니터링 eval로 구분한다.</dd>
+
+  <dt>회귀 (Regression) / 드리프트 (Drift)</dt>
+  <dd>회귀는 변경(프롬프트·모델·코드) 직후 이전에 되던 것이 안 되는 현상. 드리프트는 변경 없이도 시간에 따라(입력 분포 변화, 모델 업데이트, 메모리 축적) 품질이 서서히 변하는 현상.</dd>
+
+  <dt>pass@k / pass^k</dt>
+  <dd>같은 문제를 k회 시도했을 때 <strong>한 번이라도</strong> 통과하면 인정하는 것이 pass@k(능력 상한), <strong>k회 전부</strong> 통과해야 인정하는 것이 pass^k(일관성·신뢰성 하한). 확률적 시스템에서는 두 값의 간극 자체가 중요한 정보다.</dd>
+
+  <dt>골든셋 오염 / Judge 자기강화</dt>
+  <dd>LLM이 만든 판정이 개발과 평가 양쪽에 쓰이면, 평가 결과가 스스로를 강화해 거짓 성공을 가리키는 위험. LLM 판정을 무비판적으로 재사용할 때의 편향 강화·재현성 문제가 학술적으로 지적되어 있다.</dd>
+</dl>
+
+<!-- ==================== 2장 ==================== -->
+<h2 id="ch2"><span class="no">2장</span>Eval의 개념과 3가지 본질적 특징</h2>
+<p class="chapter-lead">"단위 테스트를 잘 짜면 되는 것 아닌가?"에 대한 답. Eval이 전통 테스트와 근본적으로 다른 이유 3가지.</p>
+
+<h3>특징 1 — 판정이 이진이 아니라 통계적이다</h3>
+<p>전통 테스트는 <code>assert output == expected</code>로 끝난다. LLM은 같은 입력에도 다른 출력을 낼 수 있는 확률적 시스템이므로, 개별 케이스의 통과/실패가 아니라 <strong>케이스 집합에 대한 통과율·점수 분포</strong>가 판정 단위가 된다. Anthropic의 통계 연구는 eval 문항들을 보이지 않는 "문항 우주(question universe)"에서 추출된 표본으로 간주하고, 관찰된 평균이 아니라 그 우주 전체의 이론적 평균(모델의 진짜 실력)을 추정해야 한다고 논증한다 — 즉 eval은 본질적으로 <strong>노이즈 속의 측정 과학</strong>이다. <span class="src">근거: <a href="https://www.anthropic.com/research/statistical-approach-to-model-evals">Anthropic, A statistical approach to model evaluations</a></span></p>
+
+<h3>특징 2 — 기준이 코드가 아니라 "성공 정의"에서 출발한다</h3>
+<p>Anthropic 공식 문서는 성공적인 LLM 앱 구축이 <strong>성공 기준을 명확히 정의하고 그것을 측정하는 평가를 설계하는 것에서 시작</strong>한다고 명시한다. "좋은 성능" 대신 "정확한 감성 분류"처럼 구체적으로, 정성적 주제(윤리·안전)조차 척도화해서 측정 가능하게 만들라는 것이 핵심이다. 채점 방식도 "LLM에게 correct/incorrect만 출력시키거나 1–5점 척도로 판정시키는" 식으로 경험적·구체적이어야 한다. <span class="src">근거: <a href="https://docs.anthropic.com/en/docs/test-and-evaluate/develop-tests">Anthropic Docs, Define success criteria and build evaluations</a></span></p>
+
+<h3>특징 3 — 대상이 모델이 아니라 시스템 전체다</h3>
+<p>LLM 에이전트는 LLM 하나가 아니라 컨텍스트 엔진, 플래닝 모듈, 메모리, 도구, 가드레일이 결합된 <strong>컴파운드 시스템</strong>이다. 따라서 유효한 평가는 프롬프트–중간 결과–최종 출력의 파이프라인 전체와, 목표·메모리·추론·도구·지식베이스·가드레일 같은 아티팩트 전체를 포괄해야 하며, 그렇지 않으면 잘못된 추론·잘못된 도구 호출·의도치 않은 부작용 같은 중대한 실패 모드가 탐지되지 않은 채 남는다. <span class="src">근거: <a href="https://arxiv.org/abs/2411.13768">Xia et al., EDDOps (arXiv:2411.13768)</a></span></p>
+
+<div class="box">
+  <div class="label">한 줄 요약</div>
+  <p style="margin:0">Eval = "확률적 시스템을 (1) 통계적으로, (2) 명시적 성공 정의에 따라, (3) 시스템 수준에서" 측정하는 것. 이 3가지 중 하나라도 빠지면 전통 QA의 연장선일 뿐 eval이 아니다.</p>
+</div>
+
+<!-- ==================== 3장 ==================== -->
+<h2 id="ch3"><span class="no">3장</span>적용 전 vs 적용 후 — 실제로 목격되는 현상</h2>
+<p class="chapter-lead">이 장의 전/후 대조는 Anthropic이 고객사(코딩·리서치·대화형 에이전트 팀들)와의 실전 경험을 정리해 공개한 엔지니어링 가이드를 1차 근거로 한다.</p>
+
+<table>
+  <thead><tr><th style="width:50%">Eval 적용 전 — 목격되는 현상</th><th>Eval 적용 후 — 목격되는 현상</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><strong>반응적 루프(reactive loop)</strong>: 하나의 실패를 고치면 다른 실패가 생기고, 진짜 회귀인지 노이즈인지 구분하지 못한 채 수렁에 빠진다.</td>
+      <td><strong>개발 가속</strong>: 실패가 테스트 케이스가 되고, 테스트 케이스가 회귀를 막고, 지표가 감(guesswork)을 대체하면서 개발 속도가 오히려 빨라진다.</td>
+    </tr>
+    <tr>
+      <td><strong>프로덕션에서만 발견</strong>: 문제를 사용자 불만으로 처음 알게 되고, 수동 재현 → 수정 → "다른 게 안 깨졌기를 기도"하는 디버깅.</td>
+      <td><strong>배포 전 검출</strong>: 변경을 수백 개 시나리오에 먼저 돌려보고, 점수 델타로 배포 여부를 판단한다.</td>
+    </tr>
+    <tr>
+      <td><strong>"느낌이 나빠졌다"는 논쟁</strong>: 팀원마다 체감이 달라 "에이전트가 나빠진 것 같다"가 회의 안건이 되지만 행동으로 옮길 수 없다.</td>
+      <td><strong>공동의 오를 언덕(hill to climb)</strong>: "느낌이 나빠졌다"가 측정 가능한 항목으로 바뀌고, 팀 전체가 같은 지표를 본다. 가치는 복리로 쌓인다 — 단, eval을 부속물이 아닌 핵심 컴포넌트로 다룰 때만.</td>
+    </tr>
+  </tbody>
+</table>
+<p class="src">근거(전/후 현상 전체): <a href="https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents">Anthropic, Demystifying evals for AI agents</a></p>
+
+<h3>실증 사례 1 — Descript (수동 채점 → LLM grader 진화)</h3>
+<div class="box case">
+  <p style="margin-bottom:8px">영상 편집 에이전트를 만드는 Descript는 성공적 편집 워크플로의 3차원 — <strong>"망가뜨리지 말 것 / 시킨 것을 할 것 / 잘할 것"</strong> — 을 기준으로 eval을 설계했다. 수동 채점에서 시작해 제품팀이 정의한 기준의 LLM grader로 진화했고, 주기적 인간 교정(calibration)을 유지하며, 현재는 품질 벤치마킹용과 회귀 테스트용 두 개의 스위트를 상시 운영한다.</p>
+  <p class="src" style="margin:0">근거: <a href="https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents">Anthropic, Demystifying evals for AI agents</a></p>
+</div>
+
+<h3>실증 사례 2 — Bolt (대규모 서비스 후 3개월 만에 구축)</h3>
+<div class="box case">
+  <p style="margin-bottom:8px">Bolt 팀은 이미 널리 쓰이는 에이전트를 보유한 상태에서 뒤늦게 eval을 시작했다. 3개월 만에 에이전트를 실행하고 <strong>정적 분석으로 출력을 채점하고, 브라우저 에이전트로 생성된 앱을 실제 테스트하며, 지시 이행 같은 행동은 LLM judge로 판정</strong>하는 평가 시스템을 구축했다. 즉 시작 시점보다 "핵심 컴포넌트로 다루는가"가 성패를 갈랐다.</p>
+  <p class="src" style="margin:0">근거: <a href="https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents">Anthropic, Demystifying evals for AI agents</a></p>
+</div>
+
+<h3>적용 규모에 대한 오해 교정</h3>
+<p>"수백 개 케이스가 있어야 시작할 수 있다"는 오해가 크다. Anthropic 가이드에 대한 실무 해설은 <strong>실제 실패에서 추출한 20–50개의 단순 과제로 충분히 시작</strong>할 수 있다고 정리한다 — 초기 변경은 효과 크기가 커서 작은 표본으로도 신호가 잡히기 때문이다. 프로덕션 중이라면 버그 트래커와 CS 큐가 최고의 소재다. <span class="src">근거: <a href="https://inkeep.com/blog/anthropic-s-guide-to-ai-agent-evals-what-support-teams-need">Inkeep, Anthropic's Guide to AI Agent Evals 해설</a></span></p>
+
+<!-- ==================== 4장 ==================== -->
+<h2 id="ch4"><span class="no">4장</span>왜 지금 EDD가 부각되는가 — 3가지 구조적 배경</h2>
+<p class="chapter-lead">EDD는 유행어가 아니라, LLM 애플리케이션의 구조 변화 3가지가 만든 필연적 대응이다.</p>
+
+<h3>배경 1 — 앱이 "모델 호출"에서 "에이전트 시스템"으로 바뀌었다</h3>
+<p>단발 프롬프트-응답 시절에는 프롬프트 몇 개를 눈으로 확인하는 것(바이브 체크)이 그럭저럭 통했다. 그러나 에이전트는 배포 후에도 메모리·정책을 갱신하며 행동이 진화하는 시스템이라, 사전 정의된 테스트 단계에 평가를 가두는 전통 방식으로는 이 진화하는 특성을 포착할 수 없다. 평가가 라이프사이클 전체에 걸친 <strong>연속적·적응적 프로세스</strong>여야 한다는 요구가 EDD의 출발점이다. <span class="src">근거: <a href="https://arxiv.org/abs/2411.13768">arXiv:2411.13768</a></span></p>
+
+<h3>배경 2 — 모델 발전 속도가 평가 인프라를 추월했다</h3>
+<p>프론티어 모델의 SWE-bench Verified 점수는 약 1년 만에 40%에서 80% 이상으로 뛰었고, 6개월 전에 유효했던 eval이 이미 포화(saturation)되는 상황이 벌어진다. 정적 벤치마크 1회 측정으로는 "지금 우리 시스템이 좋은가"를 답할 수 없고, 자기 도메인의 살아있는 평가 체계를 계속 갱신해야만 한다. <span class="src">근거: <a href="https://inkeep.com/blog/anthropic-s-guide-to-ai-agent-evals-what-support-teams-need">Inkeep 해설 (Anthropic 가이드 기반)</a></span></p>
+
+<h3>배경 3 — 실패의 원인이 코드 밖에 있다</h3>
+<p>실무 프레임에서는 LLM 앱의 실패를 3개의 간극(Three Gulfs) — 개발자 의도와 명세의 간극, 명세와 모델 일반화의 간극, 이해와 데이터의 간극 — 으로 설명하고, 이를 <strong>Analyze(오류 분석) → Measure(정량 측정) → Improve(표적 개입)</strong> 루프로 체계적으로 좁혀야 한다고 본다. 즉 "코드를 고친다"가 아니라 "측정으로 원인 지점을 특정한다"가 개발의 중심이 된 것이 EDD 부각의 세 번째 배경이다. <span class="src">근거: <a href="https://www.news.aakashg.com/p/ai-evals">Aakash Gupta, AI Evals for PMs (Hamel Husain·Shreya Shankar의 eval 방법론 정리)</a></span></p>
+
+<!-- ==================== 5장 ==================== -->
+<h2 id="ch5"><span class="no">5장</span>하네스의 한계와 "EDD가 해결한다"는 주장의 근거</h2>
+<p class="chapter-lead">이 장이 이 문서의 논증 핵심이다. 하네스(평가 실행 인프라)만으로 안 되는 것 4가지와, 각각이 EDD의 어떤 장치로 해결되는지를 학술 근거와 함께 1:1로 매핑한다.</p>
+
+<table>
+  <thead><tr><th style="width:34%">하네스만으로 안 되는 것 (한계)</th><th style="width:33%">EDD의 해결 장치</th><th>근거</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><span class="key">① 모델 수준 평가에 갇힘.</span> Inspect.AI, DeepEval 같은 기존 도구·프레임워크는 프롬프트-응답 정확도나 벤치마크 점수 중심의 모델 수준 평가에는 유효하지만, 컨텍스트 엔진·플래닝·메모리·가드레일을 포함한 컴파운드 시스템 평가에는 <strong>부분적 지원(partial support)</strong>에 그친다.</td>
+      <td>파이프라인(프롬프트·중간 결과·최종 출력)과 아티팩트(목표·메모리·추론·도구·가드레일) 전체를 평가 대상으로 삼는 <strong>시스템 수준 평가 아키텍처</strong>를 프로세스 모델에 내장.</td>
+      <td class="src"><a href="https://arxiv.org/abs/2411.13768">arXiv:2411.13768</a> — 도구의 partial support 지적 및 시스템 수준 평가 없이는 잘못된 추론·도구 오용·부작용이 미탐지로 남는다는 논증</td>
+    </tr>
+    <tr>
+      <td><span class="key">② 평가 시점이 배포 전에 갇힘.</span> 하네스는 "돌리면 결과가 나오는" 도구일 뿐, 배포 후 메모리·정책 변화로 행동이 진화하는 에이전트를 언제 다시 재는지는 정하지 않는다. 정적 벤치마크와 사전 정의 테스트 케이스는 이 진화를 포착하지 못한다.</td>
+      <td>오프라인(통제 테스트·리플레이) + 온라인(런타임 차단·격리·드리프트 플래그)을 병행하는 <strong>연속 평가</strong>를 설계–빌드–운영 전 구간의 일급 기능으로 규정 (EDDOps).</td>
+      <td class="src"><a href="https://arxiv.org/abs/2411.13768">arXiv:2411.13768</a> — TDD/BDD가 "canonical form에서 배포 전 중심"인 것과 대비되는 EDDOps 비교표</td>
+    </tr>
+    <tr>
+      <td><span class="key">③ 실패가 발견돼도 "어디를 고칠지"를 알려주지 못함.</span> 하네스는 통과/실패 로그를 남길 뿐, 연쇄 실패의 진짜 원인 지점을 특정하는 절차가 없다.</td>
+      <td><strong>실패 트리아지</strong>: 실패 트레이스를 수집해 실패 모드(계획 분해 오류, 잘못된 도구 호출, 오래된 검색, 메모리 오염)로 분류하고, 연쇄를 촉발한 최초의 결정 지점을 찾아 그 지점에 수정(도구 스로틀링, 비가역 호출 전 중간 가드레일, 검색 제약, 플래너 프롬프트 패치)을 주입.</td>
+      <td class="src"><a href="https://arxiv.org/abs/2411.13768">arXiv:2411.13768</a> — 실패 모드 분류와 "가장 효과적인 지점에 수정 주입" 방법론</td>
+    </tr>
+    <tr>
+      <td><span class="key">④ 조직이 여전히 반응적 루프에 머묾.</span> 장비가 있어도 프로세스가 없으면, 팀은 실패를 하나 고치면 다른 실패가 생기는 루프와 "회귀인지 노이즈인지 모르는" 상태를 벗어나지 못한다.</td>
+      <td>실패→테스트 케이스→회귀 방지→지표 기반 의사결정으로 이어지는 <strong>복리 루프</strong>. eval을 부속물이 아닌 핵심 컴포넌트로 다루는 조직적 규정이 EDD의 본질.</td>
+      <td class="src"><a href="https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents">Anthropic, Demystifying evals</a> — "eval 없는 팀은 반응적 루프, 투자한 팀은 개발 가속" 대조</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="box gate">
+  <div class="label">논증 요약</div>
+  <p style="margin:0">하네스는 <strong>측정 능력</strong>을 제공하고, EDD는 <strong>측정을 의사결정에 연결하는 프로세스</strong>를 제공한다. ①·②·③은 arXiv:2411.13768이 다성적 문헌 리뷰(MLR)와 실사례(호주 세무 어시스턴트)로 검증한 구조적 한계이고, ④는 Anthropic이 고객사 실전 경험으로 보고한 조직적 한계다. 넷 모두 "도구를 더 사는 것"이 아니라 "평가를 프로세스의 중심에 놓는 것"으로만 해결된다는 것이 EDD 주장의 근거다.</p>
+</div>
+
+<!-- ==================== 6장 ==================== -->
+<h2 id="ch6"><span class="no">6장</span>성숙도 레벨 0→5 — 단계별 실증과 분석</h2>
+<p class="chapter-lead">아래 성숙도 모델은 3·4·5장의 출처들을 종합해 <strong>이 문서가 구성한 실무 프레임</strong>이다(특정 논문의 공식 모델이 아님). 각 레벨마다 "이 단계에서 목격되는 현상(실증)"과 "다음 레벨로 가는 행동"을 명시했다.</p>
+
+<div class="level">
+  <div class="head"><span class="lv">LV 0</span><span class="name">바이브 체크 (Vibe Check)</span></div>
+  <div class="body">
+    <div class="row"><span class="tag">상태</span>프롬프트를 고치고 채팅창에서 몇 개 돌려본 뒤 "좋아진 것 같다"로 배포.</div>
+    <div class="row"><span class="tag">목격 현상</span>3장의 "적용 전" 현상 전부: 반응적 루프, 프로덕션에서만 발견, "느낌이 나빠졌다" 논쟁. 회귀와 노이즈를 구분 못함.</div>
+    <div class="row"><span class="tag">다음 행동</span>실제 실패 사례에서 20–50개 케이스를 추출해 골든셋 v1을 만든다 (초기엔 이 규모로 충분 — 3장 근거 참조).</div>
+  </div>
+</div>
+
+<div class="level">
+  <div class="head"><span class="lv">LV 1</span><span class="name">골든셋 + 수동 채점</span></div>
+  <div class="body">
+    <div class="row"><span class="tag">상태</span>고정된 케이스 집합이 존재하고, 변경 후 사람이 출력을 훑어보며 채점.</div>
+    <div class="row"><span class="tag">목격 현상</span>"이 변경으로 3번·7번 케이스가 깨졌다"는 대화가 처음 가능해짐. 그러나 채점이 병목이라 실행 빈도가 낮고, 채점자 간 기준이 흔들림. Descript도 이 수동 채점 단계에서 출발했다.</div>
+    <div class="row"><span class="tag">다음 행동</span>형식·수치·금칙어처럼 규칙화 가능한 항목부터 코드 grader로 자동화. "두 전문가가 동일하게 채점할 수 있는" 명세로 과제를 다듬는다.</div>
+  </div>
+</div>
+
+<div class="level">
+  <div class="head"><span class="lv">LV 2</span><span class="name">자동 채점 (code grader 중심)</span></div>
+  <div class="body">
+    <div class="row"><span class="tag">상태</span><code>promptfoo eval</code> 한 줄로 전 케이스 재채점. 정확 일치·스키마·정규식 기반의 빠르고 결정적인 판정.</div>
+    <div class="row"><span class="tag">목격 현상</span>실행 빈도가 하루 수십 회로 상승, 프롬프트 실험 속도가 눈에 띄게 빨라짐. 반면 "정확하지만 불친절한 답변" 같은 정성 품질 문제는 여전히 통과되어 새는 것이 관찰됨 — 코드 채점은 뉘앙스가 필요한 복잡한 판단을 처리하지 못한다는 한계가 체감되는 단계. <span class="src">(<a href="https://docs.anthropic.com/en/docs/test-and-evaluate/develop-tests">Anthropic Docs</a>: 코드 채점은 가장 빠르고 신뢰성·확장성이 높지만 뉘앙스가 필요한 판단에는 부족)</span></div>
+    <div class="row"><span class="tag">다음 행동</span>정성 기준을 루브릭 문장으로 명문화하고 LLM-as-Judge를 도입하되, 인간 라벨 표본과의 일치율로 Judge를 먼저 검증한다.</div>
+  </div>
+</div>
+
+<div class="level">
+  <div class="head"><span class="lv">LV 3</span><span class="name">LLM-as-Judge + CI 게이트</span></div>
+  <div class="body">
+    <div class="row"><span class="tag">상태</span>정량(코드)+정성(Judge) 혼합 채점이 PR마다 CI에서 자동 실행되고, 임계값 미달이면 머지가 차단됨. 프롬프트 변경도 코드와 같은 게이트를 통과.</div>
+    <div class="row"><span class="tag">목격 현상</span>배포 전 검출률 급상승, "몰래 나빠지는" 회귀가 사라짐. 동시에 새로운 리스크가 등장: Judge의 편향이 개발·평가 양쪽을 오염시키는 자기강화 위험. <span class="src">(<a href="https://arxiv.org/abs/2504.19076">arXiv:2504.19076</a> — LLM 판정이 시스템 개발과 평가에 동시에 영향을 줄 때 거짓 성공·편향 강화·재현성 문제가 발생)</span></div>
+    <div class="row"><span class="tag">다음 행동</span>Judge–인간 일치율의 정기 재교정을 프로세스화(Descript의 "주기적 인간 교정" 패턴). 오프라인에서만 돌던 평가를 런타임으로 확장한다.</div>
+  </div>
+</div>
+
+<div class="level">
+  <div class="head"><span class="lv">LV 4</span><span class="name">런타임 가드레일 + 온라인 모니터링</span></div>
+  <div class="body">
+    <div class="row"><span class="tag">상태</span>차단형(blocking) eval이 크리티컬 패스에서 스키마 위반·정책 위반·저신뢰 응답을 실시간 차단·재시도·승격시키고, 모니터링 eval이 샘플링 트래픽을 채점해 드리프트를 감시.</div>
+    <div class="row"><span class="tag">목격 현상</span>배포 전에 못 잡던 유형(런타임에서만 나타나는 도구 오용, 입력 분포 변화)이 지표로 잡히기 시작. 동시에 가드레일 자체의 성능 한계가 드러남 — 프롬프트 인젝션 공격 벤치마크에서 대표 가드레일들의 평균 탐지 recall이 58.57%, 탐지된 경우조차 실제 차단 성공률이 37.26% 미만이라는 보고가 있어, "달았다"와 "막힌다"의 간극이 실측된다. <span class="src">(<a href="https://arxiv.org/abs/2606.05805">TRIAD, arXiv:2606.05805</a>)</span></div>
+    <div class="row"><span class="tag">다음 행동</span>가드레일 자체를 공격 데이터셋으로 정기 평가(recall·차단률 분리 측정)하고, 운영 실패를 골든셋으로 환류하는 파이프라인을 만든다.</div>
+  </div>
+</div>
+
+<div class="level">
+  <div class="head"><span class="lv">LV 5</span><span class="name">완전한 EDD 루프 (EDDOps)</span></div>
+  <div class="body">
+    <div class="row"><span class="tag">상태</span>평가가 설계–빌드–운영 전 구간의 일급 기능. 실패 트레이스 → 실패 모드 분류 → 최초 결정 지점 특정 → 표적 수정 주입 → 골든셋 편입이 규정으로 돌아가고, 하이브리드 인간-AI 평가자가 런타임 조정과 장기 개선을 동시에 이끈다.</div>
+    <div class="row"><span class="tag">목격 현상</span>3장의 "적용 후" 현상이 정착: 실패가 자산이 되고, 지표가 의사결정을 대체하며, 가치가 복리로 쌓임. Descript의 이중 스위트(품질 벤치마킹 + 회귀 테스트) 상시 운영이 이 레벨의 실례.</div>
+    <div class="row"><span class="tag">유지 조건</span>벤치마크 포화(4장 배경 2)에 대응해 eval 스위트 자체를 계속 갱신. Judge 재교정과 골든셋 오염 감시를 상시 프로세스로 유지.</div>
+  </div>
+</div>
+
+<!-- ==================== 7장 ==================== -->
+<h2 id="ch7"><span class="no">7장</span>측정의 이론 — 노이즈 속에서 점수를 읽는 법</h2>
+<p class="chapter-lead">"85% → 87%로 올랐으니 배포하자"가 왜 위험한지. EDD의 판정이 신뢰할 수 있으려면 최소한의 통계 규율이 필요하다.</p>
+
+<h3>7-1. 점수는 표본이지 실력이 아니다</h3>
+<p>eval 점수는 "문항 우주"에서 추출된 표본의 평균이다. Anthropic의 연구는 중심극한정리에 따라 표본 평균이 정규분포를 따르는 성질을 이용해, 관찰 평균이 아닌 <strong>이론적 평균(운을 배제한 실력)</strong>을 추정하고 오차 범위와 함께 보고할 것을 권고한다. 같은 난이도 분포로 새 eval을 만들어도 결론이 유지되는 분석적 강건성이 목적이다. <span class="src">근거: <a href="https://www.anthropic.com/research/statistical-approach-to-model-evals">Anthropic, A statistical approach to model evaluations</a></span></p>
+
+<h3>7-2. 실무 규율 4가지</h3>
+<ul>
+  <li><strong>오차 범위 없는 델타는 판정 근거가 아니다</strong>: 50개 케이스에서 2%p 차이는 1개 케이스 차이다. 게이트 임계값은 표본 크기를 고려해 정한다.</li>
+  <li><strong>능력과 일관성을 분리 측정</strong>: pass@k(한 번이라도 성공)와 pass^k(전부 성공)를 함께 보고, 간극이 크면 "가끔 되는 시스템"이라는 뜻 — 프로덕션 신뢰성 관점에서는 pass^k가 판정 기준이 되어야 한다.</li>
+  <li><strong>0%와 100%는 문항의 문제일 수 있다</strong>: 다수 시행에서 일괄 0%는 과제 명세·환경 결함 신호, 일괄 100%는 포화 신호다. 문제는 모델이 틀릴 수 있을 만큼 어려워야 신호가 나온다. <span class="src">(<a href="https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents">Anthropic, Demystifying evals</a>의 원칙: "문제가 모델에게 충분히 어렵게 만들라")</span></li>
+  <li><strong>채점자 명세의 모호함은 지표의 노이즈가 된다</strong>: 두 전문가가 동일하게 채점할 수 없는 과제는 어떤 grader로도 신뢰할 수 없다. 명세를 먼저 고친다. <span class="src">(<a href="https://inkeep.com/blog/anthropic-s-guide-to-ai-agent-evals-what-support-teams-need">Inkeep 해설</a>)</span></li>
+</ul>
+
+<h3>7-3. 채점 방법 선택 기준</h3>
+<p>Anthropic 공식 문서의 원칙: <strong>가장 빠르고, 가장 신뢰할 수 있고, 가장 확장 가능한 방법을 선택</strong>하되, 자동 채점 가능한 구조(객관식·문자열 일치·코드 채점·LLM 채점)로 문항을 설계하고, 소수의 고품질 수동 채점보다 신호가 조금 낮더라도 <strong>자동 채점 가능한 다수 문항(볼륨)</strong>을 우선하라. <span class="src">근거: <a href="https://docs.anthropic.com/en/docs/test-and-evaluate/develop-tests">Anthropic Docs, Define success criteria</a></span></p>
+
+<div class="metric-grid">
+  <div class="metric"><div class="name">pass rate / pass@k / pass^k</div><div class="desc">통과율 · 능력 상한 · 일관성 하한. 셋을 함께 봐야 시스템 상태가 보인다.</div></div>
+  <div class="metric"><div class="name">schema validity rate</div><div class="desc">구조화 출력의 스키마 통과 비율. 결정 파이프라인의 기초 체력.</div></div>
+  <div class="metric"><div class="name">judge–human agreement</div><div class="desc">LLM Judge와 인간 라벨의 일치율. Judge 채점의 신뢰 전제 조건.</div></div>
+  <div class="metric"><div class="name">guardrail recall / block rate</div><div class="desc">위반 탐지율과 실제 차단 성공률. 둘의 간극이 실질 방어력이다 (6장 LV4 근거).</div></div>
+  <div class="metric"><div class="name">regression delta ± 오차범위</div><div class="desc">변경 전후 점수 차. 표본 크기 기반 오차와 함께 봐야 게이트 판정이 유효.</div></div>
+  <div class="metric"><div class="name">escalation rate</div><div class="desc">휴먼 승격 비율. 급증 = 불안정, 급감 = 임계값 완화 의심 신호.</div></div>
+</div>
+
+<!-- ==================== 8장 ==================== -->
+<h2 id="ch8"><span class="no">8장</span>실전 구현 — 코드 예시와 사용 방법</h2>
+<p class="chapter-lead">6장 성숙도 레벨에 대응시킨 4개의 실행 가능한 예시. 각 예시에 "언제·어떻게 쓰는지"를 병기했다.</p>
+
+<h3>예시 A [LV 2] — 골든셋 + 선언적 자동 채점 (promptfoo)</h3>
+<p><strong>사용 방법</strong>: 프롬프트를 고칠 때마다 <code>npx promptfoo eval</code> 한 줄로 전 케이스를 재채점해 회귀를 즉시 확인. 코드형 assert(결정적)와 LLM 루브릭(정성)을 한 파일에 혼합한다.</p>
+<pre><code># promptfooconfig.yaml
+prompts:
+  - "당신은 CS 상담원입니다. 규정 외 약속은 금지. 문의: {{query}}"
+
+providers:
+  - anthropic:messages:claude-sonnet-4-6
+
+defaultTest:
+  assert:
+    - type: not-contains          # 코드형: 금칙 표현 차단 (모든 케이스 공통)
+      value: "무조건 환불"
+
+tests:
+  - vars:
+      query: "어제 산 제품 환불 되나요?"
+    assert:
+      - type: contains            # 코드형: 규정 수치 포함 여부
+        value: "14일"
+      - type: llm-rubric          # LLM-as-Judge: 정성 기준의 정량화
+        value: "환불 규정을 정확히 안내하고, 규정에 없는 약속을 하지 않는다"
+      - type: latency
+        threshold: 3000           # ms — 성능도 게이트 대상
+</code></pre>
+<p class="src">문법 근거: <a href="https://www.promptfoo.dev/docs/intro/">promptfoo 공식 문서</a> (assert 타입 contains / not-contains / llm-rubric / latency)</p>
+
+<h3>예시 B [LV 3] — pytest 통합 회귀 평가 (DeepEval)</h3>
+<p><strong>사용 방법</strong>: 평가를 일반 유닛테스트와 동일한 CI 파이프라인에 편입. <code>threshold</code> 미달 케이스는 테스트 실패로 처리되어 머지가 차단된다.</p>
+<pre><code># tests/evals/test_refund.py
+import pytest
+from deepeval import assert_test
+from deepeval.test_case import LLMTestCase, LLMTestCaseParams
+from deepeval.metrics import GEval
+
+from app import run_app  # 평가 대상 애플리케이션 진입점
+
+correctness = GEval(
+    name="Correctness",
+    criteria="actual_output이 expected_output의 규정 내용과 사실적으로 일치하면 통과.",
+    evaluation_params=[
+        LLMTestCaseParams.ACTUAL_OUTPUT,
+        LLMTestCaseParams.EXPECTED_OUTPUT,
+    ],
+    threshold=0.8,   # 정량 임계값 = 통과/실패의 결정 기준
+)
+
+@pytest.mark.parametrize("query,expected", [
+    ("환불 규정 알려줘", "구매 후 14일 이내 전액 환불 가능"),
+    ("교환은 언제까지 돼?", "수령 후 7일 이내 교환 가능"),
+])
+def test_policy_answers(query, expected):
+    tc = LLMTestCase(
+        input=query,
+        actual_output=run_app(query),
+        expected_output=expected,
+    )
+    assert_test(tc, [correctness])
+</code></pre>
+<p class="note">라이브러리 API는 버전에 따라 달라질 수 있으므로 설치 버전의 <a href="https://deepeval.com/docs/getting-started">공식 문서</a> 대조 필수.</p>
+
+<h3>예시 C [LV 4] — 런타임 결정 제어: 스키마 검증 + 신뢰도 게이트</h3>
+<p><strong>사용 방법</strong>: 모델이 "결정"을 내리는 모든 지점을 이 래퍼로 감싼다. 스키마 위반·저신뢰 응답은 다운스트림으로 흘러가지 않는다 — 2장 특징 3(시스템 수준)의 런타임 구현.</p>
+<pre><code>import json
+from jsonschema import validate, ValidationError
+
+DECISION_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "decision":   {"enum": ["approve", "reject", "escalate"]},
+        "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+        "reason":     {"type": "string", "maxLength": 300},
+    },
+    "required": ["decision", "confidence", "reason"],
+    "additionalProperties": False,
+}
+
+CONFIDENCE_FLOOR = 0.7  # 이 값 미만이면 모델의 결정권을 회수
+
+def guarded_decision(prompt: str, max_retry: int = 2) -> dict:
+    for _ in range(max_retry + 1):
+        raw = call_model(prompt, temperature=0)  # 사용 중인 SDK 호출로 대체
+        try:
+            data = json.loads(raw)
+            validate(data, DECISION_SCHEMA)
+        except (json.JSONDecodeError, ValidationError):
+            continue  # 형식 위반 → 재시도
+        if data["confidence"] < CONFIDENCE_FLOOR:
+            return {"decision": "escalate",
+                    "confidence": data["confidence"],
+                    "reason": "저신뢰 응답 → 휴먼 리뷰 승격"}
+        return data
+    return {"decision": "escalate", "confidence": 0.0,
+            "reason": "스키마 검증 반복 실패 → 안전 폴백"}
+</code></pre>
+
+<h3>예시 D [LV 3] — CI 배포 게이트</h3>
+<p><strong>사용 방법</strong>: PR마다 평가 스위트가 자동 실행되고 임계값 미달이면 머지가 물리적으로 차단된다. 프롬프트 한 줄 수정도 코드와 동일한 게이트를 통과해야 한다.</p>
+<pre><code># .github/workflows/eval-gate.yml
+name: eval-gate
+on: [pull_request]
+
+jobs:
+  evals:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install -r requirements.txt deepeval
+      - run: deepeval test run tests/evals/   # 임계값 미달 시 exit 1 → 머지 차단
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+</code></pre>
+
+<h3>골든셋 확장 팁</h3>
+<p>수백 개 문항을 손으로 쓰기는 어렵다 — Anthropic 문서는 <strong>기준 예시 집합에서 Claude로 추가 테스트 케이스를 생성</strong>하고, 어떤 평가 방법이 적합한지 자체를 모델과 브레인스토밍하는 방식을 권장한다. 단, 생성된 문항은 인간 검수를 거쳐야 12장(용어: 골든셋 오염)의 자기강화를 피할 수 있다. <span class="src">근거: <a href="https://docs.anthropic.com/en/docs/test-and-evaluate/develop-tests">Anthropic Docs</a></span></p>
+
+<!-- ==================== 9장 ==================== -->
+<h2 id="ch9"><span class="no">9장</span>가드레일 — 평가를 런타임 방어선으로</h2>
+<p class="chapter-lead">평가는 실행 위치에 따라 역할이 갈린다. 이 구분이 가드레일 설계의 출발점이다.</p>
+
+<div class="box gate">
+  <div class="label">Blocking eval — 크리티컬 패스</div>
+  <p style="margin:0">파이프라인 한가운데서 실행되어 출력을 <strong>차단하거나, 재시도를 강제하거나, 더 안전한 대안으로 폴백</strong>시킨다. 스키마 검증, 금칙어 필터, PII 마스킹, LLM-Judge 정책 검사가 여기 속한다. 지연이 UX에 직결되므로 가볍고 결정적인 검사를 앞에, 무거운 Judge를 뒤에 배치한다. <span class="src">(구분 근거: <a href="https://www.news.aakashg.com/p/ai-evals">AI Evals for PMs</a> — guardrail eval은 크리티컬 패스에서 차단·재시도·폴백 가능)</span></p>
+</div>
+<div class="box">
+  <div class="label">Monitoring eval — 백그라운드</div>
+  <p style="margin:0">워크플로를 막지 않고 샘플링 트래픽을 채점해 <strong>드리프트·품질 저하를 수동적으로 탐지</strong>한다. 점수 하락 추세가 임계선을 넘으면 알림 → 재개발 루프를 트리거. <span class="src">(<a href="https://www.news.aakashg.com/p/ai-evals">동일 출처</a>)</span></p>
+</div>
+
+<h3>LLM-as-Judge의 이중 역할</h3>
+<p>Judge는 평가 시스템이면서 동시에 동적 가드레일로 작동할 수 있다 — 별도 모델이 명시적 기준(정책·규정 준수)으로 출력을 채점하고, 위반 탐지 시 교정 액션을 트리거하는 패턴이다. 평가 기준은 프롬프트에 인코딩한 루브릭·예시·도메인 가이드라인으로 완전히 정의되므로, "무엇이 좋은가"를 비즈니스 규칙으로 직접 조형할 수 있다. <span class="src">근거: <a href="https://weaviate.io/blog/evals-guardrails-enterprise-workflows-2">Weaviate, Evals and Guardrails in Enterprise Workflows Part 2</a></span></p>
+
+<h3>다층 가드레일 구성</h3>
+<table>
+  <thead><tr><th>계층</th><th>검사 대상</th><th>수단</th><th>실패 시 동작</th></tr></thead>
+  <tbody>
+    <tr><td class="key">입력</td><td>프롬프트 인젝션, 범위 밖 요청, PII</td><td>분류기, 패턴 매칭, 허용 토픽 리스트</td><td>거부 응답 또는 정제 후 통과</td></tr>
+    <tr><td class="key">출력</td><td>형식, 금칙어, 정책 위반, 근거 없는 주장</td><td>스키마 검증 → 코드형 필터 → LLM-Judge</td><td>재시도 → 폴백 응답 → escalate</td></tr>
+    <tr><td class="key">행동(에이전트)</td><td>도구 호출, 비가역 작업(삭제·전송·결제)</td><td>도구 화이트리스트, 비가역 호출 직전 중간 검사</td><td>호출 차단 + 휴먼 승인 대기</td></tr>
+    <tr><td class="key">운영</td><td>점수 드리프트, escalation 급증</td><td>모니터링 eval, 대시보드, 알림</td><td>롤백 또는 재개발 트리거</td></tr>
+  </tbody>
+</table>
+
+<h3>가드레일 자체를 평가하라 — 그리고 "차단"을 넘어 "교정"으로</h3>
+<p>6장 LV4에서 인용한 대로, 프롬프트 인젝션 공격에 대해 대표 가드레일들의 평균 탐지 recall은 58.57%에 그치고 탐지된 경우조차 차단 성공률은 37.26% 미만이며, 차단 후 원래의 정상 과제가 보존되는 비율은 2.31% 미만이었다. 이에 대한 대안으로 TRIAD는 허용/거부의 이진 판정 대신 <strong>proceed / refuse / update의 3중 판정 + 구조화된 언어 피드백</strong>을 에이전트 컨텍스트에 주입해, 계획을 수정하고 정상 과제를 보존하는 폐쇄 루프를 제안한다 — 즉 성숙한 가드레일은 차단기가 아니라 평가 피드백 루프의 일부다. <span class="src">근거: <a href="https://arxiv.org/abs/2606.05805">TRIAD, arXiv:2606.05805</a></span></p>
+
+<!-- ==================== 10장 ==================== -->
+<h2 id="ch10"><span class="no">10장</span>10단계 구축 프로세스와 안티패턴</h2>
+<p class="chapter-lead">1–9장의 내용을 실행 순서로 압축한 10단계. 각 단계는 6장의 성숙도 레벨과 대응한다.</p>
+
+<ol class="flow">
+  <li><span class="t">성공 기준을 구체적·측정 가능하게 정의 [LV0→1]</span><span class="d">"좋은 답변" 금지. "규정 수치를 정확 인용하고 규정 외 약속을 하지 않는다"처럼 Specific·Measurable·Achievable하게. 거버넌스(법·윤리) 제약도 이 단계에서 평가 계획에 편입. (2장 특징 2)</span></li>
+  <li><span class="t">실제 실패에서 골든셋 v1 추출 [LV1]</span><span class="d">버그 트래커·CS 큐에서 20–50개 과제로 시작. 정상 + 경계 + 적대적 케이스(인젝션, 범위 밖 요청)를 포함. (3장 규모 근거)</span></li>
+  <li><span class="t">과제 명세를 "두 전문가 동일 채점" 수준으로 다듬기 [LV1]</span><span class="d">채점에 필요한 모든 기준이 과제 설명에서 드러나야 한다. 명세의 모호함은 그대로 지표의 노이즈가 된다. (7장)</span></li>
+  <li><span class="t">코드 grader부터 자동화 [LV2]</span><span class="d">형식·수치·금칙어 등 규칙화 가능한 것 전부. 가장 빠르고 신뢰성 높은 채점 방법을 우선한다는 원칙. (7-3)</span></li>
+  <li><span class="t">정성 기준을 루브릭화하고 Judge 도입 — 단, 검증 먼저 [LV3]</span><span class="d">Judge 점수와 인간 라벨 표본의 일치율(judge–human agreement)을 측정해 통과한 지표에만 Judge를 채점자로 승격. 주기적 재교정을 일정에 박는다. (6장 LV3, Descript 패턴)</span></li>
+  <li><span class="t">CI 배포 게이트 연결 [LV3]</span><span class="d">PR마다 평가 실행, regression delta가 오차 범위를 고려한 허용치를 넘으면 머지 차단. 프롬프트 변경도 예외 없음. (8장 예시 D)</span></li>
+  <li><span class="t">런타임 blocking 가드레일 배치 [LV4]</span><span class="d">스키마 검증 → 코드 필터 → Judge 순서로 크리티컬 패스에 배치하고, 비가역 행동 직전에는 반드시 중간 검사. (9장)</span></li>
+  <li><span class="t">온라인 모니터링 + 전체 트레이스 로깅 [LV4]</span><span class="d">프롬프트·중간 추론·도구 호출·최종 출력을 로깅하고 샘플링 채점. 드리프트·escalation 급증에 알림 임계값 설정. (2장 특징 3의 운영 구현)</span></li>
+  <li><span class="t">실패 트리아지 → 최초 결정 지점에 표적 수정 [LV5]</span><span class="d">실패 트레이스를 실패 모드(계획 오류·도구 오용·오래된 검색·메모리 오염)로 분류하고, 연쇄를 촉발한 최초 지점을 찾아 그곳에 수정을 주입. (5장 ③의 실행)</span></li>
+  <li><span class="t">실패의 골든셋 환류 + 스위트 자체 갱신 [LV5]</span><span class="d">모든 운영 실패는 영구 회귀 테스트가 된다. 동시에 포화된 문항을 교체하고 난이도를 유지해 eval 스위트 자체가 낡지 않게 관리. (4장 배경 2)</span></li>
+</ol>
+
+<h3>안티패턴 5가지</h3>
+<table>
+  <thead><tr><th>안티패턴</th><th>왜 실패하는가</th><th>교정</th></tr></thead>
+  <tbody>
+    <tr><td class="key">완벽한 스위트를 기다림</td><td>eval 없이 보내는 기간만큼 반응적 루프 비용이 누적. "일찍 시작하고 완벽을 기다리지 말라"가 실전 팀들의 공통 교훈.</td><td>실패 20–50건으로 즉시 시작 (2단계)</td></tr>
+    <tr><td class="key">검증 없는 Judge 전면 도입</td><td>Judge 편향이 개발·평가를 동시 오염 → 거짓 성공 (arXiv:2504.19076)</td><td>인간 일치율 검증 통과 지표에만 단계 도입 (5단계)</td></tr>
+    <tr><td class="key">오차 범위 없는 델타 판정</td><td>노이즈를 개선/회귀로 오독 (7장)</td><td>표본 크기 기반 허용치 + pass^k 병행</td></tr>
+    <tr><td class="key">가드레일 설치 후 방치</td><td>탐지 recall 58.57%라는 실측이 보여주듯 "달았다 ≠ 막힌다"</td><td>공격 데이터셋으로 recall·차단률 정기 측정</td></tr>
+    <tr><td class="key">모델 수준 점수만 관리</td><td>도구 오용·메모리 오염 등 시스템 실패가 미탐지로 남음 (5장 ①)</td><td>파이프라인+아티팩트 전체를 평가 범위로</td></tr>
+  </tbody>
+</table>
+
+<h3>도입 자가 점검 체크리스트</h3>
+<ul class="check">
+  <li>성공 기준이 "두 전문가가 동일 채점 가능한" 문장으로 존재하는가</li>
+  <li>골든셋에 실제 운영 실패 사례가 포함되어 있는가</li>
+  <li>모델이 내리는 모든 "결정"이 닫힌 집합(enum)과 스키마로 정의되어 있는가</li>
+  <li>프롬프트 변경이 코드 변경과 동일한 CI 평가 게이트를 통과하는가</li>
+  <li>LLM-Judge와 인간 라벨의 일치율을 측정·재교정하고 있는가</li>
+  <li>게이트 판정에 표본 크기·오차 범위가 반영되어 있는가 (pass^k 포함)</li>
+  <li>가드레일의 recall과 실제 차단률을 공격 데이터셋으로 검증했는가</li>
+  <li>비가역 행동(삭제·전송·결제) 직전에 중간 검사가 존재하는가</li>
+  <li>운영 실패가 골든셋으로 환류되는 경로가 있는가</li>
+  <li>포화된 eval 문항을 교체하는 갱신 주기가 있는가</li>
+</ul>
+
+<footer>
+  <p style="font-weight:600; color:var(--ink); margin-bottom:10px">근거 자료 전체 목록 (2026-07 웹 검색으로 접근 확인)</p>
+  <ul style="margin-left:18px">
+    <li><strong>[1차 · 공식]</strong> Anthropic Engineering, <em>Demystifying evals for AI agents</em> — <a href="https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents">anthropic.com/engineering/demystifying-evals-for-ai-agents</a> · 적용 전후 현상 대조, Descript·Bolt 사례, eval 설계 원칙 (3장·6장·7장·10장)</li>
+    <li><strong>[1차 · 공식]</strong> Anthropic Docs, <em>Define success criteria and build evaluations</em> — <a href="https://docs.anthropic.com/en/docs/test-and-evaluate/develop-tests">docs.anthropic.com/en/docs/test-and-evaluate/develop-tests</a> · 성공 기준 정의, 채점 방법 선택, 볼륨 우선 원칙 (2장·7장·8장)</li>
+    <li><strong>[1차 · 연구]</strong> Anthropic Research, <em>A statistical approach to model evaluations</em> — <a href="https://www.anthropic.com/research/statistical-approach-to-model-evals">anthropic.com/research/statistical-approach-to-model-evals</a> · 문항 우주, CLT, 오차 보고 권고 (2장·7장)</li>
+    <li><strong>[1차 · 학술]</strong> Xia et al., <em>Evaluation-Driven Development and Operations of LLM Agents: A Process Model and Reference Architecture</em> — <a href="https://arxiv.org/abs/2411.13768">arxiv.org/abs/2411.13768</a> · 하네스/도구 한계(partial support), 시스템 수준 평가, 연속 평가, 실패 트리아지, TDD/BDD/EDDOps 비교 (1장·2장·4장·5장·10장)</li>
+    <li><strong>[1차 · 학술]</strong> Chen et al., <em>TRIAD: From Risk Classification to Action Plan Remediation</em> — <a href="https://arxiv.org/abs/2606.05805">arxiv.org/abs/2606.05805</a> · 가드레일 recall 58.57% / 차단 37.26% / 과제 보존 2.31% 실측, 3중 판정 프레임 (6장·9장·10장)</li>
+    <li><strong>[1차 · 학술]</strong> <em>LLM-Evaluation Tropes: Perspectives on the Validity of LLM-Evaluations</em> — <a href="https://arxiv.org/abs/2504.19076">arxiv.org/abs/2504.19076</a> · Judge 자기강화·편향·재현성 위험 (1장·6장·10장)</li>
+    <li><strong>[2차 · 실무]</strong> Aakash Gupta, <em>AI Evals for PMs</em> (Hamel Husain·Shreya Shankar 방법론 정리) — <a href="https://www.news.aakashg.com/p/ai-evals">news.aakashg.com/p/ai-evals</a> · Three Gulfs, Analyze–Measure–Improve, blocking vs monitoring eval (4장·9장)</li>
+    <li><strong>[2차 · 실무]</strong> Weaviate Blog, <em>Evals and Guardrails in Enterprise Workflows Part 2</em> — <a href="https://weaviate.io/blog/evals-guardrails-enterprise-workflows-2">weaviate.io/blog/evals-guardrails-enterprise-workflows-2</a> · LLM-as-Judge의 평가+가드레일 이중 역할 (9장)</li>
+    <li><strong>[2차 · 해설]</strong> Inkeep, <em>Anthropic's Guide to AI Agent Evals</em> — <a href="https://inkeep.com/blog/anthropic-s-guide-to-ai-agent-evals-what-support-teams-need">inkeep.com/blog/anthropic-s-guide-to-ai-agent-evals-what-support-teams-need</a> · 20–50 과제 시작 규모, SWE-bench 40%→80% 포화 맥락 (3장·4장·7장)</li>
+    <li><strong>[도구 문서]</strong> <a href="https://www.promptfoo.dev/docs/intro/">promptfoo.dev/docs</a> · <a href="https://deepeval.com/docs/getting-started">deepeval.com/docs</a> (8장 코드 예시 문법 근거)</li>
+  </ul>
+  <p style="margin-top:14px">주의: 6장의 성숙도 레벨 0→5 모델은 위 출처들을 종합해 이 문서가 구성한 실무 프레임이며, 특정 논문의 공식 표준이 아니다. 각 레벨의 "목격 현상"에 인용된 개별 사실(수치·사례)에는 해당 출처를 병기했다.</p>
+</footer>
+
+</div>
+</body>
+</html>
