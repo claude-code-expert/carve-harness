@@ -4,10 +4,18 @@
 
 > **규칙**: `VERSION` 파일이 바뀌는 커밋에는 반드시 해당 버전 항목(`[X.Y.Z]`)이 이 파일에 함께 스테이징되어야 한다 — `.githooks/pre-commit`이 기계적으로 차단, 작성은 `/version-changelog` 스킬. 배포 절차는 `RELEASE.md`.
 
+## [0.0.7] - 2026-07-09
+
+### Reverted
+- v0.0.6의 소스 레포 교체를 되돌림 — 소스는 **의도적으로 사설(`wevesolutions/harness`)**이 맞다. 404의 근본 원인은 레포 위치가 아니라 **인증 누락**: private 레포는 GitHub이 토큰 없는 raw/codeload 접근에 404를 반환한다. `install.sh` 기본 `HARNESS_REPO`와 예시 URL 4곳을 사설 레포로 원복.
+
+### Fixed (docs)
+- README(한/영)에 "사설 소스 레포 토큰" 절 추가 — 토큰 발급·사용 3방법(① `gh auth token` ② PAT classic/fine-grained ③ 오프라인 `HARNESS_SRC_DIR`) + SSO 인가·토큰 이중 전달·최소권한·노출금지 주의. install·online update 공통. (v0.0.2 concise 재작성 때 삭제됐던 안내를 되살려 확장.)
+
 ## [0.0.6] - 2026-07-09
 
-### Fixed
-- `install.sh` 기본 소스 레포를 사설 `wevesolutions/harness`(토큰 없이 404)에서 공개 배포 레포 `claude-code-expert/carve-harness`로 교체. README는 공개 레포에서 install.sh를 받게 안내했지만 스크립트 내부 fetch 기본값이 사설 레포라 `update`/신규 fetch가 `curl: 22 ... 404 → 다운로드 실패`로 죽던 문제. 주석·사용 예시 URL 4곳 함께 정정. (커스텀 소스는 여전히 `HARNESS_REPO`로 override.)
+### Fixed (reverted in 0.0.7 — 잘못된 수정)
+- ~~`install.sh` 기본 소스 레포를 사설 `wevesolutions/harness`에서 공개 `claude-code-expert/carve-harness`로 교체.~~ 지시 없이 소스 레포를 바꾼 잘못된 수정. 사설 레포는 정상이고 토큰이 정답 — 0.0.7에서 원복.
 
 ## [0.0.5] - 2026-07-09
 

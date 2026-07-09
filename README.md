@@ -1,6 +1,6 @@
 # Claude 하네스 (언어 무관 드롭인)
 
-[English](README.en.md) · 현재 버전 **v0.0.6** · 변경 내역 [CHANGELOG.md](CHANGELOG.md) · 강좌 [HARNESS_GUIDE.md](HARNESS_GUIDE.md)
+[English](README.en.md) · 현재 버전 **v0.0.7** · 변경 내역 [CHANGELOG.md](CHANGELOG.md) · 강좌 [HARNESS_GUIDE.md](HARNESS_GUIDE.md)
 
 코딩 에이전트의 규칙 위반을 "설득"이 아니라 **훅 exit 2로 차단**하는 가드레일 템플릿.
 프로젝트 루트에 드롭인하면 즉시 동작한다.
@@ -28,10 +28,45 @@ cd /path/to/your-project
 curl -fsSL https://raw.githubusercontent.com/claude-code-expert/carve-harness/main/install.sh | bash
 ```
 
-오프라인: `HARNESS_SRC_DIR=/path/to/harness-copy bash /path/to/harness-copy/install.sh`
-
 - 기존 파일은 건드리지 않는다(SKIP 보고) — 설치 목록은 `.claude/harness-manifest.txt`에 기록.
 - 설치 끝에 `/harness-audit` 자동 실행 — 38 PASS면 전 게이트 활성.
+
+### 사설(private) 소스 레포 토큰
+
+하네스 소스는 private 레포(`wevesolutions/harness`)다. GitHub은 **인증 없는** raw/codeload 접근에 404를 반환하므로, 같은 org(`wevesolutions`) 멤버여도 토큰이 필요하다. 아래 명령은 설치·업데이트 공통(마지막 `bash` 인자만 `-s -- update`로 바꾸면 업데이트).
+
+**방법 1 — gh CLI (가장 간단, 권장):**
+```bash
+GITHUB_TOKEN=$(gh auth token)
+curl -fsSL -H "Authorization: token $GITHUB_TOKEN" \
+  https://raw.githubusercontent.com/wevesolutions/harness/main/install.sh \
+  | GITHUB_TOKEN=$GITHUB_TOKEN bash
+```
+`gh` 없으면 `gh auth login`(GitHub.com → HTTPS → 브라우저) 후 실행. SSO도 자동 인가돼 방법 2의 SSO 함정이 없다.
+
+**방법 2 — PAT 직접 발급:**
+1. GitHub → Settings → Developer settings → Personal access tokens
+2. Classic은 `repo` 스코프 / Fine-grained는 Resource owner=`wevesolutions`, Repository=`harness`, **Contents: Read**
+3. 발급된 토큰으로:
+```bash
+export GITHUB_TOKEN=ghp_xxxxxxxx
+curl -fsSL -H "Authorization: token $GITHUB_TOKEN" \
+  https://raw.githubusercontent.com/wevesolutions/harness/main/install.sh \
+  | GITHUB_TOKEN=$GITHUB_TOKEN bash
+```
+
+**방법 3 — 토큰 없이 (오프라인/로컬 클론):**
+```bash
+HARNESS_SRC_DIR=/path/to/harness bash /path/to/harness/install.sh          # 설치
+HARNESS_SRC_DIR=/path/to/harness bash /path/to/harness/install.sh update   # 업데이트
+```
+
+주의:
+- 토큰이 **두 번** 들어간다 — 앞 `-H`는 install.sh 스크립트 다운로드용, 뒤 `GITHUB_TOKEN=` 환경변수는 스크립트가 소스 tarball을 codeload에서 받을 때 쓴다. 하나만 빠져도 404.
+- **SSO**: org가 SAML SSO를 강제하면 PAT(방법 2)를 토큰 목록에서 "Configure SSO → Authorize"로 `wevesolutions`에 인가해야 200이 된다. 방법 1은 해당 없음.
+- **토큰 노출 금지**: `ghp_...`를 커밋·로그·`.env`에 넣지 마라(하네스 가드가 `ghp_` 하드코딩 쓰기를 차단). 셸 세션 환경변수로만.
+- **최소 권한**: 업데이트만이면 fine-grained + Contents:Read로 충분. classic `repo`는 과함.
+- 공개 미러에서 받으려면 `HARNESS_REPO=<owner>/<public-repo>`로 소스를 바꾼다(토큰 불필요).
 
 **초기 설정** (선택, 모든 항목 엔터로 skip):
 
@@ -69,6 +104,7 @@ HARNESS_FORCE=1 bash install.sh update
 bash install.sh rollback
 ```
 
+- **토큰**: 온라인 `update`도 사설 소스라 `GITHUB_TOKEN`이 필요하다 — 위 "사설 소스 레포 토큰" 3방법과 동일(마지막 인자만 `bash -s -- update`). 오프라인·로컬 경로는 토큰 불필요.
 - update: 원격 `VERSION` vs 로컬 `.claude/harness-version` 비교(같으면 no-op) → manifest 범위만 패치, 변경 파일은 `logs/harness-backup/v<이전>/` 자동 백업, 사용자 파일(설치 때 SKIP분) 불가침.
 - rollback: 최신 백업 복원 + 버전 스탬프 복귀. 백업은 소비 — 연속 실행 시 그 이전 버전으로.
 - 배포 절차는 `RELEASE.md`.
@@ -128,7 +164,8 @@ bash uninstall.sh --yes    # 실제 제거 (manifest 범위만, 원래 있던 �
 
 | 버전 | 날짜 | 요약 |
 |------|------|------|
-| v0.0.6 | 2026-07-09 | fix: install.sh 기본 소스 레포를 공개 carve-harness로 교체 (사설 레포 404로 update 실패하던 문제) |
+| v0.0.7 | 2026-07-09 | revert v0.0.6 (소스는 사설이 정상) + 사설 레포 토큰 안내 복원 (404 원인=인증 누락) |
+| v0.0.6 | 2026-07-09 | ~~소스 레포 공개 전환~~ (0.0.7에서 원복 — 잘못된 수정) |
 | v0.0.5 | 2026-07-09 | CLAUDE.md 응답 언어 프로토콜(영문 요약→한글 결론) 추가 |
 | v0.0.4 | 2026-07-09 | fix: 설치 목록에 VERSION 포함 — 설치본 셀프테스트 실패·체인 설치 버전 소실 수정 · 하네스 강좌(HARNESS_GUIDE.md) 추가 |
 | v0.0.3 | 2026-07-08 | 대화형 설정 `setup` · update-안전 패턴 확장 파일 · LICENSE 자동 생성 |

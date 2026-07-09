@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>프로젝트 필수 하네스 구성 — API 포탈</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+/* brewnet light · anti-AI-slop: 무채색 + 단일 블루 액센트, 그라데이션/글로우/모션장식 없음 */
+:root{
+  --bg:#f4f4f3; --card:#ffffff; --ink:#1a1a18; --mut:#6b6b66;
+  --line:#e2e2df; --line-strong:#cfcfca; --accent:#2563eb;
+  --warn-bg:#fbf7ef; --no-bg:#fbf1f1; --ok-bg:#f0f5f1;
+  --sans:'Noto Sans KR',sans-serif; --mono:'JetBrains Mono',monospace;
+}
+*{box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{margin:0; background:var(--bg); color:var(--ink); font-family:var(--sans);
+  font-size:15px; line-height:1.7; -webkit-font-smoothing:antialiased;}
+.wrap{max-width:980px; margin:0 auto; padding:56px 24px 96px;}
+
+/* header */
+.doc-head{border-bottom:2px solid var(--ink); padding-bottom:20px; margin-bottom:8px;}
+.eyebrow{font-family:var(--mono); font-size:12px; letter-spacing:.08em; color:var(--mut); text-transform:uppercase; margin:0 0 10px;}
+h1{font-size:30px; line-height:1.25; font-weight:700; margin:0 0 14px; letter-spacing:-.01em;}
+
+/* meta block (첫 callout.note 묶음) */
+.callout{margin:18px 0; padding:14px 16px; border:1px solid var(--line); background:var(--card);
+  border-radius:6px; font-size:14px;}
+.callout p{margin:6px 0;}
+.callout p:first-child{margin-top:0;} .callout p:last-child{margin-bottom:0;}
+.callout.warn{background:var(--warn-bg); border-color:#e8dcc4;}
+.callout.no{background:var(--no-bg); border-color:#e8cfcf;}
+.callout.ok{background:var(--ok-bg); border-color:#cfe0d4;}
+.callout .label{font-family:var(--mono); font-size:11px; font-weight:700; letter-spacing:.06em;
+  text-transform:uppercase; color:var(--mut); display:block; margin-bottom:4px;}
+
+/* TOC */
+.toc{background:var(--card); border:1px solid var(--line); border-radius:8px;
+  padding:20px 24px; margin:28px 0 40px;}
+.toc-title{font-family:var(--mono); font-size:12px; letter-spacing:.06em; text-transform:uppercase;
+  color:var(--mut); margin:0 0 12px;}
+.toc ul{margin:0; padding-left:18px;} .toc li{margin:3px 0;}
+.toc a{color:var(--ink); text-decoration:none;}
+.toc a:hover{color:var(--accent); text-decoration:underline;}
+
+/* headings */
+h2{font-size:21px; font-weight:700; margin:48px 0 16px; padding-top:18px;
+  border-top:1px solid var(--line-strong); letter-spacing:-.01em;}
+h3{font-size:16px; font-weight:700; margin:30px 0 12px;}
+h2:first-of-type{border-top:none;}
+
+/* text */
+p{margin:12px 0;}
+strong{font-weight:700;}
+a{color:var(--accent); text-decoration:none; word-break:break-all;}
+a:hover{text-decoration:underline;}
+ul,ol{padding-left:22px;} li{margin:5px 0;}
+
+/* inline code */
+code{font-family:var(--mono); font-size:.86em; background:#f0f0ee;
+  border:1px solid var(--line); border-radius:3px; padding:1px 5px;}
+
+/* code block */
+pre{background:#1a1a18; color:#e6e6e3; border-radius:6px; padding:16px 18px;
+  overflow-x:auto; margin:16px 0; font-size:13px; line-height:1.6;}
+pre code{background:none; border:none; padding:0; color:inherit; font-size:13px;}
+
+/* tables */
+.tbl{overflow-x:auto; margin:18px 0;}
+table{border-collapse:collapse; width:100%; font-size:13.5px; background:var(--card);}
+th,td{border:1px solid var(--line); padding:9px 12px; text-align:left; vertical-align:top;}
+th{background:#ecebe9; font-weight:700; font-family:var(--mono); font-size:12px;
+  letter-spacing:.02em; white-space:nowrap;}
+td code{font-size:12px; word-break:break-all;}
+tr:nth-child(even) td{background:#fafaf9;}
+
+hr{border:none; border-top:1px solid var(--line); margin:36px 0;}
+
+footer{margin-top:64px; border-top:1px solid var(--line-strong); padding-top:20px;
+  font-family:var(--mono); font-size:12px; color:var(--mut);}
+
+@media print{ body{background:#fff;} .wrap{padding:0;} .toc{break-inside:avoid;}
+  pre{background:#f4f4f3; color:#1a1a18; border:1px solid var(--line);} a{color:var(--ink);} }
+@media (max-width:640px){ .wrap{padding:32px 16px 64px;} h1{font-size:24px;} h2{font-size:18px;} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="doc-head">
+    <p class="eyebrow">Harness Engineering · Claude Code</p>
+    <h1>프로젝트 필수 하네스 구성 — API 포탈 (Java/Spring + React)</h1>
+  </header>
+  <nav class="toc">
+    <p class="toc-title">목차</p>
+    <div class="toc">
+<ul>
+<li><a href="#api-javaspring-react">프로젝트 필수 하네스 구성 — API 포탈 (Java/Spring + React)</a><ul>
+<li><a href="#0">0. 한 장 요약 (결론 먼저)</a></li>
+<li><a href="#1">1. 디렉토리 구조 (목표)</a></li>
+<li><a href="#2">2. 구성 요소 상세</a><ul>
+<li><a href="#1-agentsmd-backfrontgateway">① 에이전트 정의 (AGENTS.md — back/front/gateway)</a></li>
+<li><a href="#2-handoff-changelog">② 스킬 — handoff / changelog ⚠️ 동명 스킬 없음, 대체 자산</a></li>
+<li><a href="#3">③ 훅 — 포맷 / 린트 / 머지금지 / 커밋룰</a></li>
+<li><a href="#4">④ 서브에이전트 (검증/리뷰)</a></li>
+<li><a href="#5-md">⑤ 룰 / 가드레일 md</a></li>
+</ul>
+</li>
+<li><a href="#3-6-headroom-caveman-lsp">3. 토큰 매니지먼트 ⑥ — headroom · caveman · LSP</a></li>
+<li><a href="#4-sdd-7-gsd-get-shit-done">4. SDD 킷 ⑦ — GSD (Get Shit Done)</a></li>
+<li><a href="#5-8-api">5. 게이트웨이 검증 ⑧ — 인증·인가·API키·라우팅·레이트리미트</a><ul>
+<li><a href="#5-1">5-1. 용어 정리 (요청 표현 → 정확한 개념)</a></li>
+<li><a href="#5-2">5-2. 기능별 테스트 매핑</a></li>
+<li><a href="#5-3">5-3. 테스트 피라미드 (게이트웨이용)</a></li>
+<li><a href="#5-4-javaspring">5-4. 권장 도구 스택 (Java/Spring)</a></li>
+<li><a href="#5-5">5-5. 에이전트(하네스) 자동화</a></li>
+</ul>
+</li>
+<li><a href="#6">6. 적용 순서 (한 번에 다 하지 말 것)</a></li>
+<li><a href="#7">7. 할루시네이션 / 출처 검증 노트</a></li>
+</ul>
+</li>
+</ul>
+</div>
+
+  </nav>
+  
+<blockquote class="callout warn"><span class="label">주의</span>
+<p>대상 스택: Spring Boot 백엔드 · React 프론트 · 경량 API 게이트웨이
+자산 출처: ECC(<code>affaan-m/ECC</code>, MIT) + 토큰 관리 3종 + GSD(SDD 킷) + 게이트웨이 테스트 방법론
+작성 기준일: 2026-06-26 · 모든 외부 링크 HTTP 200 검증 완료
+⚠️ Star 수·버전은 변동되므로 채택 전 링크에서 현행 확인 권장</p>
+</blockquote>
+<hr />
+<h2 id="0">0. 한 장 요약 (결론 먼저)</h2>
+<p>하네스는 <strong>3기둥(제약·피드백·상태)</strong> 위에 <strong>토큰 관리 · SDD 워크플로우 · 게이트웨이 검증</strong>을 얹어 완성한다.</p>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>묶음</th>
+<th>무엇</th>
+<th>핵심 자산</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>① 에이전트 정의</td>
+<td>back/front/gateway 역할 분리</td>
+<td><code>AGENTS.md</code> 계층 + ECC <code>architect</code></td>
+</tr>
+<tr>
+<td>② 스킬</td>
+<td>세션 인계·결정 기록</td>
+<td>handoff(=strategic-compact) · changelog(=recursive-decision-ledger)</td>
+</tr>
+<tr>
+<td>③ 훅</td>
+<td>포맷·린트·머지금지·커밋룰</td>
+<td><code>hooks.json</code> + commitlint + hookify</td>
+</tr>
+<tr>
+<td>④ 서브에이전트</td>
+<td>타입·상태·예외·시크릿·인증·리뷰·커밋 검증</td>
+<td>ECC reviewer/evaluator 9종</td>
+</tr>
+<tr>
+<td>⑤ 룰/가드레일</td>
+<td>검증 가능한 규칙 md</td>
+<td>ECC <code>rules/</code> (common·java·react·ts)</td>
+</tr>
+<tr>
+<td>⑥ 토큰 매니지먼트</td>
+<td>컨텍스트·비용 절감</td>
+<td>headroom · caveman · LSP/codesight</td>
+</tr>
+<tr>
+<td>⑦ SDD 킷</td>
+<td>명세 주도 개발</td>
+<td>GSD (get-shit-done)</td>
+</tr>
+<tr>
+<td>⑧ <strong>게이트웨이 검증</strong></td>
+<td>인증·인가·API키·라우팅·레이트리미트 구동 검증</td>
+<td>WireMock · Testcontainers · Walking Skeleton</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="1">1. 디렉토리 구조 (목표)</h2>
+<pre><code>api-portal/
+├── CLAUDE.md                      # 전역 가드레일 (3기둥 + 도구 라우팅)
+├── AGENTS.md                      # 모든 에이전트 공통 표준
+├── commitlint.config.js           # 커밋 룰 (ECC 차용)
+├── .specify/                      # GSD/SDD 산출물 루트
+├── backend/
+│   ├── AGENTS.md                  # Spring 레이어·트랜잭션 규칙
+│   └── src/.../auth/AGENTS.md     # 인증 폴더 전용 규칙
+├── frontend/
+│   └── AGENTS.md                  # React 상태관리·API 클라이언트 규칙
+├── gateway/
+│   ├── AGENTS.md                  # 라우팅·인증·rate limit 규칙
+│   └── src/test/                  # WireMock 스텁 + Testcontainers 통합 테스트
+└── .claude/
+    ├── agents/                    # 서브에이전트 (④)
+    ├── skills/                    # 스킬 (②·⑥)
+    ├── commands/                  # 커맨드
+    ├── rules/                     # 룰 md (⑤)
+    └── settings.json              # 훅 등록 (③·⑧)
+</code></pre>
+<hr />
+<h2 id="2">2. 구성 요소 상세</h2>
+<p>기준 경로: <code>https://github.com/affaan-m/ECC/blob/main/</code></p>
+<h3 id="1-agentsmd-backfrontgateway">① 에이전트 정의 (AGENTS.md — back/front/gateway)</h3>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>용도</th>
+<th>자산</th>
+<th>경로</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>AGENTS.md 표준 템플릿</td>
+<td><code>rules/common/agents.md</code></td>
+<td>rules/common/agents.md</td>
+</tr>
+<tr>
+<td>백/프론트/게이트웨이 구조 설계</td>
+<td><code>agents/architect.md</code>, <code>agents/code-architect.md</code></td>
+<td>agents/architect.md</td>
+</tr>
+<tr>
+<td>레이어 근거 스킬</td>
+<td><code>skills/hexagonal-architecture</code>, <code>skills/api-design</code>, <code>skills/backend-patterns</code></td>
+<td>skills/api-design/SKILL.md</td>
+</tr>
+<tr>
+<td>back/front 병렬 운용</td>
+<td>커맨드 <code>multi-backend.md</code>, <code>multi-frontend.md</code></td>
+<td>commands/multi-backend.md</td>
+</tr>
+</tbody>
+</table></div>
+<blockquote class="callout note"><span class="label">참고</span>
+<p>gateway 전용 에이전트는 ECC에 없음 → <code>architect</code> + <code>api-connector-builder</code>(skill)로 생성. AGENTS.md를 3개 폴더에 계층 배치.</p>
+</blockquote>
+<h3 id="2-handoff-changelog">② 스킬 — handoff / changelog ⚠️ 동명 스킬 없음, 대체 자산</h3>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>요청</th>
+<th>ECC 실제 자산</th>
+<th>경로</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>handoff</td>
+<td><code>skills/strategic-compact</code> + 커맨드 <code>save-session</code>·<code>resume-session</code>·<code>checkpoint</code></td>
+<td>skills/strategic-compact/SKILL.md</td>
+</tr>
+<tr>
+<td>changelog</td>
+<td><code>skills/recursive-decision-ledger</code> + 커맨드 <code>update-docs</code></td>
+<td>skills/recursive-decision-ledger/SKILL.md</td>
+</tr>
+<tr>
+<td>세션 연속 학습(보조)</td>
+<td><code>skills/continuous-learning-v2</code></td>
+<td>skills/continuous-learning-v2/SKILL.md</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="3">③ 훅 — 포맷 / 린트 / 머지금지 / 커밋룰</h3>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>요청</th>
+<th>자산</th>
+<th>경로</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>훅 본체(Pre/Post/Stop/Session/PreCompact)</td>
+<td><code>hooks/hooks.json</code></td>
+<td>hooks/hooks.json</td>
+</tr>
+<tr>
+<td>훅 작성 규칙</td>
+<td><code>rules/common/hooks.md</code>·<code>rules/java/hooks.md</code>·<code>rules/react/hooks.md</code></td>
+<td>rules/common/hooks.md</td>
+</tr>
+<tr>
+<td>룰→훅 자동 변환</td>
+<td><code>skills/hookify-rules</code> + 커맨드 <code>hookify</code>·<code>hookify-configure</code></td>
+<td>skills/hookify-rules/SKILL.md</td>
+</tr>
+<tr>
+<td>커밋 룰 검사</td>
+<td><code>commitlint.config.js</code>(루트 차용) + <code>rules/common/git-workflow.md</code></td>
+<td>commitlint.config.js</td>
+</tr>
+<tr>
+<td>린트 설정</td>
+<td><code>eslint.config.js</code>(루트)</td>
+<td>eslint.config.js</td>
+</tr>
+</tbody>
+</table></div>
+<p>매핑: 포맷/린트 = PostToolUse(prettier·eslint, Java는 spotless) · 머지금지·위험 git = PreToolUse <code>exit 2</code> · 커밋룰 = commitlint.</p>
+<blockquote class="callout note"><span class="label">참고</span>
+<p>핵심: 차단은 반드시 <code>exit 2</code>. <code>exit 1</code>은 비차단으로 처리되어 위험 동작이 진행됨.</p>
+</blockquote>
+<h3 id="4">④ 서브에이전트 (검증/리뷰)</h3>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>요청</th>
+<th>ECC 에이전트</th>
+<th>경로</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>evaluator·타입 검증</td>
+<td><code>agents/agent-evaluator.md</code> + <code>type-design-analyzer.md</code> (+ java/typescript-reviewer)</td>
+<td>agents/agent-evaluator.md</td>
+</tr>
+<tr>
+<td>리액트 상태관리 검증</td>
+<td><code>agents/react-reviewer.md</code> (+ skill react-patterns)</td>
+<td>agents/react-reviewer.md</td>
+</tr>
+<tr>
+<td>예외처리 검증</td>
+<td><code>agents/silent-failure-hunter.md</code> (+ skill error-handling)</td>
+<td>agents/silent-failure-hunter.md</td>
+</tr>
+<tr>
+<td>시크릿 키 관리</td>
+<td><code>agents/security-reviewer.md</code> (+ skill security-review·gateguard)</td>
+<td>agents/security-reviewer.md</td>
+</tr>
+<tr>
+<td>인증/인가 누락</td>
+<td><code>agents/security-reviewer.md</code> (+ skill springboot-security)</td>
+<td>skills/springboot-security/SKILL.md</td>
+</tr>
+<tr>
+<td>코드 리뷰</td>
+<td><code>agents/code-reviewer.md</code> + java-reviewer·react-reviewer</td>
+<td>agents/code-reviewer.md</td>
+</tr>
+<tr>
+<td>커밋</td>
+<td>커맨드 <code>pr.md</code>·<code>prp-commit.md</code></td>
+<td>commands/pr.md</td>
+</tr>
+<tr>
+<td>Generator-Evaluator 분리</td>
+<td><code>agents/gan-generator.md</code>·<code>gan-evaluator.md</code>·<code>gan-planner.md</code></td>
+<td>agents/gan-evaluator.md</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="5-md">⑤ 룰 / 가드레일 md</h3>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>종류</th>
+<th>자산</th>
+<th>경로</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>공통 가드레일</td>
+<td><code>rules/common/</code> (security·patterns·code-review·testing·performance·git-workflow)</td>
+<td>rules/common/security.md</td>
+</tr>
+<tr>
+<td>Java 룰</td>
+<td><code>rules/java/</code> (coding-style·patterns·security·testing·hooks)</td>
+<td>rules/java/security.md</td>
+</tr>
+<tr>
+<td>React/TS 룰</td>
+<td><code>rules/react/</code>·<code>rules/typescript/</code></td>
+<td>rules/react/patterns.md</td>
+</tr>
+<tr>
+<td>웹 보안/디자인</td>
+<td><code>rules/web/security.md</code>·<code>design-quality.md</code></td>
+<td>rules/web/security.md</td>
+</tr>
+<tr>
+<td>룰 증류·정합</td>
+<td><code>skills/rules-distill</code>·<code>skill-comply</code></td>
+<td>skills/rules-distill/SKILL.md</td>
+</tr>
+<tr>
+<td>가드레일 본체 템플릿</td>
+<td>루트 <code>RULES.md</code>·<code>CLAUDE.md</code></td>
+<td>RULES.md</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="3-6-headroom-caveman-lsp">3. 토큰 매니지먼트 ⑥ — headroom · caveman · LSP</h2>
+<p>세 가지가 <strong>각기 다른 토큰 스트림</strong>을 줄인다. 중복이 아니라 적층(stack).</p>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>도구</th>
+<th>줄이는 대상</th>
+<th>광고 절감</th>
+<th>설치</th>
+<th>비고</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>headroom</strong></td>
+<td>API 페이로드(grep·diff 등)를 프록시에서 압축</td>
+<td>47~92% (중앙값 54%)</td>
+<td><code>pip install --user headroom</code> → <code>headroom wrap claude</code></td>
+<td>RTK 번들 포함</td>
+</tr>
+<tr>
+<td><strong>caveman</strong></td>
+<td>Claude 자체 출력(프롬프트·응답)을 telegraphic하게</td>
+<td>50~75%</td>
+<td><code>claude plugin marketplace add JuliusBrussee/caveman</code> → <code>claude plugin install caveman@caveman</code></td>
+<td><code>/caveman lite\|full\|ultra</code></td>
+</tr>
+<tr>
+<td><strong>LSP</strong></td>
+<td>코드 탐색을 본문→좌표로 축소</td>
+<td>정의 43× · 참조 2.1× (실측)</td>
+<td>언어서버 설치 + <code>tweakcc --apply</code> + <code>/plugin install</code></td>
+<td>Piebald-AI 마켓플레이스</td>
+</tr>
+<tr>
+<td><strong>codesight</strong></td>
+<td>세션 시작 구조 파악을 압축 맵 1개로</td>
+<td>세션당 6.8× (실측 ≈27,915토큰)</td>
+<td><code>npx codesight --init</code> + <code>--mcp</code></td>
+<td>LSP와 상호보완</td>
+</tr>
+</tbody>
+</table></div>
+<p>설치 링크(검증 완료):
+- headroom: https://github.com/chopratejas/headroom
+- caveman: https://github.com/JuliusBrussee/caveman
+- rtk(번들): https://github.com/rtk-ai/rtk
+- LSP 마켓플레이스: https://github.com/Piebald-AI/claude-code-lsps
+- codesight: https://github.com/Houseofmvps/codesight
+- 통합 설치 스택(참고): https://github.com/sgaabdu4/claude-code-tips</p>
+<p>caveman 변형: <code>caveman-commit</code>(50자 이내 커밋), <code>caveman-review</code>(한 줄 PR 코멘트), <code>caveman-compress</code>(CLAUDE.md 압축, 입력 ~46% 절감).</p>
+<p>LSP 적용 기준:
+- 파일 20개 미만 소규모 → grep 기본으로 충분 (LSP 불필요)
+- 중대형/리팩토링 → codesight(세션 시작 구조) + LSP(정의·참조 추적) 병행
+- 다중/미지원 언어 → cclsp, 심볼 편집·메모리 필요 시 → Serena(<code>--context claude-code</code>)</p>
+<blockquote class="callout warn"><span class="label">주의</span>
+<p>⚠️ 절감폭 현실 주의: 한 독립 실측(614M 토큰 코퍼스)에서 headroom+rtk+caveman 합산 실효 절감은 <strong>약 3.7%</strong>에 그쳤다. 매 턴 컨텍스트가 저렴한 cache_read로 재전송되고, 비용 대부분이 cache_create·output이라 이들 도구가 손대지 않기 때문. 즉 <strong>광고 수치는 "특정 스트림 단독 최선값"</strong>이며, 실효 절감은 워크로드(셸·grep·리뷰 비중)에 크게 의존한다. LSP/codesight는 탐색이 많은 코드베이스에서 별도로 큰 효과(실측 6~43×).
+⚠️ 보안 주의: headroom·rtk·caveman은 코드·프롬프트·명령 출력을 읽는다. 현재는 local-first이나 단일 오염 릴리스가 위험이 될 수 있으므로 버전 고정·출처 검증 권장.</p>
+</blockquote>
+<hr />
+<h2 id="4-sdd-7-gsd-get-shit-done">4. SDD 킷 ⑦ — GSD (Get Shit Done)</h2>
+<p>"Context Rot(컨텍스트 부패)"를 막는 경량 스펙 주도 개발 시스템. 상태를 파일로 외부화하고 각 플랜을 fresh context에서 실행.</p>
+<ul>
+<li>repo: https://github.com/gsd-build/get-shit-done (★45k, MIT)</li>
+<li>설치: <code>npx get-shit-done-cc --global</code> (전역) 또는 <code>--local</code> (현재 프로젝트)</li>
+</ul>
+<p>워크플로우:</p>
+<pre><code>/gsd:new-project     → 아이디어를 상세 스펙으로 확장
+/gsd:create-roadmap  → 마일스톤 기반 로드맵
+/gsd:plan-phase      → 페이즈별 XML 최적화 플랜
+/gsd:execute-plan    → 원자적 커밋 단위 구현
+/gsd:verify          → 명시적 완료 기준 검증
+</code></pre>
+<ul>
+<li>Quick 모드: <code>/gsd:quick "다크모드 토글 추가"</code> (소규모 태스크, <code>--research</code>·<code>--full</code>·<code>--validate</code> 옵션)</li>
+<li>차별점: XML 최적화 플랜 포맷 — <code>&lt;task&gt;&lt;files&gt;&lt;action&gt;&lt;verify&gt;&lt;done&gt;</code> 으로 완료 조건을 구조화</li>
+</ul>
+<blockquote class="callout note"><span class="label">참고</span>
+<p>대안/비교: 공식 spec-kit(<code>specify-cli</code>)도 가능. spec-kit은 Claude Code에서 Skills 모드로 설치되어 <code>/speckit-*</code>(하이픈) 표기. GSD는 더 가벼운 단일 마일스톤용, spec-kit은 품질 게이트(clarify·checklist·analyze)가 풍부. API 포탈 규모면 <strong>spec-kit으로 계약 단위 명세 → GSD quick으로 소규모 변경</strong> 혼용 권장.
+연결 포인트: GSD <code>&lt;verify&gt;&lt;done&gt;</code> 슬롯에 ⑧의 "기능별 합격 기준"을 그대로 넣으면, 에이전트가 게이트웨이 검증을 건너뛸 수 없다.</p>
+</blockquote>
+<hr />
+<h2 id="5-8-api">5. 게이트웨이 검증 ⑧ — 인증·인가·API키·라우팅·레이트리미트</h2>
+<p>게이트웨이의 다섯 기능은 비즈니스 로직이 아니라 <strong>교차 관심사(cross-cutting)</strong>라, 단위 테스트로는 "실제 구동"을 검증할 수 없다. <strong>백엔드를 스텁으로 세우고 게이트웨이를 통째로 띄워 요청을 흘려보내는 컴포넌트/통합 테스트</strong>가 핵심이며, <strong>Walking Skeleton(전 구간 1줄 관통)</strong>과 <strong>계약 테스트(스텁≈현실 보증)</strong>로 완성한다.</p>
+<h3 id="5-1">5-1. 용어 정리 (요청 표현 → 정확한 개념)</h3>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>요청 표현</th>
+<th>정확한 개념</th>
+<th>게이트웨이에서 쓰임</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>목업 테스트</td>
+<td>Mock (행위 검증)</td>
+<td>게이트웨이가 인증서버를 "호출했는지" 확인</td>
+</tr>
+<tr>
+<td>스텁 테스트</td>
+<td>Stub (정해진 응답 반환)</td>
+<td>WireMock 백엔드가 200/500 반환</td>
+</tr>
+<tr>
+<td>스켈레톤 테스트</td>
+<td>Walking Skeleton (얇은 전구간)</td>
+<td>클라이언트→게이트웨이→백엔드 1시나리오 관통</td>
+</tr>
+</tbody>
+</table></div>
+<blockquote class="callout note"><span class="label">참고</span>
+<p>테스트 더블 5종(Meszaros): Dummy(채우기)·Stub(정해진 응답)·Spy(호출 기록)·Mock(기대값+행위검증)·Fake(동작하는 경량 구현). 이 중 Mock만 행위 검증을 강제. Fake는 인메모리 DB처럼 동작하나 프로덕션엔 부적합.</p>
+</blockquote>
+<h3 id="5-2">5-2. 기능별 테스트 매핑</h3>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>게이트웨이 기능</th>
+<th>검증 대상</th>
+<th>테스트 더블 / 도구</th>
+<th>합격 기준(SC) 예</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>라우팅</td>
+<td>경로·헤더에 따라 올바른 백엔드로</td>
+<td>WireMock 스텁 백엔드 + WebTestClient</td>
+<td>요청이 stub A로 감 · route attr 일치</td>
+</tr>
+<tr>
+<td>인증</td>
+<td>유효/만료/위조 토큰</td>
+<td>Stub 토큰 또는 Testcontainers Keycloak</td>
+<td>유효=200, 무효/만료=401</td>
+</tr>
+<tr>
+<td>인가</td>
+<td>역할·스코프 기반</td>
+<td>role 클레임 담긴 Stub 토큰</td>
+<td>권한 없음=403</td>
+</tr>
+<tr>
+<td>API 키 발급</td>
+<td>발급→검증 흐름</td>
+<td>실제 발급 엔드포인트 + Testcontainers store</td>
+<td>발급 키 통과, 폐기 키 차단</td>
+</tr>
+<tr>
+<td>레이트 리미트</td>
+<td>N회 초과 시 차단</td>
+<td>Testcontainers Redis + 반복 호출</td>
+<td>한도 내 200, 초과 429 + Retry-After</td>
+</tr>
+<tr>
+<td>Walking Skeleton</td>
+<td>전 구간 관통</td>
+<td>위 전부를 얇게 1시나리오</td>
+<td>토큰→라우팅→백엔드 200 한 번 통과</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="5-3">5-3. 테스트 피라미드 (게이트웨이용)</h3>
+<pre><code>        e2e (walking skeleton) — 최소 1~2개, 전구간 관통
+      contract (Spring Cloud Contract/Pact) — 스텁=현실 보증
+    component/integration — 게이트웨이+WireMock+Testcontainers (가장 두껍게)
+  unit — 필터·토큰파서 (Mockito stub)
+</code></pre>
+<ul>
+<li><strong>단위</strong>: 커스텀 필터·토큰 파서를 Mockito stub으로 격리</li>
+<li><strong>컴포넌트/통합(가장 중요)</strong>: 게이트웨이 전체 컨텍스트 + WireMock 백엔드 + Testcontainers Redis. WebTestClient/RestAssured로 호출. 라우팅은 <code>GATEWAY_ROUTE_ATTR</code>를 응답 헤더로 노출해 검증</li>
+<li><strong>계약(Contract)</strong>: 스텁의 함정 방지 — "스텁이 현실을 반영 못하면 통과해도 실제 깨짐". 머지 승인 전 스텁≈현실 주기 검증</li>
+<li><strong>e2e/skeleton</strong>: 끝에서 끝까지 동작하는 미완성 골격을 만든 뒤 점진 발전</li>
+</ul>
+<h3 id="5-4-javaspring">5-4. 권장 도구 스택 (Java/Spring)</h3>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>목적</th>
+<th>도구</th>
+<th>비고</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>백엔드 스텁</td>
+<td>WireMock (<code>@AutoConfigureWireMock(port=0)</code> 또는 Testcontainers WireMock 모듈)</td>
+<td>라우팅·헤더 변조 검증 표준</td>
+</tr>
+<tr>
+<td>게이트웨이 호출</td>
+<td>WebTestClient (reactive SCG) / MockMvc (MVC)</td>
+<td>route attr 검증 가능</td>
+</tr>
+<tr>
+<td>인프라 의존성</td>
+<td>Testcontainers — Redis(레이트리미트)·Keycloak(인증)·PostgreSQL(API키 저장)</td>
+<td>실제 컨테이너 통합 검증</td>
+</tr>
+<tr>
+<td>계약 테스트</td>
+<td>Spring Cloud Contract(<code>spring-cloud-starter-contract-stub-runner</code>) 또는 Pact</td>
+<td>WireMock 부트스트랩 단순화</td>
+</tr>
+<tr>
+<td>e2e 호출</td>
+<td>RestAssured</td>
+<td>가독성 좋은 HTTP 단언</td>
+</tr>
+<tr>
+<td>레이트리미트 부하</td>
+<td>k6 / Gatling</td>
+<td>429 발생률·Retry-After 검증</td>
+</tr>
+</tbody>
+</table></div>
+<p>테스트 골격 (구조만 — ⚠️ 실제 SCG 버전·의존성에서 컴파일·실행 검증 필요):</p>
+<pre><code class="language-java">@SpringBootTest(webEnvironment = RANDOM_PORT)
+@AutoConfigureWireMock(port = 0)   // 백엔드 스텁
+@Testcontainers                    // Redis 등 실제 컨테이너
+class GatewayIntegrationTest {
+  @Container static GenericContainer&lt;?&gt; redis =
+      new GenericContainer&lt;&gt;(&quot;redis:7&quot;).withExposedPorts(6379);
+  @Autowired WebTestClient client;
+
+  @Test void 유효토큰_라우팅_통과() {
+    stubFor(get(&quot;/api/users&quot;).willReturn(okJson(&quot;[]&quot;)));   // 스텁
+    client.get().uri(&quot;/api/users&quot;)
+        .header(&quot;Authorization&quot;, &quot;Bearer &quot; + validToken())
+        .exchange().expectStatus().isOk();                 // 합격 기준
+  }
+  @Test void 한도초과_429() { /* 반복 호출 후 429 + Retry-After 검증 */ }
+}
+</code></pre>
+<h3 id="5-5">5-5. 에이전트(하네스) 자동화</h3>
+<p><strong>A. SDD/TDD 루프</strong> — <code>/gsd:plan-phase</code>로 기능별 합격 기준 명세 → 테스트 먼저(red) → 구현 → <code>/gsd:verify</code>(green)</p>
+<p><strong>B. 훅으로 강제 (검증 완료 JSON)</strong></p>
+<pre><code class="language-json">{ &quot;hooks&quot;: {
+  &quot;PostToolUse&quot;: [{ &quot;matcher&quot;: &quot;Edit|Write&quot;, &quot;hooks&quot;: [{ &quot;type&quot;: &quot;command&quot;,
+    &quot;command&quot;: &quot;f=$(jq -r '.tool_input.file_path // empty'); case \&quot;$f\&quot; in *Gateway*.java|*Filter*.java|*Auth*.java|*RateLimit*.java) ./gradlew test --tests '*GatewayIntegration*' -q 2&gt;&amp;1 | tail -25;; esac&quot; }]}],
+  &quot;Stop&quot;: [{ &quot;hooks&quot;: [{ &quot;type&quot;: &quot;command&quot;,
+    &quot;command&quot;: &quot;./gradlew test -q 2&gt;&amp;1 | tail -15 || { echo 'GATE: tests failing' &gt;&amp;2; exit 2; }&quot; }]}]
+}}
+</code></pre>
+<ul>
+<li>PostToolUse: 게이트웨이/필터/인증 파일 수정 시 관련 통합 테스트만 자동 실행</li>
+<li>Stop: 테스트가 깨진 채 응답 종료 차단(<code>exit 2</code>)</li>
+</ul>
+<p><strong>C. ECC 서브에이전트 매핑</strong></p>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>자동화 작업</th>
+<th>ECC 에이전트/스킬</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>테스트 우선 작성 유도</td>
+<td><code>agents/tdd-guide.md</code> + skill <code>springboot-tdd</code></td>
+</tr>
+<tr>
+<td>walking skeleton 실행</td>
+<td><code>agents/e2e-runner.md</code></td>
+</tr>
+<tr>
+<td>PR 테스트 충분성 평가</td>
+<td><code>agents/pr-test-analyzer.md</code></td>
+</tr>
+<tr>
+<td>인증/인가 누락 탐지</td>
+<td><code>agents/security-reviewer.md</code> + skill <code>springboot-security</code></td>
+</tr>
+<tr>
+<td>레이트리미트 조용한 실패 탐지</td>
+<td><code>agents/silent-failure-hunter.md</code></td>
+</tr>
+<tr>
+<td>Java 통합 검증</td>
+<td><code>agents/java-reviewer.md</code></td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>D. 스텁 자동 생성·검증</strong> — 백엔드 OpenAPI 스펙 → 에이전트가 WireMock 매핑 자동 생성 → 계약 테스트로 "스텁 ≈ 실제 백엔드" 주기 검증(괴리 자동 감지)</p>
+<hr />
+<h2 id="6">6. 적용 순서 (한 번에 다 하지 말 것)</h2>
+<pre><code>1주차) AGENTS.md 계층 + rules/(가드레일) + commitlint            ← 효과 큼·난이도 낮음
+2주차) hooks.json (PreToolUse 머지차단 + PostToolUse 포맷)        ← 결정적 방어
+3주차) 서브에이전트(security·silent-failure·react·evaluator)      ← 검증 자동화
+4주차) 토큰 관리(codesight+LSP 먼저, headroom/caveman 선택)       ← 비용·세션 길이
+5주차) SDD 킷(spec-kit/GSD) + handoff/changelog 스킬             ← 워크플로우 완성
+6주차) 게이트웨이 검증(WireMock+Testcontainers) + 테스트 훅       ← 구동 검증 자동화
+</code></pre>
+<hr />
+<h2 id="7">7. 할루시네이션 / 출처 검증 노트</h2>
+<div class="tbl"><table>
+<thead>
+<tr>
+<th>항목</th>
+<th style="text-align: center;">상태</th>
+<th>근거</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ECC 레포 rename(everything-claude-code→ECC)</td>
+<td style="text-align: center;">✅</td>
+<td>GitHub API 리다이렉트 확인</td>
+</tr>
+<tr>
+<td>ECC 자산 경로(agents/rules/skills/hooks)</td>
+<td style="text-align: center;">✅</td>
+<td>git tree 집계 + 19개 경로 HTTP 200</td>
+</tr>
+<tr>
+<td>handoff·changelog 동명 스킬</td>
+<td style="text-align: center;">❌ 없음</td>
+<td>strategic-compact·recursive-decision-ledger로 대체(명시)</td>
+</tr>
+<tr>
+<td>headroom/caveman 정체·설치·절감폭</td>
+<td style="text-align: center;">✅</td>
+<td>제작사 repo + 다수 기술 글</td>
+</tr>
+<tr>
+<td>headroom+rtk+caveman 실효 절감 ~3.7%</td>
+<td style="text-align: center;">✅</td>
+<td>codepointer 독립 실측(614M 토큰)</td>
+</tr>
+<tr>
+<td>LSP 43× / codesight 6.8×</td>
+<td style="text-align: center;">✅</td>
+<td>프로젝트 내부 실측(재현 가능)</td>
+</tr>
+<tr>
+<td>LSP 빌트인 v2.0.74 추가·tweakcc 패치 필요</td>
+<td style="text-align: center;">⚠️ 재확인</td>
+<td>버전 변동 — 녹화 전 changelog 확인</td>
+</tr>
+<tr>
+<td>GSD 명령어·설치</td>
+<td style="text-align: center;">✅</td>
+<td>프로젝트 문서 + GSD repo</td>
+</tr>
+<tr>
+<td>spec-kit <code>/speckit-</code> 하이픈(Claude)</td>
+<td style="text-align: center;">✅</td>
+<td>spec-kit integrations.md (Skills 모드)</td>
+</tr>
+<tr>
+<td>테스트 더블 5종(Meszaros)·Walking Skeleton</td>
+<td style="text-align: center;">✅</td>
+<td>Fowler "Mocks Aren't Stubs" · James Shore</td>
+</tr>
+<tr>
+<td>WireMock+WebTestClient·Testcontainers WireMock 모듈</td>
+<td style="text-align: center;">✅</td>
+<td>testcontainers.com 공식 가이드 · dev.to SCG 시리즈</td>
+</tr>
+<tr>
+<td>스텁 괴리→계약 테스트 필요</td>
+<td style="text-align: center;">✅</td>
+<td>Koble(Medium) · Stoplight</td>
+</tr>
+<tr>
+<td>게이트웨이 테스트 hook JSON</td>
+<td style="text-align: center;">✅ 검증</td>
+<td><code>json.load()</code> 파싱 통과</td>
+</tr>
+<tr>
+<td>Java 테스트 골격 코드</td>
+<td style="text-align: center;">⚠️ 구조만</td>
+<td>실제 SCG 버전·의존성에서 컴파일·실행 검증 필요</td>
+</tr>
+<tr>
+<td>경량 게이트웨이 선택(SCG vs APISIX 등)</td>
+<td style="text-align: center;">ℹ️</td>
+<td>SCG는 Java팀 표준, 고부하엔 NGINX/Envoy 우위 — 트래픽 규모로 판단</td>
+</tr>
+<tr>
+<td>외부 링크 8종 + ECC 19경로</td>
+<td style="text-align: center;">✅</td>
+<td>curl 일괄 HTTP 200</td>
+</tr>
+<tr>
+<td>각 에이전트/스킬 내부 로직 정합성</td>
+<td style="text-align: center;">⚠️</td>
+<td>채택 전 개별 SKILL.md·agent.md 본문 리뷰 권장</td>
+</tr>
+</tbody>
+</table></div>
+  <footer>생성 2026-06-26 · 외부 링크 HTTP 200 검증 · brewnet light · anti-AI-slop 준수</footer>
+</div>
+</body>
+</html>
