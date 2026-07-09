@@ -154,7 +154,7 @@ run_setup() {
 # 설치 대상 목록 — uninstall.sh는 설치 시 기록되는 manifest만 신뢰한다.
 HARNESS_PATHS=(
   CLAUDE.md AGENTS.md RULES.md .cursorrules codex.md
-  install.sh uninstall.sh
+  VERSION install.sh uninstall.sh
   .claude/CLAUDE.md .claude/settings.json
   .claude/hooks .claude/skills .claude/commands .claude/agents .claude/rules
   .githooks vendor specs/README.md
