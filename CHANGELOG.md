@@ -4,6 +4,16 @@
 
 > **규칙**: `VERSION` 파일이 바뀌는 커밋에는 반드시 해당 버전 항목(`[X.Y.Z]`)이 이 파일에 함께 스테이징되어야 한다 — `.githooks/pre-commit`이 기계적으로 차단, 작성은 `/version-changelog` 스킬. 배포 절차는 `RELEASE.md`.
 
+## [0.0.6] - 2026-07-09
+
+### Fixed
+- `install.sh` 기본 소스 레포를 사설 `wevesolutions/harness`(토큰 없이 404)에서 공개 배포 레포 `claude-code-expert/carve-harness`로 교체. README는 공개 레포에서 install.sh를 받게 안내했지만 스크립트 내부 fetch 기본값이 사설 레포라 `update`/신규 fetch가 `curl: 22 ... 404 → 다운로드 실패`로 죽던 문제. 주석·사용 예시 URL 4곳 함께 정정. (커스텀 소스는 여전히 `HARNESS_REPO`로 override.)
+
+## [0.0.5] - 2026-07-09
+
+### Added
+- `CLAUDE.md` 응답 언어 프로토콜: 영문 작업 요약 먼저 → 한글 최종 결론(무엇을/왜/주의점 1블록), 각 1회. 인용된 영문·에러 출력엔 해당 부분만 한글 주석. 배포 파일이라 신규 설치 시 함께 전파(대상에 자체 CLAUDE.md가 있으면 기존 SKIP 시맨틱으로 미적용 — 수동 병합 필요).
+
 ## [0.0.4] - 2026-07-09
 
 ### Fixed

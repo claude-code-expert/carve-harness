@@ -19,6 +19,16 @@
 - 프로젝트 도메인 규칙: 이 자리에 프로젝트별 불변식·금지사항을 추가한다.
   (예: "주문 금액 음수 불가", "결제 승인 없이 배송상태 변경 금지")
 
+## 응답 언어 프로토콜 (필수)
+- Write the working summary / explanation in English first.
+- Then state the final conclusion in Korean (한글로 최종 결론).
+- Order is fixed: English summary → Korean conclusion, each exactly once.
+- When error output or quoted English text appears, add a brief Korean note for that part only.
+- On task completion, the Korean conclusion covers, in one block, once:
+  - What changed (무엇을 변경했는지)
+  - Why (왜 그렇게 했는지)
+  - Caveats (주의할 점)
+
 ## 스택 감지
 - `**/*.java` → `.claude/rules/java-spring/`
 - `**/*.ts`, `**/*.tsx` → `.claude/rules/react-next/`
