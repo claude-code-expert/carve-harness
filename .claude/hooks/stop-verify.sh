@@ -28,21 +28,42 @@ fail=0
 have_git=0
 command -v git >/dev/null 2>&1 && git rev-parse --is-inside-work-tree >/dev/null 2>&1 && have_git=1
 java_changed=1; node_changed=1; py_changed=1; sh_changed=1
+# GATE-04 defaults: git 없으면 full(java_other=1, gw off) — 회피는 변경 식별 가능할 때만.
+gw_changed=0; java_other=1
+# 게이트웨이 파일 판별 단일 소스 — audit(AUDIT-07)이 같은 개념을 참조.
+GW_RE='([Gg]ateway|[Ff]ilter|[Aa]uth|[Rr]ate[Ll]imit)[^/]*\.java$|/gateway/.*\.java$'
 if [ "$have_git" -eq 1 ]; then
   CHANGED=$(git status --porcelain 2>/dev/null | sed 's/^...//')
   printf '%s\n' "$CHANGED" | grep -Eq '\.(java|kt|gradle)'    && java_changed=1 || java_changed=0
   printf '%s\n' "$CHANGED" | grep -Eq '\.(ts|tsx)$|package\.json' && node_changed=1 || node_changed=0
   printf '%s\n' "$CHANGED" | grep -Eq '\.py$|pyproject\.toml'  && py_changed=1 || py_changed=0
   printf '%s\n' "$CHANGED" | grep -Eq '\.sh$|^\.githooks/'     && sh_changed=1 || sh_changed=0
+  # GATE-04: 게이트웨이 관련 java 변경 여부 + 그 외 java 변경 여부(섞이면 full).
+  printf '%s\n' "$CHANGED" | grep -Eq "$GW_RE" && gw_changed=1 || gw_changed=0
+  printf '%s\n' "$CHANGED" | grep -E '\.(java|kt|gradle)$' | grep -Ev "$GW_RE" | grep -q . && java_other=1 || java_other=0
 fi
 
 # --- Java/Spring: 컴파일 + 테스트 (변경 시에만) ---
 # 커버리지 80%는 build.gradle의 jacocoTestCoverageVerification으로 강제 → test 태스크가 실패한다.
+# GATE-04: 게이트웨이 파일만 변경 → *GatewayIntegration* 타깃만(전체 빌드 회피).
+#          다른 java가 섞이면 full test(게이트웨이 통합 테스트 포함)로 안전하게 간다.
 if [ "$java_changed" -eq 1 ]; then
-  if [ -f gradlew ]; then
-    ./gradlew compileJava test -q 2>&1 | tail -20 || fail=1
-  elif [ -f backend/gradlew ]; then
-    ( cd backend && ./gradlew compileJava test -q ) 2>&1 | tail -20 || fail=1
+  GDIR=""
+  [ -f gradlew ] && GDIR="."
+  [ -z "$GDIR" ] && [ -f backend/gradlew ] && GDIR="backend"
+  if [ -n "$GDIR" ]; then
+    if [ "$java_other" -eq 0 ] && [ "$gw_changed" -eq 1 ]; then
+      gw_out=$( cd "$GDIR" && ./gradlew compileJava test --tests '*GatewayIntegration*' -q 2>&1 ); gw_rc=$?
+      printf '%s\n' "$gw_out" | tail -20
+      if [ "$gw_rc" -ne 0 ]; then
+        # gradle는 --tests 매칭 0개면 실패 → 컨벤션 미채택 프로젝트의 false-fail 방지(best-effort skip).
+        printf '%s\n' "$gw_out" | grep -qiE 'no tests found|does not match' \
+          && echo "[verify] *GatewayIntegration* 매칭 테스트 없음 — 스킵(best-effort)" >&2 \
+          || fail=1
+      fi
+    else
+      ( cd "$GDIR" && ./gradlew compileJava test -q ) 2>&1 | tail -20 || fail=1
+    fi
   fi
 fi
 

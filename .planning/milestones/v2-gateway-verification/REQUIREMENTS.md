@@ -54,15 +54,15 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| GWV-01 | Phase 1 | Pending |
-| GWV-02 | Phase 1 | Pending |
-| GWV-03 | Phase 1 | Pending |
-| GATE-04 | Phase 2 | Pending |
-| GATE-05 | Phase 2 | Pending |
-| AUDIT-07 | Phase 2 | Pending |
-| COMMIT-01 | Phase 3 | Pending |
-| TESTAGENT-01 | Phase 4 | Pending |
-| TESTAGENT-02 | Phase 4 | Pending |
+| GWV-01 | Phase 1 | Complete |
+| GWV-02 | Phase 1 | Complete |
+| GWV-03 | Phase 1 | Complete |
+| GATE-04 | Phase 2 | Complete |
+| GATE-05 | Phase 2 | Complete |
+| AUDIT-07 | Phase 2 | Complete |
+| COMMIT-01 | Phase 3 | Complete |
+| TESTAGENT-01 | Phase 4 | Complete |
+| TESTAGENT-02 | Phase 4 | Complete |
 
 **Coverage:** 9/9 v2 requirements mapped — no orphans.
 

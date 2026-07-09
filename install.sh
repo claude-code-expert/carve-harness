@@ -342,7 +342,7 @@ else
 fi
 
 # (4) permissions + agent-agnostic commit gate.
-chmod +x "$HERE"/.claude/hooks/*.sh "$HERE"/.githooks/pre-commit 2>/dev/null
+chmod +x "$HERE"/.claude/hooks/*.sh "$HERE"/.githooks/* 2>/dev/null
 say "OK: 훅 실행 권한"
 if git -C "$HERE" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   git -C "$HERE" config core.hooksPath .githooks

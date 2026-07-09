@@ -1,6 +1,6 @@
 # Claude 하네스 (언어 무관 드롭인)
 
-[English](README.en.md) · 현재 버전 **v0.0.7** · 변경 내역 [CHANGELOG.md](CHANGELOG.md) · 강좌 [HARNESS_GUIDE.md](HARNESS_GUIDE.md)
+[English](README.en.md) · 현재 버전 **v0.0.8** · 변경 내역 [CHANGELOG.md](CHANGELOG.md) · 강좌 [HARNESS_GUIDE.md](HARNESS_GUIDE.md)
 
 코딩 에이전트의 규칙 위반을 "설득"이 아니라 **훅 exit 2로 차단**하는 가드레일 템플릿.
 프로젝트 루트에 드롭인하면 즉시 동작한다.
@@ -13,9 +13,9 @@
 | **피드백** | Stop 훅이 빌드·타입·테스트 실패 시 완료 선언 차단 — 변경된 스택만 증분 검증 |
 | **상태** | 세션 종료·압축 시 핸드오프 자동 저장(실제 TODO·결정 수집), 시작 시 복원 |
 | **관측** | 모든 훅 판정을 `logs/*.jsonl`에 기록 (PII 마스킹), 리포트·회전 지원 |
-| **자가감사** | `/harness-audit` — 38개 기계 체크로 하네스 오구성 PASS/FAIL |
+| **자가감사** | `/harness-audit` — 40개 기계 체크로 하네스 오구성 PASS/FAIL |
 
-**구성 요소**: 훅 8종(Claude Code 전용, 6 이벤트) · 슬래시 커맨드 14종 · 에이전트 13종 · 스킬 22종 · 규칙 17종 · 테스트 10 스위트(106건)
+**구성 요소**: 훅 8종(Claude Code 전용, 6 이벤트) · 슬래시 커맨드 14종 · 에이전트 16종 · 스킬 23종 · 규칙 18종 · 테스트 11 스위트(125건)
 
 **크로스 에이전트**: 훅 차단은 Claude Code 전용. Cursor/Codex 등은 `AGENTS.md` 정본 + `.githooks/pre-commit`이 커밋 시점에 최종 차단.
 
@@ -29,7 +29,7 @@ curl -fsSL https://raw.githubusercontent.com/claude-code-expert/carve-harness/ma
 ```
 
 - 기존 파일은 건드리지 않는다(SKIP 보고) — 설치 목록은 `.claude/harness-manifest.txt`에 기록.
-- 설치 끝에 `/harness-audit` 자동 실행 — 38 PASS면 전 게이트 활성.
+- 설치 끝에 `/harness-audit` 자동 실행 — 40 PASS면 전 게이트 활성.
 
 ### 사설(private) 소스 레포 토큰
 
@@ -122,7 +122,7 @@ bash uninstall.sh --yes    # 실제 제거 (manifest 범위만, 원래 있던 �
 
 | 명령 | 용도 |
 |------|------|
-| `/harness-audit` | 하네스 구성 38체크 PASS/FAIL |
+| `/harness-audit` | 하네스 구성 40체크 PASS/FAIL |
 | `/plan` `/verify` `/review` `/commit` | SC 분해 · SC 검증 · 코드 검토 · 커밋 준비 |
 | `/squad-*` (8종) | 기획→리뷰→QA→리팩토링→디버그→보안→문서→Git 파이프라인 |
 | `bash .claude/hooks/logs-report.sh [days]` | 훅 판정 로그 요약 (`--rotate N` 회전) |
@@ -140,8 +140,8 @@ bash uninstall.sh --yes    # 실제 제거 (manifest 범위만, 원래 있던 �
 ├── specs/                   # 상태: 핸드오프·결정 기록
 └── .claude/
     ├── settings.json        # 훅 6이벤트 등록
-    ├── hooks/  (8종 + tests 10 스위트)
-    ├── commands/ (14종) · agents/ (13종) · skills/ (22종) · rules/ (17종)
+    ├── hooks/  (8종 + tests 11 스위트)
+    ├── commands/ (14종) · agents/ (16종) · skills/ (23종) · rules/ (18종)
 ```
 
 ## 한계
@@ -164,6 +164,7 @@ bash uninstall.sh --yes    # 실제 제거 (manifest 범위만, 원래 있던 �
 
 | 버전 | 날짜 | 요약 |
 |------|------|------|
+| v0.0.8 | 2026-07-09 | 게이트웨이 검증 계층(룰+Stop 게이트 GATE-04/05+AUDIT-07) · commit-msg 규율 게이트 · 테스트 서브에이전트 3종 · anti-ai-slop 스킬 |
 | v0.0.7 | 2026-07-09 | revert v0.0.6 (소스는 사설이 정상) + 사설 레포 토큰 안내 복원 (404 원인=인증 누락) |
 | v0.0.6 | 2026-07-09 | ~~소스 레포 공개 전환~~ (0.0.7에서 원복 — 잘못된 수정) |
 | v0.0.5 | 2026-07-09 | CLAUDE.md 응답 언어 프로토콜(영문 요약→한글 결론) 추가 |

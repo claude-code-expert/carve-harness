@@ -17,6 +17,19 @@
 ### Fixed (reverted in 0.0.7 — 잘못된 수정)
 - ~~`install.sh` 기본 소스 레포를 사설 `wevesolutions/harness`에서 공개 `claude-code-expert/carve-harness`로 교체.~~ 지시 없이 소스 레포를 바꾼 잘못된 수정. 사설 레포는 정상이고 토큰이 정답 — 0.0.7에서 원복.
 
+## [0.0.8] - 2026-07-09
+
+### Added
+- **게이트웨이 검증 계층** (milestone v2, `harness-research.html` 갭 분석 ⑧):
+  - `.claude/rules/java-spring/gateway-testing.md` — 5기능(라우팅·인증·인가·API키·레이트리미트) 합격기준(SC) · 테스트 피라미드(통합 최두껍) · 도구 스택(WireMock·Testcontainers·WebTestClient·Spring Cloud Contract). 게이트웨이 파일에만 로드되는 좁은 glob.
+  - `stop-verify.sh` GATE-04/05 — 게이트웨이 파일만 변경 시 `*GatewayIntegration*` 타깃 증분 실행(전체 회피), 혼합 변경은 full, 실패 시 exit 2. `harness-audit.sh` AUDIT-07(룰↔게이트 매핑 점검).
+- **커밋 규율** (③): `.githooks/commit-msg` — Conventional Commits 형식 게이트(bash+git, ≤72자, merge/revert 면제). AUDIT-04 확장, install.sh가 `.githooks/*` 전부 +x.
+- **테스트 서브에이전트** (④): `tdd-guide`(red→green) · `e2e-runner`(walking skeleton) · `pr-test-analyzer`(테스트 충분성) 신설, `security-reviewer`에 게이트웨이 인증/인가/레이트리미트 우회 점검 확장.
+- `anti-ai-slop` 스킬 — 시각 산출물(이미지·HTML·SVG) 생성 전 slop(그라데이션·글로우·장식 모션) 차단 게이트.
+
+### Changed
+- 인벤토리: 에이전트 13→16 · 스킬 22→23 · 규칙 17→18 · 테스트 10→11 스위트(106→125건) · audit 38→40.
+
 ## [0.0.5] - 2026-07-09
 
 ### Added

@@ -2,7 +2,7 @@
 
 > Claude Code 드롭인 하네스 — 전체 사용 설명 + 설치 내역.
 > 대상: 이 하네스를 쓰거나 다른 프로젝트에 이식하려는 사용자.
-> 기준: 릴리스 **v0.0.3** (하드닝 마일스톤 Phase 1–5 + 오프라인·크로스에이전트 확장 + update/rollback/setup). `/harness-audit` = 38 PASS.
+> 기준: 릴리스 **v0.0.8** (하드닝 v1 Phase 1–5 + 오프라인·크로스에이전트 + update/rollback/setup + 게이트웨이 검증 v2). `/harness-audit` = 40 PASS.
 > 최종 갱신: 2026-07-08.
 
 이 문서는 `docs/md/HARNESS-TEMPLATE-MANUAL.md`(초기 뼈대 매뉴얼)와 `docs/md/harness-install-list.md`(외부 도구 설치 리스트)를 대체·갱신한다. 초기 매뉴얼은 하드닝 이전 상태(훅 4종·프로즈 감사·빈 스텁)를 기술하므로, **현재 상태는 이 GUIDE를 정본으로 본다.**
@@ -75,14 +75,14 @@ harness/
     │   ├── logs-report.sh        # JSONL 요약 리포트 + --rotate 회전
     │   ├── lib-protected.sh      # PROTECTED_RE + SECRETS_RE 단일 소스
     │   ├── harness-audit.sh      # 기계적 자가감사
-    │   └── tests/*.test.sh       # 훅별 어서션 (10 스위트)
+    │   └── tests/*.test.sh       # 훅별 어서션 (11 스위트)
     ├── commands/             # /plan /verify /review /commit /harness-audit /squad*
-    ├── agents/               # evaluator·code/security/silent-failure/state-reviewer + squad 8종
-    ├── skills/               # handoff · changelog · version-changelog + mattpocock 파생 19종
+    ├── agents/               # reviewer 5종 + tdd-guide·e2e-runner·pr-test-analyzer + squad 8종 (16)
+    ├── skills/               # handoff · changelog · version-changelog · anti-ai-slop + mattpocock 파생 19종
     └── rules/
         ├── common/           # security·testing·git-workflow (항상 적용)
         ├── code-convention/  # 스택별 코딩 표준 8종
-        ├── java-spring/      # patterns (**/*.java)
+        ├── java-spring/      # patterns (**/*.java) · gateway-testing (게이트웨이 파일)
         ├── react-next/       # patterns (**/*.ts,tsx)
         └── safety.md · database.md · frontend.md · api-routes.md · testing.md
 ```
@@ -122,7 +122,7 @@ harness/
 
 **에이전트** (`.claude/agents/`, description 자동위임 또는 "use the X agent"): evaluator(SC·타입/계약), code-reviewer(가독성·구조), security-reviewer(시크릿·인가·인젝션), silent-failure-hunter(삼켜진 예외), state-reviewer(상태·트랜잭션 경계) + squad 8종(plan·review·qa·refactor·debug·audit·docs·gitops). 생성(Generator)과 검증(Evaluator)은 분리 운용.
 
-**스킬** (`.claude/skills/`, 22종): handoff(→`specs/HANDOFF.md`), changelog(→`specs/DECISIONS.md`, append-only), version-changelog(→`CHANGELOG.md`, 버전 변경 시 필수) + mattpocock 파생 19종(implement·qa·teach·domain-modeling·codebase-design·prototype·to-prd·to-issues 등 — 대부분 `disable-model-invocation`이라 `/이름` 사용자 호출 전용).
+**스킬** (`.claude/skills/`, 23종): handoff(→`specs/HANDOFF.md`), changelog(→`specs/DECISIONS.md`, append-only), version-changelog(→`CHANGELOG.md`, 버전 변경 시 필수), anti-ai-slop(시각 산출물 slop 차단 게이트) + mattpocock 파생 19종(implement·qa·teach·domain-modeling·codebase-design·prototype·to-prd·to-issues 등 — 대부분 `disable-model-invocation`이라 `/이름` 사용자 호출 전용).
 
 **룰** (`.claude/rules/`, glob 자동적용): `common/**`(항상), `code-convention/*`(스택 표준), `java-spring/`(`**/*.java`), `react-next/`(`**/*.ts,tsx`), `safety.md`(위험동작 승인 게이트).
 
@@ -174,11 +174,11 @@ bash .claude/hooks/harness-audit.sh      # 또는 슬래시 /harness-audit
 - **AUDIT-05**: 규칙 위생 — 빈 파일 · ' copy' 파일 · 바이트 동일 중복.
 - **AUDIT-06**: 스킬 — 프런트매터 검증 · repo↔전역 이름 충돌.
 
-Claude Code 업그레이드마다 재실행해 게이트가 여전히 작동하는지 증명. 현재: **38 PASS, 0 FAIL**.
+Claude Code 업그레이드마다 재실행해 게이트가 여전히 작동하는지 증명. 현재: **40 PASS, 0 FAIL**.
 
 테스트 스위트도 함께:
 ```bash
-for t in .claude/hooks/tests/*.test.sh; do bash "$t"; done   # 10 스위트 전부 green
+for t in .claude/hooks/tests/*.test.sh; do bash "$t"; done   # 11 스위트 전부 green
 ```
 
 ---
@@ -256,7 +256,7 @@ fi
 bash -n .claude/hooks/stop-verify.sh                    # 문법
 echo 'package main' > /tmp/bad.go                        # 일부러 gofmt 위반 파일로
 CLAUDE_PROJECT_DIR=$PWD bash .claude/hooks/stop-verify.sh # exit 2 나오면 성공
-bash .claude/hooks/harness-audit.sh                      # 38 PASS 유지 확인
+bash .claude/hooks/harness-audit.sh                      # 40 PASS 유지 확인
 ```
 
 > 주의: `stop-verify.sh`는 manifest 파일 — 하네스 `update` 시 덮이고 백업(`logs/harness-backup/`)에 남는다. 업데이트 후 커스텀 case를 백업에서 재적용하라 (UPDATED 로그에 표시됨).
@@ -277,7 +277,7 @@ Slack/위키에 그대로:
   .claude/hooks/protected-extra.regex 수정 PR로 올려주세요.
 ```
 
-신규 입장 확인법: `bash .claude/hooks/harness-audit.sh` 가 38 PASS면 정상 세팅.
+신규 입장 확인법: `bash .claude/hooks/harness-audit.sh` 가 40 PASS면 정상 세팅.
 
 ---
 
@@ -297,7 +297,7 @@ Slack/위키에 그대로:
 
 ## 10. 검증 / 한계
 
-- 훅 8개 `bash -n` clean · 테스트 10 스위트 전부 통과 · `/harness-audit` 38 PASS. (2026-07-08 실검증)
+- 훅 8개 `bash -n` clean · 테스트 11 스위트(125건) 전부 통과 · `/harness-audit` 40 PASS. (2026-07-09 실검증)
 - **한계(문서화된 천장)**: Bash 파이프/heredoc 간접 쓰기의 시크릿 스캔은 best-effort; 코드 `TODO/FIXME` 스캔은 범위 밖; `LICENSE` 미추가(보류). 추적: `.planning/REQUIREMENTS.md`.
 - 훅/스킬 규약은 Claude Code 버전에 따라 바뀔 수 있음 — 도입 전 `/hooks`·`/plugins`로 현행 확인, `code.claude.com/docs` 대조.
 

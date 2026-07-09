@@ -8,10 +8,12 @@ v1이 강제 코어(fail-closed·관측·상태·자가감사)를 완성했다. 
 
 ## Phases
 
-- [ ] **Phase 1: 게이트웨이 검증 지식 계층** — 5기능 SC 매핑 · 테스트 피라미드 · 도구 스택을 `rules/java-spring/`에 규칙으로 고정 (GWV-01/02/03)
-- [ ] **Phase 2: 게이트웨이 타깃 Stop 게이트 + 감사** — 게이트웨이 파일 변경 시 통합 테스트만 증분 실행, 실패 시 완료 차단, 감사가 룰↔게이트 매핑 점검 (GATE-04/05, AUDIT-07)
-- [ ] **Phase 3: 커밋 규율** — Conventional Commits 형식 커밋 시점 기계 검증 (COMMIT-01)
-- [ ] **Phase 4: TDD/게이트웨이 서브에이전트** — tdd-guide · e2e-runner · pr-test-analyzer, security-reviewer 확장 (TESTAGENT-01/02)
+- [x] **Phase 1: 게이트웨이 검증 지식 계층** — 5기능 SC 매핑 · 테스트 피라미드 · 도구 스택을 `rules/java-spring/`에 규칙으로 고정 (GWV-01/02/03) — 완료 2026-07-09
+- [x] **Phase 2: 게이트웨이 타깃 Stop 게이트 + 감사** — 게이트웨이 파일 변경 시 통합 테스트만 증분 실행, 실패 시 완료 차단, 감사가 룰↔게이트 매핑 점검 (GATE-04/05, AUDIT-07) — 완료 2026-07-09
+- [x] **Phase 3: 커밋 규율** — Conventional Commits 형식 커밋 시점 기계 검증 (COMMIT-01) — 완료 2026-07-09
+- [x] **Phase 4: TDD/게이트웨이 서브에이전트** — tdd-guide · e2e-runner · pr-test-analyzer, security-reviewer 확장 (TESTAGENT-01/02) — 완료 2026-07-09
+
+> 4순위(계층 AGENTS.md): 하네스는 단일 레포라 실제 파일 미생성(YAGNI) — 멀티모듈 프로젝트 적용법은 phase-4 문서 §3에 안내. 선택(토큰관리): Out of Scope 확정.
 
 ## Phase Details
 
@@ -66,12 +68,14 @@ v1이 강제 코어(fail-closed·관측·상태·자가감사)를 완성했다. 
 
 **Execution Order:** 1 → 2 → 3 → 4
 
-| Phase | Plans | Status |
-|-------|-------|--------|
-| 1. 게이트웨이 검증 지식 계층 | 0/1 | Pending |
-| 2. 게이트웨이 Stop 게이트 + 감사 | 0/2 | Pending |
-| 3. 커밋 규율 | 0/1 | Pending |
-| 4. TDD/게이트웨이 서브에이전트 | 0/1 | Pending |
+| Phase | Plans | Status | 검증 |
+|-------|-------|--------|------|
+| 1. 게이트웨이 검증 지식 계층 | 1/1 | Complete | 룰 glob 로드 · audit 38→반영 |
+| 2. 게이트웨이 Stop 게이트 + 감사 | 2/2 | Complete | 테스트 (10–13) · AUDIT-07 |
+| 3. 커밋 규율 | 1/1 | Complete | commit-msg.test 15건 |
+| 4. TDD/게이트웨이 서브에이전트 | 1/1 | Complete | 에이전트 16종 · 프런트매터 valid |
+
+**최종 지표**: 훅 테스트 125 passed · `harness-audit` 40 PASS · 에이전트 16 · 스킬 23 · 규칙 18 · 테스트 11 스위트. (미커밋 — 사용자 검토 대기)
 
 ---
 *Created: 2026-07-09 — milestone v2, derived from harness-research.html gap analysis*
