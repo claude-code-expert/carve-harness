@@ -44,12 +44,32 @@ For domain rules and per-stack gates, see `GUIDE.md` §8.
 
 ## Update / Rollback
 
+Run every command **from the target project root**.
+
 ```bash
+# Check the installed version
+cat .claude/harness-version
+
+# Update — online (recommended: runs the new installer, so new files are received too)
 curl -fsSL https://raw.githubusercontent.com/claude-code-expert/carve-harness/main/install.sh | bash -s -- update
-bash install.sh rollback   # restore previous version (no network needed)
+
+# Update — using the locally installed installer
+bash install.sh update
+
+# Update — offline (point at a copy of the new version)
+HARNESS_SRC_DIR=/path/to/new-harness bash install.sh update
+
+# Pin a branch/tag
+curl -fsSL https://raw.githubusercontent.com/claude-code-expert/carve-harness/main/install.sh | HARNESS_REF=v0.0.4 bash -s -- update
+
+# Force re-patch of the same version (file recovery)
+HARNESS_FORCE=1 bash install.sh update
+
+# Rollback — restore previous version (no network; run again to step further back)
+bash install.sh rollback
 ```
 
-- update: compares remote `VERSION` (no-op if equal) → patches manifest scope only; changed files are auto-backed up to `logs/harness-backup/v<prev>/`; user files are inviolate.
+- update: compares remote `VERSION` vs local `.claude/harness-version` (no-op if equal) → patches manifest scope only; changed files are auto-backed up to `logs/harness-backup/v<prev>/`; user files (SKIPped at install) are inviolate.
 - rollback: restores the latest backup and reverts the version stamp. Backups are consumed — run again to step further back.
 - Release procedure: `RELEASE.md`.
 
