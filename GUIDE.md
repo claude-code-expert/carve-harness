@@ -378,17 +378,41 @@ Slack/위키에 그대로:
 
 ---
 
-## 9. 외부 도구 생태계 (선택, 미설치분)
+## 9. 사용자가 별도로 설치해야 하는 것
 
-`harness-install-list.md` 중 이 환경에 없는 토큰 절감 도구. **전역/네트워크 작업이므로 승인 후 수동 실행** 권장.
-(gh CLI·codesight·superpowers는 설치 완료 — §2 표 참조.)
+하네스는 **번들하지 않는 전제 도구**가 있다. jq·shellcheck는 `vendor/bin` 내장이라 `install.sh`가 배치하지만, 아래는 **사용자/프로젝트가 직접** 설치한다. 필수(하네스 게이트 동작 전제)와 선택(워크플로 강화)으로 나눈다.
 
-| 도구 | 용도 | 설치(수동) | 위험 |
-|------|------|-----------|------|
-| LSP | 코드탐색 토큰 절감 | `npx tweakcc --apply` + `npm i -g @vtsls/language-server` | **높음** — Claude Code 바이너리 패치 |
-| headroom | API 페이로드 압축 | `pip install --user headroom` | 중간 (전역 pip) |
+### 9.1 필수 — 하네스 동작 전제
 
-> 필요한 도구를 지정하면 개별 승인 후 설치한다. `tweakcc`는 실행 환경을 패치하므로 특히 신중히.
+| 도구 | 왜 필요 | 설치 방법 | 사용/확인 |
+|------|---------|-----------|-----------|
+| **bash + git** | 훅·설치기·핸드오프가 bash, 상태/커밋 게이트가 git | Linux/macOS 기본. **Windows는 WSL 필수** | `bash --version` · `git --version` |
+| **스택 도구** (프로젝트별) | Stop 게이트가 이 도구로 빌드·검증 — 없으면 해당 게이트는 skip 통과(차단 아님) | 아래 9.1.1 | `bash install.sh setup`이 감지 리포트 |
+
+#### 9.1.1 스택별 검증 도구 (프로젝트에 하나라도 있으면 그 게이트 활성)
+
+| 스택 | 도구 | 설치 | Stop 게이트가 하는 일 |
+|------|------|------|------------------------|
+| Node/TS | prettier·eslint·tsc·vitest/jest | `pnpm add -D prettier eslint typescript vitest` | 포맷 + `tsc --noEmit` + 테스트 |
+| Java/Spring | gradle(+spotless·jacoco) | 프로젝트 `gradlew` 동봉(Gradle wrapper) | `./gradlew compileJava test` (게이트웨이는 `*GatewayIntegration*` 증분) |
+| Python | ruff·pytest | `pip install ruff pytest` (또는 `uv`) | `ruff check` + `pytest` |
+| 게이트웨이(Java) | WireMock·Testcontainers | `build.gradle`에 의존성 추가 (룰 `gateway-testing.md` 참조) | 통합 테스트 실 컨테이너 검증 |
+
+> 스택 도구가 없으면 게이트는 **조용히 통과**(best-effort) — 하네스가 없는 도구를 강요하지 않는다. 있으면 자동으로 문다.
+
+### 9.2 선택 — 워크플로 강화 (전역/네트워크 → 승인 후 수동)
+
+| 도구 | 용도 | 설치 방법 | 사용 방법 |
+|------|------|-----------|-----------|
+| **GSD** (SDD 킷) | 스펙 주도 개발 오케스트레이션(`.planning/`) | `npx get-shit-done-cc --local` (`install.sh setup`이 제안) | `/gsd:new-project` → `/gsd:plan-phase N` → `/gsd:execute-phase N` → `/gsd:verify-work` |
+| **gh CLI** | PR·이슈·원격 인증 | 배포판 패키지매니저(`brew/apt install gh`) | `gh auth login` → `gh pr create` (사설 레포 하네스 update 토큰도 `gh auth token`) |
+| **codesight** | 세션 시작 구조맵으로 탐색 토큰 절감 | `npx codesight --init` | `.codesight/CODESIGHT.md` 자동 참조 |
+| **superpowers** | 프로세스 스킬 프레임워크(brainstorming·systematic-debugging) | `/plugin install superpowers@superpowers-marketplace` | 스킬 자동 발동 |
+| **caveman / ponytail** | 출력 압축 / 과잉설계 억제 | `/plugin install caveman@caveman` · `ponytail@ponytail` | `/caveman lite\|full\|ultra` · `/ponytail lite\|full\|ultra` |
+| **LSP** | 코드탐색 토큰 대폭 절감 | `npx tweakcc --apply` + `npm i -g @vtsls/language-server` | ⚠️ **Claude Code 바이너리 패치** — 위험 높음, 신중히 |
+| **headroom** | API 페이로드 압축 | `pip install --user headroom` → `headroom wrap claude` | ⚠️ 전역 pip — 중간 위험 |
+
+> **설치 원칙**: 전역 설치·네트워크 실행·바이너리 패치(`tweakcc`)는 프로젝트 밖(사용자 환경)을 바꾸므로 **명시 승인 후 수동**. `install.sh setup`은 git·PATH·LICENSE·GSD만 대화형으로 다루고, 나머지 선택 도구는 위 표대로 개별 설치한다.
 
 ---
 
