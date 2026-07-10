@@ -1,6 +1,6 @@
 # Claude 하네스 (언어 무관 드롭인)
 
-[English](README.en.md) · 현재 버전 **v0.0.10** · 변경 내역 [CHANGELOG.md](CHANGELOG.md) · 강좌 [HARNESS_GUIDE.md](HARNESS_GUIDE.md)
+[English](README.en.md) · 현재 버전 **v0.0.11** · 변경 내역 [CHANGELOG.md](CHANGELOG.md) · 강좌 [HARNESS_GUIDE.md](HARNESS_GUIDE.md)
 
 코딩 에이전트의 규칙 위반을 "설득"이 아니라 **훅 exit 2로 차단**하는 가드레일 템플릿.
 프로젝트 루트에 드롭인하면 즉시 동작한다.
@@ -12,10 +12,10 @@
 | **제약** | 보호 경로(`.env`·prod·마이그레이션)·하드코딩 시크릿 쓰기를 PreToolUse 훅이 차단. jq 부재·JSON 파손 시 fail-closed |
 | **피드백** | Stop 훅이 빌드·타입·테스트 실패 시 완료 선언 차단 — 변경된 스택만 증분 검증 |
 | **상태** | 세션 종료·압축 시 핸드오프 자동 저장(실제 TODO·결정 수집), 시작 시 복원 |
-| **관측** | 모든 훅 판정을 `logs/*.jsonl`에 기록 (PII 마스킹), 리포트·회전 지원 |
+| **관측** | 모든 훅 판정을 `logs/*.jsonl`에 기록 (PII 마스킹), 리포트·회전 지원. 세션 시작 배너가 로드된 전 구성을 표시하고, 훅 메시지는 `[carve-harness:<hook>]` 프리픽스로 통일 |
 | **자가감사** | `/harness-audit` — 42개 기계 체크로 하네스 오구성 PASS/FAIL |
 
-**구성 요소**: 훅 9종(6 이벤트 + 수동 CLI 3) · 슬래시 커맨드 14종 · 에이전트 20종 · 스킬 23종 · 규칙 18종 · 워크플로 1종 · 테스트 13 스위트(147건)
+**구성 요소**: 훅 9종(6 이벤트 + 수동 CLI 3) · 슬래시 커맨드 14종 · 에이전트 20종 · 스킬 23종 · 규칙 18종 · 워크플로 1종 · 테스트 13 스위트(152건)
 
 **크로스 에이전트**: 훅 차단은 Claude Code 전용. Cursor/Codex 등은 `AGENTS.md` 정본 + `.githooks/pre-commit`이 커밋 시점에 최종 차단.
 
@@ -140,6 +140,7 @@ bash uninstall.sh --yes    # 실제 제거 (manifest 범위만, 원래 있던 �
 
 | 버전 | 날짜 | 요약 |
 |------|------|------|
+| v0.0.11 | 2026-07-10 | 체크박스 TUI 구성 선택 · 세션 배너 인벤토리 + `[carve-harness:<hook>]` 프리픽스 통일 · LSP(vtsls·jdtls)·ponytail 플러그인 선언 배포 · 공개 레포 전환(토큰 불요) |
 | v0.0.10 | 2026-07-10 | 설치 구성 선택(5구성 CLI + `HARNESS_COMPONENTS`) · fable 오케스트레이터 팀(워커 4종+워크플로+가이드) · npm test 러너 · macOS 이식성 수정 |
 | v0.0.9 | 2026-07-09 | Java/Spring 결정적 출력검증 evaluator(`eval-java.sh` — LLM 없이 재현 가능한 P) · ArchUnit 규칙 승격 · AUDIT-08 |
 | v0.0.8 | 2026-07-09 | 게이트웨이 검증 계층(룰+Stop 게이트 GATE-04/05+AUDIT-07) · commit-msg 규율 게이트 · 테스트 서브에이전트 3종 · anti-ai-slop 스킬 |
