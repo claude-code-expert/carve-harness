@@ -2,7 +2,7 @@
 
 > Claude Code 드롭인 하네스 — 전체 사용 설명 + 설치 내역.
 > 대상: 이 하네스를 쓰거나 다른 프로젝트에 이식하려는 사용자.
-> 기준: 릴리스 **v0.0.9** (v1 하드닝 + 오프라인·크로스에이전트 + update/rollback/setup + 게이트웨이 검증 v2 + Java/Spring 결정적 evaluator v3). `/harness-audit` = 42 PASS.
+> 기준: 릴리스 **v0.0.10** (v1 하드닝 + 오프라인·크로스에이전트 + update/rollback/setup + 게이트웨이 검증 v2 + Java/Spring 결정적 evaluator v3 + 설치 구성 선택·fable 오케스트레이터 팀). `/harness-audit` = 42 PASS.
 > 최종 갱신: 2026-07-09.
 
 이 문서는 `docs/md/HARNESS-TEMPLATE-MANUAL.md`(초기 뼈대 매뉴얼)와 `docs/md/harness-install-list.md`(외부 도구 설치 리스트)를 대체·갱신한다. 초기 매뉴얼은 하드닝 이전 상태(훅 4종·프로즈 감사·빈 스텁)를 기술하므로, **현재 상태는 이 GUIDE를 정본으로 본다.**
@@ -76,7 +76,7 @@ harness/
     │   ├── lib-protected.sh      # PROTECTED_RE + SECRETS_RE 단일 소스
     │   ├── harness-audit.sh      # 기계적 자가감사
     │   ├── eval-java.sh          # Java/Spring 결정적 출력검증 스코어러 (P±오차)
-    │   └── tests/*.test.sh       # 훅별 어서션 (12 스위트)
+    │   └── tests/*.test.sh       # 훅별 어서션 (13 스위트)
     ├── commands/             # /plan /verify /review /commit /harness-audit /squad*
     ├── agents/               # reviewer 5종 + tdd-guide·e2e-runner·pr-test-analyzer + squad 8종 (16)
     ├── skills/               # handoff · changelog · version-changelog · anti-ai-slop + mattpocock 파생 19종
@@ -143,7 +143,7 @@ harness/
 | `squad-docs.md` | `/squad-docs [type]` | 문서 생성(README·API·JSDoc). 예: `/squad-docs api` |
 | `squad-gitops.md` | `/squad-gitops [type]` | 커밋 메시지·PR·체인지로그. 예: `/squad-gitops pr` |
 
-### 5.2 에이전트 (`.claude/agents/`, 16종)
+### 5.2 에이전트 (`.claude/agents/`, 20종)
 
 **하네스 검증 에이전트** (생성/검증 분리 — Evaluator 축):
 
@@ -157,6 +157,17 @@ harness/
 | `tdd-guide.md` | sonnet | 게이트웨이·백엔드 기능을 red→green TDD 루프로 유도, GSD `<verify><done>` 연결. `"use the tdd-guide agent"` |
 | `e2e-runner.md` | sonnet | 게이트웨이 Walking Skeleton(전 구간 관통 e2e) 세우고 실행. `"use the e2e-runner agent"` |
 | `pr-test-analyzer.md` | sonnet | 변경분(PR/diff)의 테스트 충분성 평가(커버리지·SC매핑·스텁괴리). `"use the pr-test-analyzer agent"` |
+
+**fable 오케스트레이터 팀** (Agent Teams·Workflow 슬롯 전용 — 호출법·모델 무관 SOP는 `docs/md/fable-team-guide.md`):
+
+| 파일 | 모델 | 설명 · 호출 |
+|------|------|-------------|
+| `fable-builder.md` | sonnet | 배정 태스크를 격리 worktree에서 코드+테스트로 구현. `"fable-builder로 구현"` |
+| `fable-doc-writer.md` | sonnet | 빌드 결과 근거로 문서 작성/갱신(`docs/**` 소유). `"fable-doc-writer로 문서화"` |
+| `fable-researcher.md` | sonnet | 구현 전 리서치 → 출처 포함 RESEARCH.md. `"fable-researcher로 조사"` |
+| `fable-visualizer.md` | sonnet | 다이어그램·목업 전담(시각 게이트 준수). `"fable-visualizer로 다이어그램"` |
+
+> 파이프라인 전체는 `.claude/workflows/fable-team-pipeline.js` — `"fable-team-pipeline 실행"`(옵트인)으로 Spec→Build+Verify→Document→Verify 4-Phase 자동 실행.
 
 **Squad 파이프라인 에이전트** (트리거 키워드로 자동위임):
 
@@ -277,7 +288,7 @@ Claude Code 업그레이드마다 재실행해 게이트가 여전히 작동하�
 
 테스트 스위트도 함께:
 ```bash
-for t in .claude/hooks/tests/*.test.sh; do bash "$t"; done   # 12 스위트 전부 green
+npm test   # 13 스위트 전부 green (= bash .claude/hooks/tests/run-all.sh)
 ```
 
 ---
@@ -421,7 +432,7 @@ Slack/위키에 그대로:
 
 ## 10. 검증 / 한계
 
-- 훅 9개 `bash -n` clean · 테스트 12 스위트(134건) 전부 통과 · `/harness-audit` 42 PASS. (2026-07-09 실검증)
+- 훅 9개 `bash -n` clean · 테스트 13 스위트(147건) 전부 통과(`npm test`) · `/harness-audit` 42 PASS. (2026-07-10 실검증)
 - **한계(문서화된 천장)**: Bash 파이프/heredoc 간접 쓰기의 시크릿 스캔은 best-effort; 코드 `TODO/FIXME` 스캔은 범위 밖; `LICENSE` 미추가(보류). 추적: `.planning/REQUIREMENTS.md`.
 - 훅/스킬 규약은 Claude Code 버전에 따라 바뀔 수 있음 — 도입 전 `/hooks`·`/plugins`로 현행 확인, `code.claude.com/docs` 대조.
 
