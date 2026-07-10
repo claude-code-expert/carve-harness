@@ -20,8 +20,8 @@
 #               백업은 소비된다 — 연속 실행 시 그 이전 백업으로 내려간다.
 #   [setup]     대화형 초기 설정 — 설치 후 프로젝트 맞춤 (모든 항목 엔터로 skip)
 #               bash install.sh setup
-#               git init · PATH · LICENSE 생성 · 보호경로 추가 · 도메인 규칙 ·
-#               스택 감지 리포트 · GSD 설치 제안
+#               git init · PATH · LSP 서버(vtsls) · LICENSE 생성 · 보호경로 추가 ·
+#               도메인 규칙 · 스택 감지 리포트 · GSD 설치 제안
 #   [bootstrap] 하네스 파일이 이미 있으면 → 머신 준비만
 #               1) vendor 체크섬 검증  2) .claude/bin 배치(jq·shellcheck)
 #               3) jq 없으면 ~/.local/bin/jq  4) 훅 권한 + core.hooksPath
@@ -62,9 +62,16 @@ merge_settings_hooks() {  # $1=harness settings (source)  $2=user settings (in p
         ) }
       + { permissions: (($u.permissions // {})
           + { deny: ((($u.permissions.deny // []) + ($h.permissions.deny // [])) | unique) }) }
+      + (if ($h.extraKnownMarketplaces // $u.extraKnownMarketplaces) != null then
+          { extraKnownMarketplaces:
+              (($h.extraKnownMarketplaces // {}) + ($u.extraKnownMarketplaces // {})) }
+        else {} end)
+      + (if ($h.enabledPlugins // $u.enabledPlugins) != null then
+          { enabledPlugins: (($h.enabledPlugins // {}) + ($u.enabledPlugins // {})) }
+        else {} end)
     ' "$hs" "$us" > "$tmp" 2>/dev/null && [ -s "$tmp" ] && jq empty "$tmp" >/dev/null 2>&1; then
     mv "$tmp" "$us"
-    say "OK: .claude/settings.json — 하네스 훅 6이벤트 병합 (사용자 설정 보존)"
+    say "OK: .claude/settings.json — 하네스 훅 6이벤트 + LSP/플러그인 병합 (사용자 설정 보존)"
   else
     rm -f "$tmp"; say "WARN: settings.json 병합 실패 — 훅 수동 등록 필요 (jq/파일 확인)"; warn=1
   fi
@@ -107,7 +114,19 @@ run_setup() {
     ;; esac
   fi
 
-  # 3) LICENSE
+  # 3) LSP 서버 — settings.json의 vtsls/jdtls 플러그인이 호출하는 실행 파일
+  if ! command -v vtsls >/dev/null 2>&1 && command -v npm >/dev/null 2>&1; then
+    ask "vtsls(TS/JS/React LSP 서버) 미설치 — npm i -g @vtsls/language-server typescript 설치할까? [y/N] "
+    if [ "$REPLY" = "y" ]; then
+      npm i -g @vtsls/language-server typescript \
+        && say "OK: vtsls + typescript 전역 설치" \
+        || say "WARN: npm 전역 설치 실패 — 수동 설치 필요"
+    fi
+  fi
+  command -v jdtls >/dev/null 2>&1 \
+    || say "NOTE: jdtls(Java LSP) 미설치 — Java 프로젝트면 'brew install jdtls' (JDK 필요)"
+
+  # 4) LICENSE
   if [ ! -e "$HERE/LICENSE" ]; then
     ask "LICENSE 없음 — 생성할까? [1=MIT(내장) 2=Apache-2.0(네트워크) 엔터=skip] "
     case "$REPLY" in
@@ -126,7 +145,7 @@ run_setup() {
     esac
   fi
 
-  # 4) 보호 경로 추가 (update-안전: protected-extra.regex는 manifest 밖 → 갱신에도 보존)
+  # 5) 보호 경로 추가 (update-안전: protected-extra.regex는 manifest 밖 → 갱신에도 보존)
   ask "추가 보호 경로 정규식? (예: config/prod/|\\.pem$ — 엔터=skip) "
   if [ -n "$REPLY" ]; then
     printf 'x' | grep -Eq "$REPLY" 2>/dev/null
@@ -138,7 +157,7 @@ run_setup() {
     fi
   fi
 
-  # 5) 도메인 규칙 (여러 줄, 빈 줄로 종료)
+  # 6) 도메인 규칙 (여러 줄, 빈 줄로 종료)
   first=1
   while :; do
     ask "CLAUDE.md 도메인 규칙 1줄? (예: 주문 금액 음수 불가 — 엔터=끝) "
@@ -151,7 +170,7 @@ run_setup() {
     first=0
   done
 
-  # 6) 스택 감지 리포트 (질문 없음)
+  # 7) 스택 감지 리포트 (질문 없음)
   say "── 스택 감지 (Stop 게이트 상태) ──"
   found=0
   if [ -f "$HERE/package.json" ]; then
@@ -177,7 +196,7 @@ run_setup() {
   done
   [ "$found" -eq 0 ] && say "지원 스택 미감지 — 코드 추가 시 게이트 자동 동작"
 
-  # 7) GSD (SDD 킷)
+  # 8) GSD (SDD 킷)
   if command -v npx >/dev/null 2>&1; then
     ask "GSD(SDD 킷) 설치? npx get-shit-done-cc --local [y/N] "
     [ "$REPLY" = "y" ] && ( cd "$HERE" && npx get-shit-done-cc --local )
@@ -622,6 +641,16 @@ fi
 # (4.4) merge harness hooks into a pre-existing settings.json (jq now guaranteed).
 if [ -n "$MERGE_SETTINGS_SRC" ] && [ -f "$MERGE_SETTINGS_SRC" ]; then
   merge_settings_hooks "$MERGE_SETTINGS_SRC" "$HERE/.claude/settings.json"
+fi
+
+# (4.45) LSP 서버 바이너리 — settings.json이 선언한 vtsls/jdtls 플러그인은
+# 마켓플레이스 신뢰 승인 후 자동 설치되지만, 서버 실행 파일은 PATH에 있어야 한다.
+if [ -f "$HERE/.claude/settings.json" ] \
+   && jq -e '.enabledPlugins["vtsls@claude-code-lsps"]' "$HERE/.claude/settings.json" >/dev/null 2>&1; then
+  command -v vtsls >/dev/null 2>&1 \
+    || say "NOTE: vtsls(TS/JS/React LSP 서버) 미설치 — 'npm i -g @vtsls/language-server typescript' 또는 'bash install.sh setup'"
+  command -v jdtls >/dev/null 2>&1 \
+    || say "NOTE: jdtls(Java LSP 서버) 미설치 — Java 프로젝트면 'brew install jdtls' (JDK 필요)"
 fi
 
 # (4.5) interactive project setup.

@@ -3,6 +3,15 @@
   "permissions": {
     "deny": ["Read(./**/.env*)", "Read(./**/*secret*)", "Bash(cat *.env*)", "Bash(cat *secret*)", "Bash(rm -rf*)", "Bash(git push*--force*)"]
   },
+  "extraKnownMarketplaces": {
+    "claude-code-lsps": { "source": { "source": "github", "repo": "Piebald-AI/claude-code-lsps" } },
+    "ponytail": { "source": { "source": "github", "repo": "DietrichGebert/ponytail" } }
+  },
+  "enabledPlugins": {
+    "vtsls@claude-code-lsps": true,
+    "jdtls@claude-code-lsps": true,
+    "ponytail@ponytail": true
+  },
   "hooks": {
     "PreToolUse":  [ { "matcher": "Write|Edit|MultiEdit|NotebookEdit|Bash", "hooks": [ { "type": "command", "command": "bash ${CLAUDE_PROJECT_DIR}/.claude/hooks/pretool-guard.sh" } ] } ],
     "PostToolUse": [ { "matcher": "Write|Edit", "hooks": [ { "type": "command", "command": "bash ${CLAUDE_PROJECT_DIR}/.claude/hooks/posttool-format.sh" } ] } ],
