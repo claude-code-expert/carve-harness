@@ -105,5 +105,61 @@ else
   echo "SKIP: bash gate fixture (shellcheck absent)"
 fi
 
+# (10-13) GATE-04/05: gateway-scoped incremental. Fake gradlew records its args and
+# obeys control files (NOTESTS/FAILGW) so we can assert targeting + failure exit.
+if command -v git >/dev/null 2>&1; then
+  gw=$(mktemp -d)
+  (
+    cd "$gw" || exit
+    git init -q
+    cat > gradlew <<'GRADLEW'
+#!/usr/bin/env bash
+echo "$@" >> gradle-args
+if printf '%s' "$*" | grep -q -- '--tests'; then
+  [ -f NOTESTS ] && { echo "No tests found for given includes"; exit 1; }
+  [ -f FAILGW ]  && { echo "GatewayIntegrationTest FAILED"; exit 1; }
+fi
+exit 0
+GRADLEW
+    chmod +x gradlew
+    echo 'plugins {}' > build.gradle
+    git add -A; git -c user.email=t@t -c user.name=t commit -qm init   # scaffolding clean
+  )
+  run_gw() { ( cd "$gw" && printf '%s' '{}' | CLAUDE_PROJECT_DIR="$gw" bash "$ABS_HOOK" >/dev/null 2>&1 ); }
+
+  # (10) gateway-only change -> targeted *GatewayIntegration* filter used.
+  ( cd "$gw" && rm -f gradle-args FAILGW NOTESTS X.java && echo 'class G {}' > ApiGateway.java )
+  run_gw
+  if grep -q -- '--tests' "$gw/gradle-args" 2>/dev/null && grep -q 'GatewayIntegration' "$gw/gradle-args" 2>/dev/null; then
+    echo "PASS: GATE-04 gateway-only -> targeted *GatewayIntegration* (SC1)"; pass=$((pass + 1))
+  else
+    echo "FAIL: GATE-04 targeting"; fail=$((fail + 1))
+  fi
+
+  # (11) gateway + non-gateway java -> full test (no --tests filter).
+  ( cd "$gw" && rm -f gradle-args && echo 'class B {}' > Bar.java )   # ApiGateway.java still present
+  run_gw
+  if ! grep -q -- '--tests' "$gw/gradle-args" 2>/dev/null; then
+    echo "PASS: GATE-04 mixed java -> full suite (no filter)"; pass=$((pass + 1))
+  else
+    echo "FAIL: GATE-04 mixed should be full"; fail=$((fail + 1))
+  fi
+
+  # (12) GATE-05: gateway integration test fails -> exit 2.
+  ( cd "$gw" && rm -f gradle-args Bar.java && touch FAILGW )   # only ApiGateway.java changed
+  ( cd "$gw" && printf '%s' '{}' | CLAUDE_PROJECT_DIR="$gw" bash "$ABS_HOOK" >/dev/null 2>&1 ); code=$?
+  [ "$code" -eq 2 ] && { echo "PASS: GATE-05 gateway test fail -> exit 2 (SC2)"; pass=$((pass + 1)); } \
+                    || { echo "FAIL: GATE-05 (exit $code)"; fail=$((fail + 1)); }
+
+  # (13) gradle 'no tests found' -> best-effort skip (exit 0, not a false fail).
+  ( cd "$gw" && rm -f gradle-args FAILGW && touch NOTESTS )
+  ( cd "$gw" && printf '%s' '{}' | CLAUDE_PROJECT_DIR="$gw" bash "$ABS_HOOK" >/dev/null 2>&1 ); code=$?
+  [ "$code" -eq 0 ] && { echo "PASS: GATE-04 no-matching-tests -> best-effort skip (exit 0)"; pass=$((pass + 1)); } \
+                    || { echo "FAIL: GATE-04 no-tests skip (exit $code)"; fail=$((fail + 1)); }
+  rm -rf "$gw"
+else
+  echo "SKIP: GATE-04/05 fixture (git absent)"
+fi
+
 printf -- '---\n%s passed, %s failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]

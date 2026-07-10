@@ -46,10 +46,12 @@ done
 if [ "$APPLY" -eq 1 ]; then
   git -C "$HERE" config --unset core.hooksPath 2>/dev/null && say "OK: core.hooksPath 해제"
   if grep -q '>>> harness' "$HERE/.gitignore" 2>/dev/null; then
-    sed -i '/# >>> harness (managed by install.sh) >>>/,/# <<< harness <<</d' "$HERE/.gitignore"
+    # -i.hbak: BSD sed needs a suffix (bare -i is GNU-only); backup removed right after
+    sed -i.hbak '/# >>> harness (managed by install.sh) >>>/,/# <<< harness <<</d' "$HERE/.gitignore" \
+      && rm -f "$HERE/.gitignore.hbak"
     say "OK: .gitignore 하네스 블록 제거"
   fi
-  rm -f "$MANIFEST" "$HERE/.claude/harness-version"
+  rm -f "$MANIFEST" "$HERE/.claude/harness-version" "$HERE/.claude/harness-components"
   rmdir "$HERE/.claude" "$HERE/specs" "$HERE/.githooks" 2>/dev/null
   say "제거 완료. 남긴 것: logs/ (감사 기록), specs/ 산출물 — 필요 없으면 직접 삭제."
 else

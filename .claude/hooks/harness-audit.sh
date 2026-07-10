@@ -144,6 +144,13 @@ else
   no "pre-commit gate missing/not +x/no PROTECTED_RE (AUDIT-04)"
 fi
 
+CM="$AUDIT_ROOT/.githooks/commit-msg"
+if [ -f "$CM" ] && [ -x "$CM" ] && grep -q 'Conventional Commits' "$CM" 2>/dev/null; then
+  ok "agent-agnostic commit-msg gate present +x (AUDIT-04)"
+else
+  no "commit-msg gate missing/not +x (COMMIT-01) (AUDIT-04)"
+fi
+
 # hooksPath is per-clone install state — only checkable inside a git repo.
 if [ -d "$AUDIT_ROOT/.git" ] && command -v git >/dev/null 2>&1; then
   hp=$(git -C "$AUDIT_ROOT" config core.hooksPath 2>/dev/null)
@@ -201,6 +208,34 @@ if [ -d "$HOME/.claude/skills" ]; then
   [ -z "$coll" ] \
     && ok "no repo<->global skill name collision (AUDIT-06)" \
     || no "skill name collision with ~/.claude/skills: $(printf '%s' "$coll" | tr '\n' ' ') (AUDIT-06)"
+fi
+
+# ── AUDIT-07 ────────────────────────────────────────────────────────────────
+# Gateway policy→gate (GWV-01 → GATE-04): if the gateway-testing rule ships, the
+# Stop gate must carry the gateway-targeted trigger — else the rule is an orphan
+# policy (documented but unenforced). Absent rule = not a gateway harness, skip.
+GWR="$AUDIT_ROOT/.claude/rules/java-spring/gateway-testing.md"
+SV="$HOOKS_DIR/stop-verify.sh"
+if [ -f "$GWR" ]; then
+  if grep -q 'GatewayIntegration' "$SV" 2>/dev/null; then
+    ok "policy->gate: gateway rule -> stop-verify GATE-04 trigger (AUDIT-07)"
+  else
+    no "orphan policy: gateway-testing.md ships but stop-verify has no GATE-04 trigger (AUDIT-07)"
+  fi
+fi
+
+# ── AUDIT-08 ────────────────────────────────────────────────────────────────
+# Java/Spring deterministic evaluator (v3): if the scorer ships, its ArchUnit
+# rule template + build snippet must ship too — else the scorer has no rules to
+# score against (orphan tool). Absent scorer = evaluator not adopted, skip.
+EJ="$HOOKS_DIR/eval-java.sh"
+if [ -f "$EJ" ]; then
+  ARCHDIR="$AUDIT_ROOT/.claude/rules/java-spring/archunit"
+  if [ -x "$EJ" ] && [ -f "$ARCHDIR/HarnessArchRulesTest.java" ] && [ -f "$ARCHDIR/build-eval.gradle.kts" ]; then
+    ok "eval-java scorer +x with ArchUnit template + build snippet (AUDIT-08)"
+  else
+    no "orphan tool: eval-java.sh ships but ArchUnit template/build snippet missing or not +x (AUDIT-08)"
+  fi
 fi
 
 printf -- '---\n%s passed, %s failed\n' "$pass" "$fail"

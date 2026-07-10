@@ -1,0 +1,11 @@
+{
+  "name": "carve-harness",
+  "private": true,
+  "description": "Bash-hook + markdown harness — npm scripts wrap the shell test suites (zero dependencies)",
+  "scripts": {
+    "test": "bash .claude/hooks/tests/run-all.sh",
+    "test:install": "bash .claude/hooks/tests/install-components.test.sh",
+    "test:guard": "bash .claude/hooks/tests/pretool-guard.test.sh",
+    "test:audit": "bash .claude/hooks/tests/harness-audit.test.sh"
+  }
+}

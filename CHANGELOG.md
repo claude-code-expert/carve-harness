@@ -4,10 +4,47 @@
 
 > **규칙**: `VERSION` 파일이 바뀌는 커밋에는 반드시 해당 버전 항목(`[X.Y.Z]`)이 이 파일에 함께 스테이징되어야 한다 — `.githooks/pre-commit`이 기계적으로 차단, 작성은 `/version-changelog` 스킬. 배포 절차는 `RELEASE.md`.
 
+## [0.0.9] - 2026-07-09
+
+### Fixed (critical)
+- **기존 `settings.json`이 있는 프로젝트에서 하네스가 통째로 무력화되던 근본 버그** — `install.sh`가 `.claude/settings.json`을 no-clobber로 SKIP해, 소비자 프로젝트에 이미 settings.json이 있으면(=실제 프로젝트의 표준) 훅 6이벤트(SessionStart 배너·PreToolUse 가드·Stop 검증·핸드오프)가 **등록되지 않아** 배너 미표시 + 전 게이트 조용히 무력화. 증상은 "배너 안 나옴", 실체는 하네스 전면 inert. 이제 SKIP 대신 **jq로 훅을 병합**(사용자 `permissions.allow`·`model`·자체 훅 보존, `$schema`·`deny` 합집합, 재실행 멱등). 회귀 테스트 2건 추가(기존 테스트가 빈 디렉토리에만 설치해 못 잡던 케이스).
+
+### Added
+- **Java/Spring 결정적 출력검증 evaluator** (milestone v3, `edd-complete-guide.html` LV2 기반): 같은 입력이면 같은 확률 `P ∈ [0,1] ± 오차`를 LLM judge 없이 산출.
+  - `.claude/hooks/eval-java.sh` — gradle grader 실행 → XML 리포트 파싱 → 6 metric(compile·pass^k·coverage·violation density·archrules·nplus1) 합성 P, jq -cn JSON emit. jq/gradle 부재 시 "unable"(fail-closed), 도구 미배선 metric은 skip+명시(은폐 없음).
+  - `.claude/rules/java-spring/archunit/HarnessArchRulesTest.java` — patterns.md `[MUST]` 규칙(계층·필드주입·LAZY·트랜잭션·SQL·Entity반환)을 ArchUnit 실행 테스트로 승격("설득"→결정적 검증).
+  - `.claude/rules/java-spring/archunit/build-eval.gradle.kts` — JaCoCo(XML)·ArchUnit·PMD·Checkstyle·SpotBugs 리포트 배선 스니펫.
+  - `harness-audit.sh` AUDIT-08 — 스코어러↔ArchUnit 템플릿/build 스니펫 매핑 점검(orphan tool 방지).
+  - `tests/eval-java.test.sh` 7케이스 — 결정성(2회 동일 P)·XML 파싱·no-gradle unable·compile-fail P=0·도구부재 skip.
+
+### Changed
+- 인벤토리: 훅 8→9 · 테스트 11→12 스위트(125→134건) · audit 40→42. 규칙 .md는 18 유지(archunit 템플릿·스니펫은 glob 룰이 아니라 eval 자산).
+
+## [0.0.8] - 2026-07-09
+
+### Added
+- **게이트웨이 검증 계층** (milestone v2, `harness-research.html` 갭 분석 ⑧):
+  - `.claude/rules/java-spring/gateway-testing.md` — 5기능(라우팅·인증·인가·API키·레이트리미트) 합격기준(SC) · 테스트 피라미드(통합 최두껍) · 도구 스택(WireMock·Testcontainers·WebTestClient·Spring Cloud Contract). 게이트웨이 파일에만 로드되는 좁은 glob.
+  - `stop-verify.sh` GATE-04/05 — 게이트웨이 파일만 변경 시 `*GatewayIntegration*` 타깃 증분 실행(전체 회피), 혼합 변경은 full, 실패 시 exit 2. `harness-audit.sh` AUDIT-07(룰↔게이트 매핑 점검).
+- **커밋 규율** (③): `.githooks/commit-msg` — Conventional Commits 형식 게이트(bash+git, ≤72자, merge/revert 면제). AUDIT-04 확장, install.sh가 `.githooks/*` 전부 +x.
+- **테스트 서브에이전트** (④): `tdd-guide`(red→green) · `e2e-runner`(walking skeleton) · `pr-test-analyzer`(테스트 충분성) 신설, `security-reviewer`에 게이트웨이 인증/인가/레이트리미트 우회 점검 확장.
+- `anti-ai-slop` 스킬 — 시각 산출물(이미지·HTML·SVG) 생성 전 slop(그라데이션·글로우·장식 모션) 차단 게이트.
+
+### Changed
+- 인벤토리: 에이전트 13→16 · 스킬 22→23 · 규칙 17→18 · 테스트 10→11 스위트(106→125건) · audit 38→40.
+
+## [0.0.7] - 2026-07-09
+
+### Reverted
+- v0.0.6의 소스 레포 교체를 되돌림 — 소스는 **의도적으로 사설(`wevesolutions/harness`)**이 맞다. 404의 근본 원인은 레포 위치가 아니라 **인증 누락**: private 레포는 GitHub이 토큰 없는 raw/codeload 접근에 404를 반환한다. `install.sh` 기본 `HARNESS_REPO`와 예시 URL 4곳을 사설 레포로 원복.
+
+### Fixed (docs)
+- README(한/영)에 "사설 소스 레포 토큰" 절 추가 — 토큰 발급·사용 3방법(① `gh auth token` ② PAT classic/fine-grained ③ 오프라인 `HARNESS_SRC_DIR`) + SSO 인가·토큰 이중 전달·최소권한·노출금지 주의. install·online update 공통. (v0.0.2 concise 재작성 때 삭제됐던 안내를 되살려 확장.)
+
 ## [0.0.6] - 2026-07-09
 
-### Fixed
-- `install.sh` 기본 소스 레포를 사설 `wevesolutions/harness`(토큰 없이 404)에서 공개 배포 레포 `claude-code-expert/carve-harness`로 교체. README는 공개 레포에서 install.sh를 받게 안내했지만 스크립트 내부 fetch 기본값이 사설 레포라 `update`/신규 fetch가 `curl: 22 ... 404 → 다운로드 실패`로 죽던 문제. 주석·사용 예시 URL 4곳 함께 정정. (커스텀 소스는 여전히 `HARNESS_REPO`로 override.)
+### Fixed (reverted in 0.0.7 — 잘못된 수정)
+- ~~`install.sh` 기본 소스 레포를 사설 `wevesolutions/harness`에서 다른 공개 레포로 교체.~~ 지시 없이 소스 레포를 바꾼 잘못된 수정. 사설 레포는 정상이고 토큰이 정답 — 0.0.7에서 원복.
 
 ## [0.0.5] - 2026-07-09
 

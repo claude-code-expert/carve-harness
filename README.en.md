@@ -1,6 +1,6 @@
 # Claude Harness (language-agnostic drop-in)
 
-[한국어](README.md) · Current version **v0.0.6** · Changes: [CHANGELOG.md](CHANGELOG.md) · Course: [HARNESS_GUIDE.md](HARNESS_GUIDE.md) (Korean)
+[한국어](README.md) · Current version **v0.0.9** · Changes: [CHANGELOG.md](CHANGELOG.md) · Course: [HARNESS_GUIDE.md](HARNESS_GUIDE.md) (Korean)
 
 A guardrail template that stops coding-agent rule violations with **hook exit 2 blocking** — not persuasion.
 Drop it into your project root and it works immediately.
@@ -13,9 +13,9 @@ Drop it into your project root and it works immediately.
 | **Feedback** | Stop hook blocks "done" claims while build/type/tests fail — incremental, changed stacks only |
 | **State** | Handoff auto-saved at session end/compaction (real TODOs and decisions), restored at start |
 | **Observability** | Every hook verdict logged to `logs/*.jsonl` (PII masked), with report/rotation |
-| **Self-audit** | `/harness-audit` — 38 mechanical checks PASS/FAIL the harness configuration itself |
+| **Self-audit** | `/harness-audit` — 42 mechanical checks PASS/FAIL the harness configuration itself |
 
-**Inventory**: 8 hooks (Claude Code only, 6 events) · 14 slash commands · 13 agents · 22 skills · 17 rule files · 10 test suites (106 cases)
+**Inventory**: 9 hooks (6 events + 3 manual CLI) · 14 slash commands · 16 agents · 23 skills · 18 rule files · 12 test suites (134 cases)
 
 **Cross-agent**: hook blocking is Claude Code-only. Cursor/Codex/etc. follow `AGENTS.md` as the canonical rules, with `.githooks/pre-commit` as the final gate at commit time.
 
@@ -25,13 +25,52 @@ Drop it into your project root and it works immediately.
 
 ```bash
 cd /path/to/your-project
-curl -fsSL https://raw.githubusercontent.com/claude-code-expert/carve-harness/main/install.sh | bash
+# Private repo — token required (see "Token for the private source repo"). Offline: HARNESS_SRC_DIR.
+curl -fsSL -H "Authorization: token $GITHUB_TOKEN" \
+  https://raw.githubusercontent.com/wevesolutions/harness/main/install.sh \
+  | GITHUB_TOKEN=$GITHUB_TOKEN bash
 ```
 
-Offline: `HARNESS_SRC_DIR=/path/to/harness-copy bash /path/to/harness-copy/install.sh`
-
 - Existing files are never touched (reported as SKIP) — installed paths are recorded in `.claude/harness-manifest.txt`.
-- The installer ends by running `/harness-audit` — 38 PASS means all gates are live.
+- **Exception: `.claude/settings.json` is merged, not skipped** — your existing config (`permissions`, `model`, own hooks) is preserved while the harness's 6 hook events are registered via jq (idempotent). Skipping it would leave the hooks unregistered and every gate (banner, guard, verify) inert.
+- The installer ends by running `/harness-audit` — 42 PASS means all gates are live.
+
+### Token for the private source repo
+
+The harness source lives in a private repo (`wevesolutions/harness`). GitHub returns 404 for **unauthenticated** raw/codeload access, so a token is required even for members of the same org (`wevesolutions`). The commands below work for install and update alike (swap the trailing `bash` for `bash -s -- update`).
+
+**Method 1 — gh CLI (simplest, recommended):**
+```bash
+GITHUB_TOKEN=$(gh auth token)
+curl -fsSL -H "Authorization: token $GITHUB_TOKEN" \
+  https://raw.githubusercontent.com/wevesolutions/harness/main/install.sh \
+  | GITHUB_TOKEN=$GITHUB_TOKEN bash
+```
+No `gh`? Run `gh auth login` (GitHub.com → HTTPS → browser) first. SSO is auto-authorized, avoiding Method 2's SSO pitfall.
+
+**Method 2 — issue a PAT:**
+1. GitHub → Settings → Developer settings → Personal access tokens
+2. Classic: `repo` scope / Fine-grained: Resource owner=`wevesolutions`, Repository=`harness`, **Contents: Read**
+3. With the token:
+```bash
+export GITHUB_TOKEN=ghp_xxxxxxxx
+curl -fsSL -H "Authorization: token $GITHUB_TOKEN" \
+  https://raw.githubusercontent.com/wevesolutions/harness/main/install.sh \
+  | GITHUB_TOKEN=$GITHUB_TOKEN bash
+```
+
+**Method 3 — no token (offline / local clone):**
+```bash
+HARNESS_SRC_DIR=/path/to/harness bash /path/to/harness/install.sh          # install
+HARNESS_SRC_DIR=/path/to/harness bash /path/to/harness/install.sh update   # update
+```
+
+Notes:
+- The token appears **twice** — the leading `-H` downloads the install.sh script; the trailing `GITHUB_TOKEN=` env var is used when the script fetches the source tarball from codeload. Missing either → 404.
+- **SSO**: if the org enforces SAML SSO, a PAT (Method 2) must be authorized for `wevesolutions` via "Configure SSO → Authorize" in the token list before codeload returns 200. Method 1 is exempt.
+- **Never expose the token**: don't put `ghp_...` in commits, logs, or `.env` (the harness guard blocks `ghp_` hardcoded writes). Shell-session env var only.
+- **Least privilege**: for updates only, fine-grained + Contents:Read is enough; classic `repo` is overkill.
+- To pull from a public mirror instead, set `HARNESS_REPO=<owner>/<public-repo>` (no token needed).
 
 **Initial setup** (optional, every prompt skippable with Enter):
 
@@ -50,8 +89,9 @@ Run every command **from the target project root**.
 # Check the installed version
 cat .claude/harness-version
 
-# Update — online (recommended: runs the new installer, so new files are received too)
-curl -fsSL https://raw.githubusercontent.com/claude-code-expert/carve-harness/main/install.sh | bash -s -- update
+# Update — online (recommended) · private repo, token required
+curl -fsSL -H "Authorization: token $GITHUB_TOKEN" \
+  https://raw.githubusercontent.com/wevesolutions/harness/main/install.sh | GITHUB_TOKEN=$GITHUB_TOKEN bash -s -- update
 
 # Update — using the locally installed installer
 bash install.sh update
@@ -59,8 +99,9 @@ bash install.sh update
 # Update — offline (point at a copy of the new version)
 HARNESS_SRC_DIR=/path/to/new-harness bash install.sh update
 
-# Pin a branch/tag
-curl -fsSL https://raw.githubusercontent.com/claude-code-expert/carve-harness/main/install.sh | HARNESS_REF=v0.0.4 bash -s -- update
+# Pin a branch/tag (token required)
+curl -fsSL -H "Authorization: token $GITHUB_TOKEN" \
+  https://raw.githubusercontent.com/wevesolutions/harness/main/install.sh | HARNESS_REF=v0.0.4 GITHUB_TOKEN=$GITHUB_TOKEN bash -s -- update
 
 # Force re-patch of the same version (file recovery)
 HARNESS_FORCE=1 bash install.sh update
@@ -69,6 +110,7 @@ HARNESS_FORCE=1 bash install.sh update
 bash install.sh rollback
 ```
 
+- **Token**: online `update` needs `GITHUB_TOKEN` too (private source) — same 3 methods as "Token for the private source repo" above, just end with `bash -s -- update`. Offline and local paths need no token.
 - update: compares remote `VERSION` vs local `.claude/harness-version` (no-op if equal) → patches manifest scope only; changed files are auto-backed up to `logs/harness-backup/v<prev>/`; user files (SKIPped at install) are inviolate.
 - rollback: restores the latest backup and reverts the version stamp. Backups are consumed — run again to step further back.
 - Release procedure: `RELEASE.md`.
@@ -86,7 +128,7 @@ Once installed, the gates are automatic — protected-path writes are blocked, o
 
 | Command | Purpose |
 |---------|---------|
-| `/harness-audit` | 38-check PASS/FAIL of the harness configuration |
+| `/harness-audit` | 42-check PASS/FAIL of the harness configuration |
 | `/plan` `/verify` `/review` `/commit` | SC breakdown · SC verification · code review · commit prep |
 | `/squad-*` (8) | plan→review→QA→refactor→debug→security→docs→git pipeline |
 | `bash .claude/hooks/logs-report.sh [days]` | hook verdict log summary (`--rotate N` to rotate) |
@@ -104,8 +146,8 @@ For customization (protected paths, formatters, verify commands, new stacks) and
 ├── specs/                   # state: handoffs & decision log
 └── .claude/
     ├── settings.json        # 6 hook events registered
-    ├── hooks/  (8 + 10 test suites)
-    ├── commands/ (14) · agents/ (13) · skills/ (22) · rules/ (17)
+    ├── hooks/  (9 + 12 test suites)
+    ├── commands/ (14) · agents/ (16) · skills/ (23) · rules/ (18)
 ```
 
 ## Limitations
@@ -128,7 +170,10 @@ For customization (protected paths, formatters, verify commands, new stacks) and
 
 | Version | Date | Summary |
 |---------|------|---------|
-| v0.0.6 | 2026-07-09 | fix: default source repo → public carve-harness (private repo 404 broke update) |
+| v0.0.9 | 2026-07-09 | deterministic Java/Spring output-verification evaluator (`eval-java.sh` — reproducible P without an LLM) · ArchUnit rule promotion · AUDIT-08 |
+| v0.0.8 | 2026-07-09 | gateway verification layer (rule + Stop gate GATE-04/05 + AUDIT-07) · commit-msg discipline gate · 3 test subagents · anti-ai-slop skill |
+| v0.0.7 | 2026-07-09 | revert v0.0.6 (private source is intentional) + restore private-repo token guidance (404 root cause = missing auth) |
+| v0.0.6 | 2026-07-09 | ~~switch source repo to public~~ (reverted in 0.0.7 — wrong fix) |
 | v0.0.5 | 2026-07-09 | CLAUDE.md response-language protocol (English summary → Korean conclusion) |
 | v0.0.4 | 2026-07-09 | fix: ship VERSION in the install list — installed-copy self-test failures and chained-install version loss · harness course (HARNESS_GUIDE.md) |
 | v0.0.3 | 2026-07-08 | Interactive `setup` · update-safe pattern extension files · LICENSE generation |
