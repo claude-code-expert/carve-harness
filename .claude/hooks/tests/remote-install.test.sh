@@ -145,6 +145,14 @@ if jq -e '.hooks.SessionStart and .hooks.PreToolUse and .hooks.Stop' "$T3/.claud
 else
   no "settings.json merge (hooks unregistered = harness inert)"
 fi
+# LSP/ponytail plugin declarations must survive the merge into pre-existing settings.
+if jq -e '.enabledPlugins["vtsls@claude-code-lsps"] and .enabledPlugins["jdtls@claude-code-lsps"] and .enabledPlugins["ponytail@ponytail"]' \
+     "$T3/.claude/settings.json" >/dev/null 2>&1 \
+   && jq -e '.extraKnownMarketplaces["claude-code-lsps"]' "$T3/.claude/settings.json" >/dev/null 2>&1; then
+  ok "merge carries LSP(vtsls/jdtls) + ponytail plugin declarations"
+else
+  no "plugin declarations lost in settings merge"
+fi
 # idempotency: second install must not duplicate hook groups.
 n1=$(jq '.hooks.SessionStart | length' "$T3/.claude/settings.json")
 ( cd "$T3" && HARNESS_SRC_DIR="$REPO" bash "$REPO/install.sh" ) >/dev/null 2>&1

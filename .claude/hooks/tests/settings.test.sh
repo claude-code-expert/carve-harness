@@ -28,6 +28,12 @@ jq -e '.hooks.Stop[0].hooks[0].timeout > 600' "$S" >/dev/null 2>&1 \
   && ok "SessionEnd registered -> session-handoff.sh save SessionEnd (STATE-02/D-09)" \
   || no "SessionEnd registration (STATE-02/D-09)"
 
+# LSP + ponytail plugins declared: marketplaces + enabledPlugins (ts/react/js via vtsls, java via jdtls).
+jq -e '.extraKnownMarketplaces["claude-code-lsps"] and .extraKnownMarketplaces["ponytail"]' "$S" >/dev/null 2>&1 \
+  && ok "LSP/ponytail marketplaces declared" || no "extraKnownMarketplaces (LSP/ponytail)"
+jq -e '.enabledPlugins["vtsls@claude-code-lsps"] and .enabledPlugins["jdtls@claude-code-lsps"] and .enabledPlugins["ponytail@ponytail"]' "$S" >/dev/null 2>&1 \
+  && ok "vtsls + jdtls + ponytail plugins enabled" || no "enabledPlugins (vtsls/jdtls/ponytail)"
+
 # SC#4: from a non-root cwd, the ${CLAUDE_PROJECT_DIR}-resolved guard still blocks a protected write.
 sub=$(mktemp -d)
 ( cd "$sub" && CLAUDE_PROJECT_DIR="$root" bash -c \

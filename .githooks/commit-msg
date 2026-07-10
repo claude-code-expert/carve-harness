@@ -23,7 +23,7 @@ esac
 TYPES='feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert'
 
 if ! printf '%s' "$subject" | grep -Eq "^(${TYPES})(\([a-z0-9._/-]+\))?!?: .+"; then
-  echo "[commit-msg] Conventional Commits 위반 — 제목: \"$subject\"" >&2
+  echo "[carve-harness:commit-msg] Conventional Commits 위반 — 제목: \"$subject\"" >&2
   echo "  형식: <type>(scope)?: <subject>   type ∈ {${TYPES}}" >&2
   echo "  예: feat(auth): add JWT refresh   ·   fix: null guard on empty body" >&2
   exit 1
@@ -31,7 +31,7 @@ fi
 
 # Subject length: 72 hard cap (git wrap limit). 50 is the recommended target.
 if [ "${#subject}" -gt 72 ]; then
-  echo "[commit-msg] 제목이 너무 김 (${#subject}자 > 72) — 72자 이하로 (권장 50)." >&2
+  echo "[carve-harness:commit-msg] 제목이 너무 김 (${#subject}자 > 72) — 72자 이하로 (권장 50)." >&2
   echo "  제목: \"$subject\"" >&2
   exit 1
 fi

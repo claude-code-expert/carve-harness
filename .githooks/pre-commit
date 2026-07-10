@@ -7,7 +7,7 @@
 
 ROOT="$(git rev-parse --show-toplevel 2>/dev/null)" || exit 0
 if ! source "$ROOT/.claude/hooks/lib-protected.sh" 2>/dev/null; then
-  echo "[pre-commit] lib-protected.sh 없음 → fail-closed 차단" >&2
+  echo "[carve-harness:pre-commit] lib-protected.sh 없음 → fail-closed 차단" >&2
   exit 1
 fi
 
@@ -24,7 +24,7 @@ while IFS=$'\t' read -r status p1 p2; do
       if [ "${status:0:1}" = "A" ] && printf '%s' "$path" | grep -q 'db/migration/'; then
         continue
       fi
-      echo "[pre-commit] 보호 경로 커밋 차단 ($status): $path" >&2
+      echo "[carve-harness:pre-commit] 보호 경로 커밋 차단 ($status): $path" >&2
       fail=1
     fi
   done
@@ -32,7 +32,7 @@ done < <(git diff --cached --name-status)
 
 # (2) Hardcoded secrets in staged ADDED lines (binary diffs produce none).
 if git diff --cached -U0 | grep -E '^\+' | grep -Eq "$SECRETS_RE"; then
-  echo "[pre-commit] 스테이징된 변경에 하드코딩 시크릿 감지 — 커밋 차단" >&2
+  echo "[carve-harness:pre-commit] 스테이징된 변경에 하드코딩 시크릿 감지 — 커밋 차단" >&2
   fail=1
 fi
 
@@ -42,13 +42,13 @@ fi
 if git diff --cached --name-only | grep -qx 'VERSION' && [ -e "$ROOT/CHANGELOG.md" ]; then
   newv=$(git show :VERSION 2>/dev/null | tr -d '[:space:]')
   if [ -n "$newv" ] && ! git show :CHANGELOG.md 2>/dev/null | grep -qF "[$newv]"; then
-    echo "[pre-commit] VERSION $newv 변경 — 스테이징된 CHANGELOG.md에 [$newv] 항목 필요 (/version-changelog 스킬 사용)" >&2
+    echo "[carve-harness:pre-commit] VERSION $newv 변경 — 스테이징된 CHANGELOG.md에 [$newv] 항목 필요 (/version-changelog 스킬 사용)" >&2
     fail=1
   fi
 fi
 
 if [ "$fail" -ne 0 ]; then
-  echo "[pre-commit] 차단됨. --no-verify 우회는 AGENTS.md §0에서 금지." >&2
+  echo "[carve-harness:pre-commit] 차단됨. --no-verify 우회는 AGENTS.md §0에서 금지." >&2
   exit 1
 fi
 exit 0
