@@ -19,7 +19,9 @@ printf '%s' "$out" | grep -q 'Write  <masked>' && ok "summary lists blocked tool
 printf '%s' "$out" | grep -Eq '1 PreToolUse block' && ok "summary counts event x decision" || no "summary counts"
 
 # (3) --rotate deletes only files older than keep-days.
-old="$tmp/logs/old.jsonl"; printf '{}\n' > "$old"; touch -d '30 days ago' "$old"
+# BSD touch has no -d '30 days ago' — compute the stamp (BSD -v / GNU -d)
+old="$tmp/logs/old.jsonl"; printf '{}\n' > "$old"
+touch -t "$(date -v-30d +%Y%m%d%H%M 2>/dev/null || date -d '30 days ago' +%Y%m%d%H%M)" "$old"
 CLAUDE_PROJECT_DIR="$tmp" bash "$HOOK" --rotate 7 >/dev/null 2>&1
 if [ ! -f "$old" ] && [ -f "$tmp/logs/a.jsonl" ]; then
   ok "--rotate deletes old, keeps recent"

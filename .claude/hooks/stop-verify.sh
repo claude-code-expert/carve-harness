@@ -70,10 +70,14 @@ fi
 # --- React/Next/TS: 타입체크 + 테스트 ---
 # 커버리지 80%는 vitest/jest --coverage 임계값(package.json)으로 강제.
 run_node() {  # $1 = 프로젝트 디렉토리
-  ( cd "$1" && pnpm exec tsc --noEmit 2>&1 | tail -20 ) || return 1
+  # package.json 존재 ≠ TS 프로젝트 — tsconfig 있을 때만 타입체크 (셸 전용 리포 false fail 방지)
+  if [ -f "$1/tsconfig.json" ]; then
+    ( cd "$1" && pnpm exec tsc --noEmit 2>&1 | tail -20 ) || return 1
+  fi
   # test 스크립트가 있을 때만 실행 (없는데 pnpm test → 오류로 false fail 방지)
   if jq -e '.scripts.test' "$1/package.json" >/dev/null 2>&1; then
-    ( cd "$1" && pnpm test 2>&1 | tail -20 ) || return 1
+    PM=pnpm; command -v pnpm >/dev/null 2>&1 || PM=npm
+    ( cd "$1" && "$PM" test 2>&1 | tail -20 ) || return 1
   fi
 }
 if [ "$node_changed" -eq 1 ]; then
