@@ -5,6 +5,9 @@
 #   [fetch]     현재 디렉토리에 하네스가 없으면 → GitHub에서 받아 설치
 #               curl -fsSL https://raw.githubusercontent.com/wevesolutions/harness/main/install.sh | bash
 #               (사설 레포: GITHUB_TOKEN=... 필요 · 오프라인: HARNESS_SRC_DIR=/path/to/harness)
+#               설치 전 구성 선택 창 표시: 필수md·훅·스킬·커맨드·오케스트레이터 (엔터=전체)
+#               비대화형은 HARNESS_COMPONENTS=md,hooks,skills,commands,orchestrator (또는 all)
+#               재실행하면 빠진 구성을 추가 설치할 수 있다 (기존 파일은 SKIP)
 #   [update]    설치된 하네스를 새 버전으로 패치 — manifest 범위만 갱신
 #               curl -fsSL https://raw.githubusercontent.com/wevesolutions/harness/main/install.sh | bash -s -- update
 #               VERSION 비교(같으면 no-op) · 변경 파일은 logs/harness-backup/v<이전>/ 백업
@@ -182,13 +185,64 @@ run_setup() {
 }
 
 # 설치 대상 목록 — uninstall.sh는 설치 시 기록되는 manifest만 신뢰한다.
+# 구성(component) 5종 + core. 설치 시 선택 가능, core는 항상 설치.
+MD_PATHS=( CLAUDE.md AGENTS.md RULES.md .cursorrules codex.md .claude/CLAUDE.md .claude/rules specs/README.md )
+HOOK_PATHS=( .claude/settings.json .claude/hooks .githooks )
+SKILL_PATHS=( .claude/skills )
+CMD_PATHS=( .claude/commands )
+ORCH_PATHS=( .claude/agents .claude/workflows docs/md/orchestration.md docs/md/fable-team-guide.md )
+CORE_PATHS=( VERSION install.sh uninstall.sh vendor )
 HARNESS_PATHS=(
-  CLAUDE.md AGENTS.md RULES.md .cursorrules codex.md
-  VERSION install.sh uninstall.sh
-  .claude/CLAUDE.md .claude/settings.json
-  .claude/hooks .claude/skills .claude/commands .claude/agents .claude/rules
-  .githooks vendor specs/README.md
+  "${MD_PATHS[@]}" "${HOOK_PATHS[@]}" "${SKILL_PATHS[@]}" "${CMD_PATHS[@]}"
+  "${ORCH_PATHS[@]}" "${CORE_PATHS[@]}"
 )
+
+COMP_ALL="md hooks skills commands orchestrator"
+COMPFILE="$HERE/.claude/harness-components"   # 선택 기록 — update가 신규 파일 필터에 사용
+
+comp_of() { # $1=경로 → 구성 이름
+  case "$1" in
+    .claude/hooks*|.githooks*|.claude/settings.json) echo hooks ;;
+    .claude/skills*)   echo skills ;;
+    .claude/commands*) echo commands ;;
+    .claude/agents*|.claude/workflows*|docs/md/*) echo orchestrator ;;
+    CLAUDE.md|AGENTS.md|RULES.md|.cursorrules|codex.md|.claude/CLAUDE.md|.claude/rules*|specs/README.md) echo md ;;
+    *) echo core ;;
+  esac
+}
+comp_in() { case " $COMPONENTS " in *" $1 "*) return 0 ;; *) return 1 ;; esac; }
+
+select_components() { # → $COMPONENTS (공백 구분). env > 프롬프트 > 전체.
+  if [ -n "${HARNESS_COMPONENTS:-}" ]; then
+    [ "$HARNESS_COMPONENTS" = "all" ] && COMPONENTS="$COMP_ALL" \
+      || COMPONENTS=$(printf '%s' "$HARNESS_COMPONENTS" | tr ',' ' ')
+    say "구성 선택(env): $COMPONENTS"
+    return
+  fi
+  say "── 설치 구성 선택 ──"
+  say "  1) 필수 md         CLAUDE.md·AGENTS.md·RULES.md·.claude/rules·specs"
+  say "  2) 훅              .claude/hooks·.githooks·settings.json (가드·게이트)"
+  say "  3) 스킬            .claude/skills (plan·verify·review·handoff…)"
+  say "  4) 커맨드          .claude/commands"
+  say "  5) 오케스트레이터   .claude/agents·workflows·orchestration 가이드"
+  ask "번호 선택 (예: 1 2 5 — 엔터=전체 설치): "
+  if [ -z "$REPLY" ]; then COMPONENTS="$COMP_ALL"; say "구성 선택: 전체"; return; fi
+  COMPONENTS=""
+  for n in $(printf '%s' "$REPLY" | tr ',' ' '); do
+    case "$n" in
+      1) COMPONENTS="$COMPONENTS md" ;;
+      2) COMPONENTS="$COMPONENTS hooks" ;;
+      3) COMPONENTS="$COMPONENTS skills" ;;
+      4) COMPONENTS="$COMPONENTS commands" ;;
+      5) COMPONENTS="$COMPONENTS orchestrator" ;;
+      *) say "WARN: 무시된 입력: $n" ;;
+    esac
+  done
+  COMPONENTS="${COMPONENTS# }"
+  [ -n "$COMPONENTS" ] || { COMPONENTS="$COMP_ALL"; say "유효 선택 없음 → 전체 설치"; }
+  say "구성 선택: $COMPONENTS"
+  comp_in hooks || say "NOTE: 훅 미선택 — 차단 가드·커밋 게이트 비활성 (하네스 제약 기둥 없음)"
+}
 
 # ── [rollback] ───────────────────────────────────────────────────────────────
 if [ "$MODE" = "rollback" ]; then
@@ -219,6 +273,8 @@ if [ "$MODE" = "update" ]; then
   NEED_FETCH=1
 elif [ "$MODE" = "install" ] && [ ! -f "$HERE/.claude/hooks/pretool-guard.sh" ]; then
   NEED_FETCH=1
+elif [ "$MODE" = "install" ] && [ -n "${HARNESS_COMPONENTS:-}" ]; then
+  NEED_FETCH=1   # 설치 후 구성 추가: HARNESS_COMPONENTS=skills bash install.sh
 fi
 if [ "$NEED_FETCH" -eq 1 ]; then
   SRC="${HARNESS_SRC_DIR:-}"
@@ -252,6 +308,8 @@ if [ "$NEED_FETCH" -eq 1 ]; then
       exit 0
     fi
     say "update: v$OLDV -> v$NEWV"
+    # 설치 때 선택한 구성만 신규 파일 추가 대상 — 기록 없으면(구버전 설치) 전체
+    COMPONENTS=$(tr '\n' ' ' < "$COMPFILE" 2>/dev/null); COMPONENTS="${COMPONENTS:-$COMP_ALL}"
     BAK="$HERE/logs/harness-backup/v$OLDV"   # logs/는 gitignore — 백업 소음 없음
     # ponytail: 경로 목록은 실행 중인 스크립트 기준 — 신규 경로까지 받으려면 curl|bash 업데이트가 정본
     for p in "${HARNESS_PATHS[@]}"; do
@@ -270,6 +328,11 @@ if [ "$NEED_FETCH" -eq 1 ]; then
         fi
         say "UPDATED: $p (백업: logs/harness-backup/v$OLDV/$p)"
       elif [ ! -e "$HERE/$p" ]; then
+        c=$(comp_of "$p")
+        if [ "$c" != "core" ] && ! comp_in "$c"; then
+          say "SKIP: $p ($c 구성 미선택 — 추가하려면 install 재실행)"
+          continue
+        fi
         mkdir -p "$HERE/$(dirname "$p")"
         cp -R "$SRC/$p" "$HERE/$p"
         printf '%s\n' "$p" >> "$MANIFEST"
@@ -281,10 +344,15 @@ if [ "$NEED_FETCH" -eq 1 ]; then
     printf '%s\n' "$NEWV" > "$VSTAMP"
     say "OK: 버전 스탬프 v$NEWV"
   else
+    select_components
     mkdir -p "$HERE/.claude"   # 나머지 경로는 복사 루프가 생성 — 미리 만들면 SKIP 오탐
-    : > "$MANIFEST"
+    touch "$MANIFEST"          # 재실행으로 구성 추가 시 기존 기록 보존
     for p in "${HARNESS_PATHS[@]}"; do
       [ -e "$SRC/$p" ] || continue
+      c=$(comp_of "$p")
+      if [ "$c" != "core" ] && ! comp_in "$c"; then
+        continue   # 미선택 구성 — 조용히 제외 (선택 요약은 위에 출력됨)
+      fi
       # settings.json은 훅 등록의 유일한 자리 — 기존 파일이면 스킵이 아니라 병합한다
       # (스킵하면 훅 미등록 → 배너·가드·검증 전부 무력화). 병합은 jq 보장 후 (4.5)에서.
       if [ "$p" = ".claude/settings.json" ] && [ -e "$HERE/$p" ] && [ "${HARNESS_FORCE:-0}" != "1" ]; then
@@ -299,9 +367,13 @@ if [ "$NEED_FETCH" -eq 1 ]; then
       fi
       mkdir -p "$HERE/$(dirname "$p")"
       cp -R "$SRC/$p" "$HERE/$p"
-      printf '%s\n' "$p" >> "$MANIFEST"
+      grep -qx "$p" "$MANIFEST" 2>/dev/null || printf '%s\n' "$p" >> "$MANIFEST"
       say "OK: $p"
     done
+    # 선택 기록 저장 — 재실행 시 이전 선택과 합집합 (update의 신규 파일 필터 기준)
+    [ -f "$COMPFILE" ] && COMPONENTS="$COMPONENTS $(tr '\n' ' ' < "$COMPFILE")"
+    COMPONENTS=$(printf '%s\n' $COMPONENTS | sort -u | tr '\n' ' ')
+    printf '%s\n' $COMPONENTS > "$COMPFILE"
     [ -f "$SRC/VERSION" ] && tr -d '[:space:]' < "$SRC/VERSION" > "$VSTAMP"
 
     # .gitignore — 하네스 런타임 산출물 무시 블록 (마커로 관리, uninstall이 제거)
@@ -312,6 +384,7 @@ if [ "$NEED_FETCH" -eq 1 ]; then
         echo '.claude/bin/'
         echo '.claude/harness-manifest.txt'
         echo '.claude/harness-version'
+        echo '.claude/harness-components'
         echo 'specs/HANDOFF.md'
         echo '# <<< harness <<<'
       } >> "$HERE/.gitignore"
@@ -374,8 +447,11 @@ elif [ -f "$CBIN/jq" ]; then
        say '  export PATH="$HOME/.local/bin:$PATH"'
        warn=1 ;;
   esac
-else
+elif [ -f "$HERE/.claude/hooks/pretool-guard.sh" ]; then
   fail "jq 없음 + 내장본도 없음 — 훅이 fail-closed로 모든 쓰기를 차단한다. jq 확보 필수"
+else
+  say "WARN: jq 없음 — 훅 구성 미설치라 진행 (훅 추가 설치 시 jq 필수)"
+  warn=1
 fi
 
 # (4) permissions + agent-agnostic commit gate.
@@ -399,7 +475,10 @@ fi
 
 # (5) final state report.
 say "---"
-if CLAUDE_PROJECT_DIR="$HERE" bash "$HERE/.claude/hooks/harness-audit.sh"; then
+if [ ! -f "$HERE/.claude/hooks/harness-audit.sh" ]; then
+  say "audit 생략 — 훅 구성 미설치 (추가하려면 install 재실행 후 2 선택)"
+  say "설치 완료(부분 구성) — 위 WARN/SKIP 항목 확인."
+elif CLAUDE_PROJECT_DIR="$HERE" bash "$HERE/.claude/hooks/harness-audit.sh"; then
   say "---"
   [ "$warn" -eq 0 ] && say "설치 완료 — 하네스 전 게이트 활성." \
                     || say "설치 완료(경고 있음) — 위 WARN/ACTION/SKIP 항목 확인."
