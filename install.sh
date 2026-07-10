@@ -218,14 +218,15 @@ comp_in() { case " $COMPONENTS " in *" $1 "*) return 0 ;; *) return 1 ;; esac; }
 # 전체 항목을 섹션별로 펼쳐 표시. ↑↓/jk 이동 · 스페이스 토글(섹션 행=하위 일괄) ·
 # 1-5 섹션 점프 · a 전체 토글 · 엔터 설치. 기본 전체 선택 → 엔터만 치면 전체 설치.
 # env HARNESS_COMPONENTS / tty 없음(비대화형)은 기존 구성 단위 경로로 폴백.
-IT_PATH=(); IT_LABEL=(); IT_SEC=(); IT_HDR=(); IT_ON=(); HDR_IDX=()
+# 헤더 행은 IT_PATH가 빈 문자열 — 별도 플래그 배열 없이 이걸로 판별한다.
+IT_PATH=(); IT_LABEL=(); IT_SEC=(); IT_ON=(); HDR_IDX=()
 SELECTED_PATHS=()
 
-add_hdr() { HDR_IDX+=("${#IT_PATH[@]}"); IT_PATH+=(""); IT_SEC+=("$1"); IT_HDR+=(1); IT_ON+=(1); IT_LABEL+=("$2"); }
-add_it()  { IT_PATH+=("$1"); IT_SEC+=("$2"); IT_HDR+=(0); IT_ON+=(1); IT_LABEL+=("$3"); }
+add_hdr() { HDR_IDX+=("${#IT_PATH[@]}"); IT_PATH+=(""); IT_SEC+=("$1"); IT_ON+=(1); IT_LABEL+=("$2"); }
+add_it()  { IT_PATH+=("$1"); IT_SEC+=("$2"); IT_ON+=(1); IT_LABEL+=("$3"); }
 
 build_items() { # $SRC 기준으로 실재 항목만 나열
-  local p f idx n i
+  local p f idx next i
   add_hdr md "필수 md"
   for p in "${MD_PATHS[@]}"; do [ -e "$SRC/$p" ] && add_it "$p" md "$p"; done
   add_hdr hooks "훅 (가드·게이트)"
@@ -235,24 +236,24 @@ build_items() { # $SRC 기준으로 실재 항목만 나열
   add_hdr commands "커맨드"
   for f in "$SRC"/.claude/commands/*; do [ -e "$f" ] && add_it ".claude/commands/${f##*/}" commands "${f##*/}"; done
   add_hdr orchestrator "오케스트레이터"
-  for f in "$SRC"/.claude/agents/*; do [ -e "$f" ] && add_it ".claude/agents/${f##*/}" orchestrator "agents/${f##*/}"; done
-  [ -e "$SRC/.claude/workflows" ] && add_it ".claude/workflows" orchestrator ".claude/workflows"
-  for p in docs/md/orchestration.md docs/md/fable-team-guide.md; do
-    [ -e "$SRC/$p" ] && add_it "$p" orchestrator "$p"
+  for p in "${ORCH_PATHS[@]}"; do   # 정본 목록 순회 — agents만 항목 단위로 전개
+    if [ "$p" = ".claude/agents" ]; then
+      for f in "$SRC"/.claude/agents/*; do [ -e "$f" ] && add_it ".claude/agents/${f##*/}" orchestrator "agents/${f##*/}"; done
+    else
+      [ -e "$SRC/$p" ] && add_it "$p" orchestrator "$p"
+    fi
   done
-  for idx in "${HDR_IDX[@]}"; do   # 헤더에 항목 수 표기
-    n=0
-    for ((i = 0; i < ${#IT_PATH[@]}; i++)); do
-      [ "${IT_HDR[$i]}" = 0 ] && [ "${IT_SEC[$i]}" = "${IT_SEC[$idx]}" ] && n=$((n + 1))
-    done
-    IT_LABEL[$idx]="${IT_LABEL[$idx]} ($n)"
+  for ((i = 0; i < ${#HDR_IDX[@]}; i++)); do   # 헤더에 항목 수 표기 — 섹션은 연속 구간
+    idx=${HDR_IDX[$i]}
+    if [ $((i + 1)) -lt "${#HDR_IDX[@]}" ]; then next=${HDR_IDX[$((i + 1))]}; else next=${#IT_PATH[@]}; fi
+    IT_LABEL[$idx]="${IT_LABEL[$idx]} ($((next - idx - 1)))"
   done
 }
 
 sec_state() { # $1=섹션 → 2=전체 on · 1=부분 · 0=전체 off
   local i on=0 off=0
   for ((i = 0; i < ${#IT_PATH[@]}; i++)); do
-    [ "${IT_HDR[$i]}" = 1 ] && continue
+    [ -n "${IT_PATH[$i]}" ] || continue
     [ "${IT_SEC[$i]}" = "$1" ] || continue
     [ "${IT_ON[$i]}" = 1 ] && on=1 || off=1
   done
@@ -263,17 +264,17 @@ toggle_sec() {
   local new i
   [ "$(sec_state "$1")" = 2 ] && new=0 || new=1
   for ((i = 0; i < ${#IT_PATH[@]}; i++)); do
-    [ "${IT_HDR[$i]}" = 0 ] && [ "${IT_SEC[$i]}" = "$1" ] && IT_ON[$i]=$new
+    [ -n "${IT_PATH[$i]}" ] && [ "${IT_SEC[$i]}" = "$1" ] && IT_ON[$i]=$new
   done
 }
 
 toggle_all() {
   local new=0 i
   for ((i = 0; i < ${#IT_PATH[@]}; i++)); do
-    [ "${IT_HDR[$i]}" = 0 ] && [ "${IT_ON[$i]}" = 0 ] && new=1
+    [ -n "${IT_PATH[$i]}" ] && [ "${IT_ON[$i]}" = 0 ] && new=1
   done
   for ((i = 0; i < ${#IT_PATH[@]}; i++)); do
-    [ "${IT_HDR[$i]}" = 0 ] && IT_ON[$i]=$new
+    [ -n "${IT_PATH[$i]}" ] && IT_ON[$i]=$new
   done
 }
 
@@ -287,7 +288,7 @@ draw_menu() { # $1=표시 행 수 — 커서 따라 스크롤, 매번 같은 줄
   end=$((TOP + rows)); [ "$end" -gt "$total" ] && end=$total
   for ((i = TOP; i < end; i++)); do
     cur=' '; [ "$i" -eq "$CURSOR" ] && cur='>'
-    if [ "${IT_HDR[$i]}" = 1 ]; then
+    if [ -z "${IT_PATH[$i]}" ]; then
       st=$(sec_state "${IT_SEC[$i]}")
       case "$st" in 2) mark='x' ;; 1) mark='~' ;; *) mark=' ' ;; esac
       printf '\033[K%s [%s] ── %s ──\n' "$cur" "$mark" "${IT_LABEL[$i]}"
@@ -312,27 +313,28 @@ menu_loop() {
     IFS= read -rsn1 key < "$ASK_IN" 2>/dev/null || break   # EOF/입력 불가 → 현재 상태로 확정
     case "$key" in
       "") break ;;   # 엔터 → 설치
-      j) [ "$CURSOR" -lt $((total - 1)) ] && CURSOR=$((CURSOR + 1)) ;;
-      k) [ "$CURSOR" -gt 0 ] && CURSOR=$((CURSOR - 1)) ;;
+      j) CURSOR=$((CURSOR + 1)) ;;
+      k) CURSOR=$((CURSOR - 1)) ;;
       $'\033')
         IFS= read -rsn2 -t 1 seq < "$ASK_IN" 2>/dev/null || seq=""
         case "$seq" in
-          '[A') [ "$CURSOR" -gt 0 ] && CURSOR=$((CURSOR - 1)) ;;
-          '[B') [ "$CURSOR" -lt $((total - 1)) ] && CURSOR=$((CURSOR + 1)) ;;
+          '[A') CURSOR=$((CURSOR - 1)) ;;
+          '[B') CURSOR=$((CURSOR + 1)) ;;
         esac ;;
       ' ')
-        if [ "${IT_HDR[$CURSOR]}" = 1 ]; then toggle_sec "${IT_SEC[$CURSOR]}"
+        if [ -z "${IT_PATH[$CURSOR]}" ]; then toggle_sec "${IT_SEC[$CURSOR]}"
         else IT_ON[$CURSOR]=$((1 - ${IT_ON[$CURSOR]})); fi ;;
       a) toggle_all ;;
-      [1-5]) CURSOR=${HDR_IDX[$(($key - 1))]} ;;
+      [1-9]) [ "$key" -le "${#HDR_IDX[@]}" ] && CURSOR=${HDR_IDX[$((key - 1))]} ;;
     esac
+    [ "$CURSOR" -lt 0 ] && CURSOR=0
+    [ "$CURSOR" -ge "$total" ] && CURSOR=$((total - 1))
   done
 }
 
-prefix_full() { # $1=디렉토리 — 하위 항목 전부 선택이면 0
+prefix_full() { # $1=디렉토리 — 하위 항목 전부 선택이면 0 (헤더는 빈 경로라 자연 제외)
   local i
   for ((i = 0; i < ${#IT_PATH[@]}; i++)); do
-    [ "${IT_HDR[$i]}" = 1 ] && continue
     case "${IT_PATH[$i]}" in "$1"/*) [ "${IT_ON[$i]}" = 1 ] || return 1 ;; esac
   done
   return 0
@@ -349,13 +351,14 @@ collect_selected() { # → $COMPONENTS + $SELECTED_PATHS. 전체 선택 디렉�
     esac
   done
   COMPONENTS="${COMPONENTS# }"
+  # build_items가 항목 단위로 전개하는 디렉토리 3종 — 전개 지점 변경 시 함께 수정
   for p in .claude/skills .claude/commands .claude/agents; do
     prefix_full "$p" && full="$full $p"
   done
   SELECTED_PATHS=()
   for p in $full; do SELECTED_PATHS+=("$p"); done
   for ((i = 0; i < ${#IT_PATH[@]}; i++)); do
-    [ "${IT_HDR[$i]}" = 1 ] && continue
+    [ -n "${IT_PATH[$i]}" ] || continue
     [ "${IT_ON[$i]}" = 1 ] || continue
     p="${IT_PATH[$i]}"
     case " $full " in *" ${p%/*} "*) continue ;; esac   # 축약 디렉토리 소속 → 개별 기록 생략
@@ -461,12 +464,11 @@ if [ "$NEED_FETCH" -eq 1 ]; then
     COMPONENTS=$(tr '\n' ' ' < "$COMPFILE" 2>/dev/null); COMPONENTS="${COMPONENTS:-$COMP_ALL}"
     BAK="$HERE/logs/harness-backup/v$OLDV"   # logs/는 gitignore — 백업 소음 없음
     # ponytail: 경로 목록은 실행 중인 스크립트 기준 — 신규 경로까지 받으려면 curl|bash 업데이트가 정본
-    # 부분 선택(체크박스 설치)의 fine 경로도 패치 대상 — manifest에서 수집
+    # manifest의 모든 라인이 하네스 설치분(부분 선택의 fine 경로 포함) — 전부 패치 대상.
+    # coarse 경로 중복은 2차 순회에서 diff 동일 → no-op으로 흡수된다.
     UP_PATHS=( "${HARNESS_PATHS[@]}" )
     while IFS= read -r fp; do
-      case "$fp" in
-        .claude/skills/* | .claude/commands/* | .claude/agents/*) UP_PATHS+=("$fp") ;;
-      esac
+      [ -n "$fp" ] && UP_PATHS+=("$fp")
     done < "$MANIFEST"
     for p in "${UP_PATHS[@]}"; do
       [ -e "$SRC/$p" ] || continue
