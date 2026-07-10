@@ -25,10 +25,7 @@
 
 ```bash
 cd /path/to/your-project
-# 사설 레포 — 토큰 필요(아래 "사설 소스 레포 토큰"). 오프라인은 HARNESS_SRC_DIR.
-curl -fsSL -H "Authorization: token $GITHUB_TOKEN" \
-  https://raw.githubusercontent.com/wevesolutions/harness/main/install.sh \
-  | GITHUB_TOKEN=$GITHUB_TOKEN bash
+curl -fsSL https://raw.githubusercontent.com/claude-code-expert/carve-harness/main/install.sh | bash
 ```
 
 - **구성 선택**: 설치 전 5구성(필수 md·훅·스킬·커맨드·오케스트레이터) 번호 선택 창이 뜬다(엔터=전체). 비대화형은 `HARNESS_COMPONENTS=md,hooks bash install.sh`. 선택은 `.claude/harness-components`에 기록돼 update의 신규 파일 필터로 작동하고, 재실행하면 빠진 구성을 추가할 수 있다.
@@ -36,42 +33,14 @@ curl -fsSL -H "Authorization: token $GITHUB_TOKEN" \
 - **예외: `.claude/settings.json`은 스킵이 아니라 병합**한다 — 기존 설정(`permissions`·`model`·자체 훅)을 보존하며 하네스 훅 6이벤트를 jq로 등록(멱등). 이걸 스킵하면 훅이 미등록돼 배너·가드·검증이 전부 무력화되기 때문.
 - 설치 끝에 `/harness-audit` 자동 실행 — 42 PASS면 전 게이트 활성.
 
-### 사설(private) 소스 레포 토큰
+### 오프라인 / 로컬 클론 설치
 
-하네스 소스는 private 레포(`wevesolutions/harness`)다. GitHub은 **인증 없는** raw/codeload 접근에 404를 반환하므로, 같은 org(`wevesolutions`) 멤버여도 토큰이 필요하다. 아래 명령은 설치·업데이트 공통(마지막 `bash` 인자만 `-s -- update`로 바꾸면 업데이트).
-
-**방법 1 — gh CLI (가장 간단, 권장):**
-```bash
-GITHUB_TOKEN=$(gh auth token)
-curl -fsSL -H "Authorization: token $GITHUB_TOKEN" \
-  https://raw.githubusercontent.com/wevesolutions/harness/main/install.sh \
-  | GITHUB_TOKEN=$GITHUB_TOKEN bash
-```
-`gh` 없으면 `gh auth login`(GitHub.com → HTTPS → 브라우저) 후 실행. SSO도 자동 인가돼 방법 2의 SSO 함정이 없다.
-
-**방법 2 — PAT 직접 발급:**
-1. GitHub → Settings → Developer settings → Personal access tokens
-2. Classic은 `repo` 스코프 / Fine-grained는 Resource owner=`wevesolutions`, Repository=`harness`, **Contents: Read**
-3. 발급된 토큰으로:
-```bash
-export GITHUB_TOKEN=ghp_xxxxxxxx
-curl -fsSL -H "Authorization: token $GITHUB_TOKEN" \
-  https://raw.githubusercontent.com/wevesolutions/harness/main/install.sh \
-  | GITHUB_TOKEN=$GITHUB_TOKEN bash
-```
-
-**방법 3 — 토큰 없이 (오프라인/로컬 클론):**
 ```bash
 HARNESS_SRC_DIR=/path/to/harness bash /path/to/harness/install.sh          # 설치
 HARNESS_SRC_DIR=/path/to/harness bash /path/to/harness/install.sh update   # 업데이트
 ```
 
-주의:
-- 토큰이 **두 번** 들어간다 — 앞 `-H`는 install.sh 스크립트 다운로드용, 뒤 `GITHUB_TOKEN=` 환경변수는 스크립트가 소스 tarball을 codeload에서 받을 때 쓴다. 하나만 빠져도 404.
-- **SSO**: org가 SAML SSO를 강제하면 PAT(방법 2)를 토큰 목록에서 "Configure SSO → Authorize"로 `wevesolutions`에 인가해야 200이 된다. 방법 1은 해당 없음.
-- **토큰 노출 금지**: `ghp_...`를 커밋·로그·`.env`에 넣지 마라(하네스 가드가 `ghp_` 하드코딩 쓰기를 차단). 셸 세션 환경변수로만.
-- **최소 권한**: 업데이트만이면 fine-grained + Contents:Read로 충분. classic `repo`는 과함.
-- 공개 미러에서 받으려면 `HARNESS_REPO=<owner>/<public-repo>`로 소스를 바꾼다(토큰 불필요).
+다른 소스에서 받으려면 `HARNESS_REPO=<owner>/<repo>` · `HARNESS_REF=<branch|tag>`로 바꾼다.
 
 **초기 설정** (선택, 모든 항목 엔터로 skip):
 
@@ -90,19 +59,17 @@ git init · jq PATH · LICENSE 생성(MIT/Apache-2.0) · 보호 경로 추가 ·
 # 현재 설치 버전 확인
 cat .claude/harness-version
 
-# 업데이트 — 온라인 (권장: 새 설치기 기준이라 신규 파일까지 수신) · 사설 레포라 토큰 필요
-curl -fsSL -H "Authorization: token $GITHUB_TOKEN" \
-  https://raw.githubusercontent.com/wevesolutions/harness/main/install.sh | GITHUB_TOKEN=$GITHUB_TOKEN bash -s -- update
+# 업데이트 — 온라인 (권장: 새 설치기 기준이라 신규 파일까지 수신)
+curl -fsSL https://raw.githubusercontent.com/claude-code-expert/carve-harness/main/install.sh | bash -s -- update
 
-# 업데이트 — 로컬 설치본의 설치기로 (토큰 불필요)
+# 업데이트 — 로컬 설치본의 설치기로
 bash install.sh update
 
 # 업데이트 — 오프라인 (새 버전 복사본 지정)
 HARNESS_SRC_DIR=/path/to/new-harness bash install.sh update
 
-# 특정 브랜치/태그 고정 (토큰 필요)
-curl -fsSL -H "Authorization: token $GITHUB_TOKEN" \
-  https://raw.githubusercontent.com/wevesolutions/harness/main/install.sh | HARNESS_REF=v0.0.4 GITHUB_TOKEN=$GITHUB_TOKEN bash -s -- update
+# 특정 브랜치/태그 고정
+curl -fsSL https://raw.githubusercontent.com/claude-code-expert/carve-harness/main/install.sh | HARNESS_REF=v0.0.4 bash -s -- update
 
 # 같은 버전 강제 재패치 (파일 복구 용도)
 HARNESS_FORCE=1 bash install.sh update
@@ -111,7 +78,6 @@ HARNESS_FORCE=1 bash install.sh update
 bash install.sh rollback
 ```
 
-- **토큰**: 온라인 `update`도 사설 소스라 `GITHUB_TOKEN`이 필요하다 — 위 "사설 소스 레포 토큰" 3방법과 동일(마지막 인자만 `bash -s -- update`). 오프라인·로컬 경로는 토큰 불필요.
 - update: 원격 `VERSION` vs 로컬 `.claude/harness-version` 비교(같으면 no-op) → manifest 범위만 패치, 변경 파일은 `logs/harness-backup/v<이전>/` 자동 백업, 사용자 파일(설치 때 SKIP분) 불가침.
 - rollback: 최신 백업 복원 + 버전 스탬프 복귀. 백업은 소비 — 연속 실행 시 그 이전 버전으로.
 - 배포 절차는 `RELEASE.md`.

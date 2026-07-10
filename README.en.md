@@ -25,10 +25,7 @@ Drop it into your project root and it works immediately.
 
 ```bash
 cd /path/to/your-project
-# Private repo — token required (see "Token for the private source repo"). Offline: HARNESS_SRC_DIR.
-curl -fsSL -H "Authorization: token $GITHUB_TOKEN" \
-  https://raw.githubusercontent.com/wevesolutions/harness/main/install.sh \
-  | GITHUB_TOKEN=$GITHUB_TOKEN bash
+curl -fsSL https://raw.githubusercontent.com/claude-code-expert/carve-harness/main/install.sh | bash
 ```
 
 - **Component selection**: before installing, a numbered menu offers 5 groups (required md / hooks / skills / commands / orchestrator; Enter = all). Non-interactive: `HARNESS_COMPONENTS=md,hooks bash install.sh`. The selection is recorded in `.claude/harness-components`, drives update-mode filtering, and re-running adds missing groups.
@@ -36,42 +33,14 @@ curl -fsSL -H "Authorization: token $GITHUB_TOKEN" \
 - **Exception: `.claude/settings.json` is merged, not skipped** — your existing config (`permissions`, `model`, own hooks) is preserved while the harness's 6 hook events are registered via jq (idempotent). Skipping it would leave the hooks unregistered and every gate (banner, guard, verify) inert.
 - The installer ends by running `/harness-audit` — 42 PASS means all gates are live.
 
-### Token for the private source repo
+### Offline / local clone install
 
-The harness source lives in a private repo (`wevesolutions/harness`). GitHub returns 404 for **unauthenticated** raw/codeload access, so a token is required even for members of the same org (`wevesolutions`). The commands below work for install and update alike (swap the trailing `bash` for `bash -s -- update`).
-
-**Method 1 — gh CLI (simplest, recommended):**
-```bash
-GITHUB_TOKEN=$(gh auth token)
-curl -fsSL -H "Authorization: token $GITHUB_TOKEN" \
-  https://raw.githubusercontent.com/wevesolutions/harness/main/install.sh \
-  | GITHUB_TOKEN=$GITHUB_TOKEN bash
-```
-No `gh`? Run `gh auth login` (GitHub.com → HTTPS → browser) first. SSO is auto-authorized, avoiding Method 2's SSO pitfall.
-
-**Method 2 — issue a PAT:**
-1. GitHub → Settings → Developer settings → Personal access tokens
-2. Classic: `repo` scope / Fine-grained: Resource owner=`wevesolutions`, Repository=`harness`, **Contents: Read**
-3. With the token:
-```bash
-export GITHUB_TOKEN=ghp_xxxxxxxx
-curl -fsSL -H "Authorization: token $GITHUB_TOKEN" \
-  https://raw.githubusercontent.com/wevesolutions/harness/main/install.sh \
-  | GITHUB_TOKEN=$GITHUB_TOKEN bash
-```
-
-**Method 3 — no token (offline / local clone):**
 ```bash
 HARNESS_SRC_DIR=/path/to/harness bash /path/to/harness/install.sh          # install
 HARNESS_SRC_DIR=/path/to/harness bash /path/to/harness/install.sh update   # update
 ```
 
-Notes:
-- The token appears **twice** — the leading `-H` downloads the install.sh script; the trailing `GITHUB_TOKEN=` env var is used when the script fetches the source tarball from codeload. Missing either → 404.
-- **SSO**: if the org enforces SAML SSO, a PAT (Method 2) must be authorized for `wevesolutions` via "Configure SSO → Authorize" in the token list before codeload returns 200. Method 1 is exempt.
-- **Never expose the token**: don't put `ghp_...` in commits, logs, or `.env` (the harness guard blocks `ghp_` hardcoded writes). Shell-session env var only.
-- **Least privilege**: for updates only, fine-grained + Contents:Read is enough; classic `repo` is overkill.
-- To pull from a public mirror instead, set `HARNESS_REPO=<owner>/<public-repo>` (no token needed).
+To pull from a different source, set `HARNESS_REPO=<owner>/<repo>` · `HARNESS_REF=<branch|tag>`.
 
 **Initial setup** (optional, every prompt skippable with Enter):
 
@@ -90,9 +59,8 @@ Run every command **from the target project root**.
 # Check the installed version
 cat .claude/harness-version
 
-# Update — online (recommended) · private repo, token required
-curl -fsSL -H "Authorization: token $GITHUB_TOKEN" \
-  https://raw.githubusercontent.com/wevesolutions/harness/main/install.sh | GITHUB_TOKEN=$GITHUB_TOKEN bash -s -- update
+# Update — online (recommended)
+curl -fsSL https://raw.githubusercontent.com/claude-code-expert/carve-harness/main/install.sh | bash -s -- update
 
 # Update — using the locally installed installer
 bash install.sh update
@@ -100,9 +68,8 @@ bash install.sh update
 # Update — offline (point at a copy of the new version)
 HARNESS_SRC_DIR=/path/to/new-harness bash install.sh update
 
-# Pin a branch/tag (token required)
-curl -fsSL -H "Authorization: token $GITHUB_TOKEN" \
-  https://raw.githubusercontent.com/wevesolutions/harness/main/install.sh | HARNESS_REF=v0.0.4 GITHUB_TOKEN=$GITHUB_TOKEN bash -s -- update
+# Pin a branch/tag
+curl -fsSL https://raw.githubusercontent.com/claude-code-expert/carve-harness/main/install.sh | HARNESS_REF=v0.0.4 bash -s -- update
 
 # Force re-patch of the same version (file recovery)
 HARNESS_FORCE=1 bash install.sh update
@@ -111,7 +78,6 @@ HARNESS_FORCE=1 bash install.sh update
 bash install.sh rollback
 ```
 
-- **Token**: online `update` needs `GITHUB_TOKEN` too (private source) — same 3 methods as "Token for the private source repo" above, just end with `bash -s -- update`. Offline and local paths need no token.
 - update: compares remote `VERSION` vs local `.claude/harness-version` (no-op if equal) → patches manifest scope only; changed files are auto-backed up to `logs/harness-backup/v<prev>/`; user files (SKIPped at install) are inviolate.
 - rollback: restores the latest backup and reverts the version stamp. Backups are consumed — run again to step further back.
 - Release procedure: `RELEASE.md`.

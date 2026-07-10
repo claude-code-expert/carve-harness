@@ -3,13 +3,13 @@
 #
 # 모드:
 #   [fetch]     현재 디렉토리에 하네스가 없으면 → GitHub에서 받아 설치
-#               curl -fsSL https://raw.githubusercontent.com/wevesolutions/harness/main/install.sh | bash
-#               (사설 레포: GITHUB_TOKEN=... 필요 · 오프라인: HARNESS_SRC_DIR=/path/to/harness)
+#               curl -fsSL https://raw.githubusercontent.com/claude-code-expert/carve-harness/main/install.sh | bash
+#               (오프라인: HARNESS_SRC_DIR=/path/to/harness)
 #               설치 전 구성 선택 창 표시: 필수md·훅·스킬·커맨드·오케스트레이터 (엔터=전체)
 #               비대화형은 HARNESS_COMPONENTS=md,hooks,skills,commands,orchestrator (또는 all)
 #               재실행하면 빠진 구성을 추가 설치할 수 있다 (기존 파일은 SKIP)
 #   [update]    설치된 하네스를 새 버전으로 패치 — manifest 범위만 갱신
-#               curl -fsSL https://raw.githubusercontent.com/wevesolutions/harness/main/install.sh | bash -s -- update
+#               curl -fsSL https://raw.githubusercontent.com/claude-code-expert/carve-harness/main/install.sh | bash -s -- update
 #               VERSION 비교(같으면 no-op) · 변경 파일은 logs/harness-backup/v<이전>/ 백업
 #               설치 때 SKIP된 사용자 파일은 건드리지 않음 · 신규 파일은 설치+manifest 추가
 #   [rollback]  직전 업데이트 되돌리기 — 네트워크 불필요
@@ -25,7 +25,7 @@
 #               3) jq 없으면 ~/.local/bin/jq  4) 훅 권한 + core.hooksPath
 #               5) harness-audit 최종 보고
 #
-# 환경변수: HARNESS_REPO(기본 wevesolutions/harness) · HARNESS_REF(기본 main)
+# 환경변수: HARNESS_REPO(기본 claude-code-expert/carve-harness) · HARNESS_REF(기본 main)
 #           HARNESS_SRC_DIR(로컬 소스 — 네트워크 생략) · HARNESS_FORCE=1(기존 파일 덮어쓰기/재패치)
 set -u
 
@@ -282,19 +282,13 @@ if [ "$NEED_FETCH" -eq 1 ]; then
   if [ -z "$SRC" ]; then
     command -v curl >/dev/null 2>&1 || fail "curl 없음 — 오프라인이면 HARNESS_SRC_DIR=/복사된/하네스 로 실행"
     command -v tar  >/dev/null 2>&1 || fail "tar 없음"
-    REPO="${HARNESS_REPO:-wevesolutions/harness}"
+    REPO="${HARNESS_REPO:-claude-code-expert/carve-harness}"
     REF="${HARNESS_REF:-main}"
     TMPD=$(mktemp -d)
     trap '[ -n "$TMPD" ] && rm -rf "$TMPD"' EXIT
     say "fetch: https://github.com/$REPO @ $REF"
-    if [ -n "${GITHUB_TOKEN:-}" ]; then
-      curl -fsSL -H "Authorization: token $GITHUB_TOKEN" \
-        "https://codeload.github.com/$REPO/tar.gz/$REF" | tar -xz -C "$TMPD" --strip-components=1 \
-        || fail "다운로드 실패 — 레포/브랜치/토큰 확인"
-    else
-      curl -fsSL "https://codeload.github.com/$REPO/tar.gz/$REF" | tar -xz -C "$TMPD" --strip-components=1 \
-        || fail "다운로드 실패 — 사설 레포면 GITHUB_TOKEN 필요"
-    fi
+    curl -fsSL "https://codeload.github.com/$REPO/tar.gz/$REF" | tar -xz -C "$TMPD" --strip-components=1 \
+      || fail "다운로드 실패 — 레포/브랜치 확인"
     SRC="$TMPD"
   fi
   [ -f "$SRC/.claude/hooks/pretool-guard.sh" ] || fail "소스에 하네스 없음: $SRC"
