@@ -5,7 +5,9 @@
 #   [fetch]     현재 디렉토리에 하네스가 없으면 → GitHub에서 받아 설치
 #               curl -fsSL https://raw.githubusercontent.com/claude-code-expert/carve-harness/main/install.sh | bash
 #               (오프라인: HARNESS_SRC_DIR=/path/to/harness)
-#               설치 전 구성 선택 창 표시: 필수md·훅·스킬·커맨드·오케스트레이터 (엔터=전체)
+#               설치 전 전체 항목 체크박스 목록 표시 (섹션: 필수md·훅·스킬·커맨드·오케스트레이터)
+#               ↑↓/jk 이동 · 스페이스 토글(섹션 행=하위 일괄) · 1-5 섹션 점프 · a 전체 · 엔터 설치
+#               기본 전체 선택 — 엔터만 치면 전체 설치
 #               비대화형은 HARNESS_COMPONENTS=md,hooks,skills,commands,orchestrator (또는 all)
 #               재실행하면 빠진 구성을 추가 설치할 수 있다 (기존 파일은 SKIP)
 #   [update]    설치된 하네스를 새 버전으로 패치 — manifest 범위만 갱신
@@ -212,35 +214,188 @@ comp_of() { # $1=경로 → 구성 이름
 }
 comp_in() { case " $COMPONENTS " in *" $1 "*) return 0 ;; *) return 1 ;; esac; }
 
-select_components() { # → $COMPONENTS (공백 구분). env > 프롬프트 > 전체.
+# ── 구성 선택: 체크박스 TUI ──────────────────────────────────────────────────
+# 전체 항목을 섹션별로 펼쳐 표시. ↑↓/jk 이동 · 스페이스 토글(섹션 행=하위 일괄) ·
+# 1-5 섹션 점프 · a 전체 토글 · 엔터 설치. 기본 전체 선택 → 엔터만 치면 전체 설치.
+# env HARNESS_COMPONENTS / tty 없음(비대화형)은 기존 구성 단위 경로로 폴백.
+IT_PATH=(); IT_LABEL=(); IT_SEC=(); IT_HDR=(); IT_ON=(); HDR_IDX=()
+SELECTED_PATHS=()
+
+add_hdr() { HDR_IDX+=("${#IT_PATH[@]}"); IT_PATH+=(""); IT_SEC+=("$1"); IT_HDR+=(1); IT_ON+=(1); IT_LABEL+=("$2"); }
+add_it()  { IT_PATH+=("$1"); IT_SEC+=("$2"); IT_HDR+=(0); IT_ON+=(1); IT_LABEL+=("$3"); }
+
+build_items() { # $SRC 기준으로 실재 항목만 나열
+  local p f idx n i
+  add_hdr md "필수 md"
+  for p in "${MD_PATHS[@]}"; do [ -e "$SRC/$p" ] && add_it "$p" md "$p"; done
+  add_hdr hooks "훅 (가드·게이트)"
+  for p in "${HOOK_PATHS[@]}"; do [ -e "$SRC/$p" ] && add_it "$p" hooks "$p"; done
+  add_hdr skills "스킬"
+  for f in "$SRC"/.claude/skills/*; do [ -e "$f" ] && add_it ".claude/skills/${f##*/}" skills "${f##*/}"; done
+  add_hdr commands "커맨드"
+  for f in "$SRC"/.claude/commands/*; do [ -e "$f" ] && add_it ".claude/commands/${f##*/}" commands "${f##*/}"; done
+  add_hdr orchestrator "오케스트레이터"
+  for f in "$SRC"/.claude/agents/*; do [ -e "$f" ] && add_it ".claude/agents/${f##*/}" orchestrator "agents/${f##*/}"; done
+  [ -e "$SRC/.claude/workflows" ] && add_it ".claude/workflows" orchestrator ".claude/workflows"
+  for p in docs/md/orchestration.md docs/md/fable-team-guide.md; do
+    [ -e "$SRC/$p" ] && add_it "$p" orchestrator "$p"
+  done
+  for idx in "${HDR_IDX[@]}"; do   # 헤더에 항목 수 표기
+    n=0
+    for ((i = 0; i < ${#IT_PATH[@]}; i++)); do
+      [ "${IT_HDR[$i]}" = 0 ] && [ "${IT_SEC[$i]}" = "${IT_SEC[$idx]}" ] && n=$((n + 1))
+    done
+    IT_LABEL[$idx]="${IT_LABEL[$idx]} ($n)"
+  done
+}
+
+sec_state() { # $1=섹션 → 2=전체 on · 1=부분 · 0=전체 off
+  local i on=0 off=0
+  for ((i = 0; i < ${#IT_PATH[@]}; i++)); do
+    [ "${IT_HDR[$i]}" = 1 ] && continue
+    [ "${IT_SEC[$i]}" = "$1" ] || continue
+    [ "${IT_ON[$i]}" = 1 ] && on=1 || off=1
+  done
+  if [ "$off" -eq 0 ]; then echo 2; elif [ "$on" -eq 0 ]; then echo 0; else echo 1; fi
+}
+
+toggle_sec() {
+  local new i
+  [ "$(sec_state "$1")" = 2 ] && new=0 || new=1
+  for ((i = 0; i < ${#IT_PATH[@]}; i++)); do
+    [ "${IT_HDR[$i]}" = 0 ] && [ "${IT_SEC[$i]}" = "$1" ] && IT_ON[$i]=$new
+  done
+}
+
+toggle_all() {
+  local new=0 i
+  for ((i = 0; i < ${#IT_PATH[@]}; i++)); do
+    [ "${IT_HDR[$i]}" = 0 ] && [ "${IT_ON[$i]}" = 0 ] && new=1
+  done
+  for ((i = 0; i < ${#IT_PATH[@]}; i++)); do
+    [ "${IT_HDR[$i]}" = 0 ] && IT_ON[$i]=$new
+  done
+}
+
+draw_menu() { # $1=표시 행 수 — 커서 따라 스크롤, 매번 같은 줄 수 재그리기
+  local rows=$1 total=${#IT_PATH[@]} i end mark cur st
+  [ "$CURSOR" -lt "$TOP" ] && TOP=$CURSOR
+  [ "$CURSOR" -ge $((TOP + rows)) ] && TOP=$((CURSOR - rows + 1))
+  [ "$TOP" -gt $((total - rows)) ] && TOP=$((total - rows))
+  [ "$TOP" -lt 0 ] && TOP=0
+  [ "$DRAWN" -gt 0 ] && printf '\033[%dA' "$DRAWN"
+  end=$((TOP + rows)); [ "$end" -gt "$total" ] && end=$total
+  for ((i = TOP; i < end; i++)); do
+    cur=' '; [ "$i" -eq "$CURSOR" ] && cur='>'
+    if [ "${IT_HDR[$i]}" = 1 ]; then
+      st=$(sec_state "${IT_SEC[$i]}")
+      case "$st" in 2) mark='x' ;; 1) mark='~' ;; *) mark=' ' ;; esac
+      printf '\033[K%s [%s] ── %s ──\n' "$cur" "$mark" "${IT_LABEL[$i]}"
+    else
+      mark=' '; [ "${IT_ON[$i]}" = 1 ] && mark='x'
+      printf '\033[K%s   [%s] %s\n' "$cur" "$mark" "${IT_LABEL[$i]}"
+    fi
+  done
+  DRAWN=$((end - TOP))
+}
+
+menu_loop() {
+  local key seq lines rows total=${#IT_PATH[@]}
+  lines=$(stty size < "$ASK_IN" 2>/dev/null | awk '{print $1}')
+  case "$lines" in '' | *[!0-9]*) lines=0 ;; esac
+  [ "$lines" -ge 8 ] || lines=1000   # 감지 실패(파이프 입력 등) → 전체 출력
+  rows=$((lines - 3)); [ "$rows" -gt "$total" ] && rows=$total
+  CURSOR=0; TOP=0; DRAWN=0
+  say "── 설치 구성 선택 ── ↑↓/jk 이동 · 스페이스 토글(섹션 행=하위 일괄) · 1-5 섹션 · a 전체 · 엔터 설치"
+  while :; do
+    draw_menu "$rows"
+    IFS= read -rsn1 key < "$ASK_IN" 2>/dev/null || break   # EOF/입력 불가 → 현재 상태로 확정
+    case "$key" in
+      "") break ;;   # 엔터 → 설치
+      j) [ "$CURSOR" -lt $((total - 1)) ] && CURSOR=$((CURSOR + 1)) ;;
+      k) [ "$CURSOR" -gt 0 ] && CURSOR=$((CURSOR - 1)) ;;
+      $'\033')
+        IFS= read -rsn2 -t 1 seq < "$ASK_IN" 2>/dev/null || seq=""
+        case "$seq" in
+          '[A') [ "$CURSOR" -gt 0 ] && CURSOR=$((CURSOR - 1)) ;;
+          '[B') [ "$CURSOR" -lt $((total - 1)) ] && CURSOR=$((CURSOR + 1)) ;;
+        esac ;;
+      ' ')
+        if [ "${IT_HDR[$CURSOR]}" = 1 ]; then toggle_sec "${IT_SEC[$CURSOR]}"
+        else IT_ON[$CURSOR]=$((1 - ${IT_ON[$CURSOR]})); fi ;;
+      a) toggle_all ;;
+      [1-5]) CURSOR=${HDR_IDX[$(($key - 1))]} ;;
+    esac
+  done
+}
+
+prefix_full() { # $1=디렉토리 — 하위 항목 전부 선택이면 0
+  local i
+  for ((i = 0; i < ${#IT_PATH[@]}; i++)); do
+    [ "${IT_HDR[$i]}" = 1 ] && continue
+    case "${IT_PATH[$i]}" in "$1"/*) [ "${IT_ON[$i]}" = 1 ] || return 1 ;; esac
+  done
+  return 0
+}
+
+collect_selected() { # → $COMPONENTS + $SELECTED_PATHS. 전체 선택 디렉토리는 coarse 경로로 축약.
+  local i p sec full="" all_on=1
+  COMPONENTS=""
+  for sec in $COMP_ALL; do
+    case "$(sec_state "$sec")" in
+      2) COMPONENTS="$COMPONENTS $sec" ;;
+      1) COMPONENTS="$COMPONENTS $sec"; all_on=0 ;;
+      0) all_on=0 ;;
+    esac
+  done
+  COMPONENTS="${COMPONENTS# }"
+  for p in .claude/skills .claude/commands .claude/agents; do
+    prefix_full "$p" && full="$full $p"
+  done
+  SELECTED_PATHS=()
+  for p in $full; do SELECTED_PATHS+=("$p"); done
+  for ((i = 0; i < ${#IT_PATH[@]}; i++)); do
+    [ "${IT_HDR[$i]}" = 1 ] && continue
+    [ "${IT_ON[$i]}" = 1 ] || continue
+    p="${IT_PATH[$i]}"
+    case " $full " in *" ${p%/*} "*) continue ;; esac   # 축약 디렉토리 소속 → 개별 기록 생략
+    SELECTED_PATHS+=("$p")
+  done
+  if [ -z "$COMPONENTS" ]; then
+    say "선택 없음 — core만 설치"
+  elif [ "$all_on" -eq 1 ]; then
+    say "구성 선택: 전체"
+  else
+    say "구성 선택: $COMPONENTS (${#SELECTED_PATHS[@]} 항목)"
+  fi
+}
+
+sel_from_components() { # env/비대화형 — 구성 단위 coarse 경로
+  local p c
+  SELECTED_PATHS=()
+  for p in "${HARNESS_PATHS[@]}"; do
+    c=$(comp_of "$p")
+    [ "$c" = "core" ] && continue
+    comp_in "$c" && SELECTED_PATHS+=("$p")
+  done
+}
+
+select_components() { # → $COMPONENTS + $SELECTED_PATHS. env > TUI > 전체.
   if [ -n "${HARNESS_COMPONENTS:-}" ]; then
     [ "$HARNESS_COMPONENTS" = "all" ] && COMPONENTS="$COMP_ALL" \
       || COMPONENTS=$(printf '%s' "$HARNESS_COMPONENTS" | tr ',' ' ')
     say "구성 선택(env): $COMPONENTS"
+    sel_from_components
     return
   fi
-  say "── 설치 구성 선택 ──"
-  say "  1) 필수 md         CLAUDE.md·AGENTS.md·RULES.md·.claude/rules·specs"
-  say "  2) 훅              .claude/hooks·.githooks·settings.json (가드·게이트)"
-  say "  3) 스킬            .claude/skills (plan·verify·review·handoff…)"
-  say "  4) 커맨드          .claude/commands"
-  say "  5) 오케스트레이터   .claude/agents·workflows·orchestration 가이드"
-  ask "번호 선택 (예: 1 2 5 — 엔터=전체 설치): "
-  if [ -z "$REPLY" ]; then COMPONENTS="$COMP_ALL"; say "구성 선택: 전체"; return; fi
-  COMPONENTS=""
-  for n in $(printf '%s' "$REPLY" | tr ',' ' '); do
-    case "$n" in
-      1) COMPONENTS="$COMPONENTS md" ;;
-      2) COMPONENTS="$COMPONENTS hooks" ;;
-      3) COMPONENTS="$COMPONENTS skills" ;;
-      4) COMPONENTS="$COMPONENTS commands" ;;
-      5) COMPONENTS="$COMPONENTS orchestrator" ;;
-      *) say "WARN: 무시된 입력: $n" ;;
-    esac
-  done
-  COMPONENTS="${COMPONENTS# }"
-  [ -n "$COMPONENTS" ] || { COMPONENTS="$COMP_ALL"; say "유효 선택 없음 → 전체 설치"; }
-  say "구성 선택: $COMPONENTS"
+  if ! { : < "$ASK_IN"; } 2>/dev/null; then   # tty 없음 → 전체
+    COMPONENTS="$COMP_ALL"; say "구성 선택: 전체"
+    sel_from_components
+    return
+  fi
+  build_items
+  menu_loop
+  collect_selected
   comp_in hooks || say "NOTE: 훅 미선택 — 차단 가드·커밋 게이트 비활성 (하네스 제약 기둥 없음)"
 }
 
@@ -306,7 +461,14 @@ if [ "$NEED_FETCH" -eq 1 ]; then
     COMPONENTS=$(tr '\n' ' ' < "$COMPFILE" 2>/dev/null); COMPONENTS="${COMPONENTS:-$COMP_ALL}"
     BAK="$HERE/logs/harness-backup/v$OLDV"   # logs/는 gitignore — 백업 소음 없음
     # ponytail: 경로 목록은 실행 중인 스크립트 기준 — 신규 경로까지 받으려면 curl|bash 업데이트가 정본
-    for p in "${HARNESS_PATHS[@]}"; do
+    # 부분 선택(체크박스 설치)의 fine 경로도 패치 대상 — manifest에서 수집
+    UP_PATHS=( "${HARNESS_PATHS[@]}" )
+    while IFS= read -r fp; do
+      case "$fp" in
+        .claude/skills/* | .claude/commands/* | .claude/agents/*) UP_PATHS+=("$fp") ;;
+      esac
+    done < "$MANIFEST"
+    for p in "${UP_PATHS[@]}"; do
       [ -e "$SRC/$p" ] || continue
       if grep -qx "$p" "$MANIFEST" 2>/dev/null; then
         diff -rq "$SRC/$p" "$HERE/$p" >/dev/null 2>&1 && continue   # 동일 → 그대로
@@ -341,12 +503,8 @@ if [ "$NEED_FETCH" -eq 1 ]; then
     select_components
     mkdir -p "$HERE/.claude"   # 나머지 경로는 복사 루프가 생성 — 미리 만들면 SKIP 오탐
     touch "$MANIFEST"          # 재실행으로 구성 추가 시 기존 기록 보존
-    for p in "${HARNESS_PATHS[@]}"; do
+    for p in ${SELECTED_PATHS[@]+"${SELECTED_PATHS[@]}"} "${CORE_PATHS[@]}"; do
       [ -e "$SRC/$p" ] || continue
-      c=$(comp_of "$p")
-      if [ "$c" != "core" ] && ! comp_in "$c"; then
-        continue   # 미선택 구성 — 조용히 제외 (선택 요약은 위에 출력됨)
-      fi
       # settings.json은 훅 등록의 유일한 자리 — 기존 파일이면 스킵이 아니라 병합한다
       # (스킵하면 훅 미등록 → 배너·가드·검증 전부 무력화). 병합은 jq 보장 후 (4.5)에서.
       if [ "$p" = ".claude/settings.json" ] && [ -e "$HERE/$p" ] && [ "${HARNESS_FORCE:-0}" != "1" ]; then
@@ -470,7 +628,7 @@ fi
 # (5) final state report.
 say "---"
 if [ ! -f "$HERE/.claude/hooks/harness-audit.sh" ]; then
-  say "audit 생략 — 훅 구성 미설치 (추가하려면 install 재실행 후 2 선택)"
+  say "audit 생략 — 훅 구성 미설치 (추가하려면 install 재실행 후 훅 섹션 선택)"
   say "설치 완료(부분 구성) — 위 WARN/SKIP 항목 확인."
 elif CLAUDE_PROJECT_DIR="$HERE" bash "$HERE/.claude/hooks/harness-audit.sh"; then
   say "---"

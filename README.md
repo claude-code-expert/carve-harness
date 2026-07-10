@@ -28,7 +28,7 @@ cd /path/to/your-project
 curl -fsSL https://raw.githubusercontent.com/claude-code-expert/carve-harness/main/install.sh | bash
 ```
 
-- **구성 선택**: 설치 전 5구성(필수 md·훅·스킬·커맨드·오케스트레이터) 번호 선택 창이 뜬다(엔터=전체). 비대화형은 `HARNESS_COMPONENTS=md,hooks bash install.sh`. 선택은 `.claude/harness-components`에 기록돼 update의 신규 파일 필터로 작동하고, 재실행하면 빠진 구성을 추가할 수 있다.
+- **구성 선택**: 설치 전 전체 항목이 섹션별(필수 md·훅·스킬·커맨드·오케스트레이터) 체크박스 목록으로 펼쳐진다. `↑↓`/`jk` 이동 · 스페이스 토글(섹션 행에서 누르면 하위 일괄) · `1`-`5` 섹션 점프 · `a` 전체 토글 · 엔터 설치. 기본은 전체 선택 — 엔터만 치면 전체 설치. 비대화형은 `HARNESS_COMPONENTS=md,hooks bash install.sh`. 선택은 `.claude/harness-components`에 기록돼 update의 신규 파일 필터로 작동하고, 재실행하면 빠진 항목을 추가할 수 있다.
 - 기존 파일은 건드리지 않는다(SKIP 보고) — 설치 목록은 `.claude/harness-manifest.txt`에 기록.
 - **예외: `.claude/settings.json`은 스킵이 아니라 병합**한다 — 기존 설정(`permissions`·`model`·자체 훅)을 보존하며 하네스 훅 6이벤트를 jq로 등록(멱등). 이걸 스킵하면 훅이 미등록돼 배너·가드·검증이 전부 무력화되기 때문.
 - 설치 끝에 `/harness-audit` 자동 실행 — 42 PASS면 전 게이트 활성.

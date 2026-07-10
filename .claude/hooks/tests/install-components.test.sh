@@ -77,36 +77,70 @@ T4=$(mktemp -d)
   && ok "env all -> 5 components recorded" || no "env all"
 rm -rf "$T4"
 
-# (8) interactive numbered pick "1 5": md+orchestrator only.
+# (8) checkbox TUI: jump+space toggles hooks/skills/commands OFF -> md+orchestrator only.
+#     Keys: '2'=jump hooks, SP=section off, '3' skills off, '4' commands off, EOF=confirm.
 T5=$(mktemp -d)
-printf '1 5\n' \
+printf '2 3 4 ' \
   | ( cd "$T5" && HARNESS_SETUP_STDIN=1 HARNESS_SRC_DIR="$REPO" bash "$REPO/install.sh" ) >/dev/null 2>&1
 code=$?
 if [ "$code" -eq 0 ] && [ -d "$T5/.claude/agents" ] && [ -f "$T5/CLAUDE.md" ] \
-   && [ ! -d "$T5/.claude/hooks" ] && [ ! -d "$T5/.claude/skills" ]; then
-  ok "interactive '1 5' -> md+orchestrator only"
+   && [ ! -d "$T5/.claude/hooks" ] && [ ! -d "$T5/.claude/skills" ] \
+   && [ ! -d "$T5/.claude/commands" ]; then
+  ok "TUI section toggles off -> md+orchestrator only"
 else
-  no "interactive pick (exit $code)"
+  no "TUI section toggle (exit $code)"
 fi
 
-# (9) hooks-unselected warning shown in interactive mode.
-out=$(printf '1\n' | ( cd "$(mktemp -d)" && HARNESS_SETUP_STDIN=1 HARNESS_SRC_DIR="$REPO" bash "$REPO/install.sh" ) 2>&1)
+# (9) hooks-unselected NOTE shown when hooks section toggled off.
+out=$(printf '2 ' | ( cd "$(mktemp -d)" && HARNESS_SETUP_STDIN=1 HARNESS_SRC_DIR="$REPO" bash "$REPO/install.sh" ) 2>&1)
 printf '%s' "$out" | grep -q "NOTE: 훅 미선택" \
-  && ok "interactive: hooks-unselected NOTE shown" || no "hooks NOTE"
+  && ok "TUI: hooks-unselected NOTE shown" || no "hooks NOTE"
 
-# (10) interactive invalid input "9": warned + falls back to full install.
+# (10) unknown key ignored; enter installs the default (all selected).
 T6=$(mktemp -d)
 out=$(printf '9\n' | ( cd "$T6" && HARNESS_SETUP_STDIN=1 HARNESS_SRC_DIR="$REPO" bash "$REPO/install.sh" ) 2>&1)
 code=$?
 if [ "$code" -eq 0 ] \
-   && printf '%s' "$out" | grep -q "WARN: 무시된 입력: 9" \
-   && printf '%s' "$out" | grep -q "유효 선택 없음 → 전체 설치" \
-   && [ -d "$T6/.claude/hooks" ]; then
-  ok "interactive invalid -> WARN + full fallback"
+   && printf '%s' "$out" | grep -q "구성 선택: 전체" \
+   && [ -d "$T6/.claude/hooks" ] && [ -d "$T6/.claude/skills" ]; then
+  ok "TUI unknown key ignored -> enter installs all"
 else
-  no "invalid input fallback (exit $code)"
+  no "unknown key / default all (exit $code)"
 fi
 rm -rf "$T6"
+
+# (10b) fine-grained pick: all off ('a'), jump skills ('3'), down ('j'), space = first skill only.
+T7=$(mktemp -d)
+FIRST_SKILL=$(ls "$REPO/.claude/skills" | sort | head -1)
+out=$(printf 'a3j \n' | ( cd "$T7" && HARNESS_SETUP_STDIN=1 HARNESS_SRC_DIR="$REPO" bash "$REPO/install.sh" ) 2>&1)
+code=$?
+if [ "$code" -eq 0 ] \
+   && [ -e "$T7/.claude/skills/$FIRST_SKILL" ] \
+   && [ "$(ls "$T7/.claude/skills" | wc -l | tr -d ' ')" = "1" ] \
+   && [ ! -f "$T7/CLAUDE.md" ] && [ ! -d "$T7/.claude/hooks" ] \
+   && grep -qx ".claude/skills/$FIRST_SKILL" "$T7/.claude/harness-manifest.txt" \
+   && grep -qx 'skills' "$T7/.claude/harness-components" \
+   && [ "$(wc -l < "$T7/.claude/harness-components" | tr -d ' ')" = "1" ]; then
+  ok "TUI fine-grained: single skill installed, fine manifest + skills component"
+else
+  no "fine-grained pick (exit $code)"
+fi
+
+# (10c) update patches fine-grained manifest entries.
+SRC3=$(mktemp -d)
+( cd "$REPO" && tar -c --exclude=.git --exclude=logs --exclude=.planning . ) | tar -x -C "$SRC3"
+echo "9.9.8" > "$SRC3/VERSION"
+echo "# FINE-MARKER" >> "$SRC3/.claude/skills/$FIRST_SKILL/SKILL.md"
+( cd "$T7" && HARNESS_SRC_DIR="$SRC3" bash install.sh update ) >/dev/null 2>&1
+code=$?
+if [ "$code" -eq 0 ] \
+   && grep -q "FINE-MARKER" "$T7/.claude/skills/$FIRST_SKILL/SKILL.md" \
+   && [ "$(ls "$T7/.claude/skills" | wc -l | tr -d ' ')" = "1" ]; then
+  ok "update: fine manifest entry patched, deselected skills stay absent"
+else
+  no "fine update (exit $code)"
+fi
+rm -rf "$SRC3" "$T7"
 
 # (11) re-run adds a component: union recorded, manifest extended, no truncate loss, no dups.
 ( cd "$T1" && HARNESS_COMPONENTS=skills HARNESS_SRC_DIR="$REPO" bash "$REPO/install.sh" ) >/dev/null 2>&1
