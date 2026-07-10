@@ -138,7 +138,7 @@ if [ "$m_compile" = "0" ]; then
                      skipped:["passk","coverage","violations","archrules","nplus1"],
                      reason:"컴파일 실패 — 나머지 metric 무의미"}')
   printf '%s\n' "$verdict"
-  [ "$JSON_ONLY" -eq 1 ] || echo "[eval-java] P=0.00 — 컴파일 실패. gradlew compileJava 먼저 통과 필요." >&2
+  [ "$JSON_ONLY" -eq 1 ] || echo "[carve-harness:eval-java] P=0.00 — 컴파일 실패. gradlew compileJava 먼저 통과 필요." >&2
   exit 0
 fi
 m_passk=$(metric_passk)
@@ -186,7 +186,7 @@ printf '%s\n' "$verdict"
 
 # human summary — 어떤 축이 P를 끌어내렸는지
 {
-  echo "[eval-java] P=$(printf '%.2f' "$P") ± $(printf '%.2f' "$ERR")  (k=$K)"
+  echo "[carve-harness:eval-java] P=$(printf '%.2f' "$P") ± $(printf '%.2f' "$ERR")  (k=$K)"
   printf '  compile=%s passk=%s coverage=%s violations=%s archrules=%s nplus1=%s\n' \
     "$m_compile" "$m_passk" "$m_coverage" "$m_violations" "$m_archrules" "$m_nplus1"
   [ -n "$SKIPPED" ] && echo "  skipped(도구 미배선): $SKIPPED — P는 남은 축으로 산출됨"

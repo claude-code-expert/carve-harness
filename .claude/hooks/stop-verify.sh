@@ -10,14 +10,14 @@ LOG_EVENT="$(dirname "${BASH_SOURCE[0]}")/log-event.sh"
 # On the second Stop pass (stop_hook_active=true) surface once and yield (exit 0).
 input=$(cat)
 if command -v jq >/dev/null 2>&1 && [ "$(printf '%s' "$input" | jq -r '.stop_hook_active // false')" = "true" ]; then
-  echo "[verify] 이미 재검증 continuation 상태 — 루프 방지 위해 종료 허용" >&2
+  echo "[carve-harness:verify] 이미 재검증 continuation 상태 — 루프 방지 위해 종료 허용" >&2
   bash "$LOG_EVENT" Stop verify loop-yield ""
   exit 0
 fi
 # D-02: jq-absent is best-effort (non-blocking) here — asymmetric with the write guard,
 # which fails closed. Hard-failing verification on a jq-less box would block completion.
 if ! command -v jq >/dev/null 2>&1; then
-  echo "[verify] jq 미설치 → 검증 스킵(best-effort)" >&2
+  echo "[carve-harness:verify] jq 미설치 → 검증 스킵(best-effort)" >&2
   exit 0
 fi
 
@@ -58,7 +58,7 @@ if [ "$java_changed" -eq 1 ]; then
       if [ "$gw_rc" -ne 0 ]; then
         # gradle는 --tests 매칭 0개면 실패 → 컨벤션 미채택 프로젝트의 false-fail 방지(best-effort skip).
         printf '%s\n' "$gw_out" | grep -qiE 'no tests found|does not match' \
-          && echo "[verify] *GatewayIntegration* 매칭 테스트 없음 — 스킵(best-effort)" >&2 \
+          && echo "[carve-harness:verify] *GatewayIntegration* 매칭 테스트 없음 — 스킵(best-effort)" >&2 \
           || fail=1
       fi
     else
@@ -120,12 +120,12 @@ if [ "$sh_changed" -eq 1 ]; then
   if [ "$hooks_changed" -eq 1 ]; then
     for t in "$(dirname "${BASH_SOURCE[0]}")"/tests/*.test.sh; do
       [ -e "$t" ] || continue
-      bash "$t" >/dev/null 2>&1 || { echo "[verify] 훅 테스트 실패: $(basename "$t")" >&2; fail=1; }
+      bash "$t" >/dev/null 2>&1 || { echo "[carve-harness:verify] 훅 테스트 실패: $(basename "$t")" >&2; fail=1; }
     done
   fi
 fi
 
 # GATE-03: verification is now change-scoped — only stacks whose files changed run above.
-[ "$fail" -eq 0 ] || { echo "[verify] 검증 실패(빌드/타입/테스트) — 완료 전 수정 필요" >&2; bash "$LOG_EVENT" Stop verify fail ""; exit 2; }
+[ "$fail" -eq 0 ] || { echo "[carve-harness:verify] 검증 실패(빌드/타입/테스트) — 완료 전 수정 필요" >&2; bash "$LOG_EVENT" Stop verify fail ""; exit 2; }
 bash "$LOG_EVENT" Stop verify pass ""
 exit 0

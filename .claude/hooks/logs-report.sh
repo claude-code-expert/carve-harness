@@ -9,28 +9,28 @@ PATH="$DIR/.claude/bin:$PATH"
 LOGS="$DIR/logs"
 
 if ! command -v jq >/dev/null 2>&1; then
-  echo "[logs-report] jq 없음 — install.sh 실행 필요" >&2
+  echo "[carve-harness:logs-report] jq 없음 — install.sh 실행 필요" >&2
   exit 1
 fi
-[ -d "$LOGS" ] || { echo "[logs-report] logs/ 없음 — 기록된 이벤트 없음"; exit 0; }
+[ -d "$LOGS" ] || { echo "[carve-harness:logs-report] logs/ 없음 — 기록된 이벤트 없음"; exit 0; }
 
 if [ "${1:-}" = "--rotate" ]; then
   keep="${2:?usage: logs-report.sh --rotate <keep-days>}"
-  case "$keep" in *[!0-9]*|'') echo "[logs-report] --rotate는 정수 일수 필요" >&2; exit 1;; esac
+  case "$keep" in *[!0-9]*|'') echo "[carve-harness:logs-report] --rotate는 정수 일수 필요" >&2; exit 1;; esac
   old=$(find "$LOGS" -name '*.jsonl' -type f -mtime +"$keep")
   if [ -n "$old" ]; then
-    printf '%s\n' "$old" | while read -r f; do echo "[logs-report] 삭제: $f"; rm -f "$f"; done
+    printf '%s\n' "$old" | while read -r f; do echo "[carve-harness:logs-report] 삭제: $f"; rm -f "$f"; done
   else
-    echo "[logs-report] ${keep}일 초과 로그 없음"
+    echo "[carve-harness:logs-report] ${keep}일 초과 로그 없음"
   fi
   exit 0
 fi
 
 days="${1:-7}"
-case "$days" in *[!0-9]*|'') echo "[logs-report] 일수는 정수" >&2; exit 1;; esac
+case "$days" in *[!0-9]*|'') echo "[carve-harness:logs-report] 일수는 정수" >&2; exit 1;; esac
 
 files=$(find "$LOGS" -name '*.jsonl' -type f -mtime -"$days" | sort)
-[ -n "$files" ] || { echo "[logs-report] 최근 ${days}일 로그 없음"; exit 0; }
+[ -n "$files" ] || { echo "[carve-harness:logs-report] 최근 ${days}일 로그 없음"; exit 0; }
 
 echo "== 하네스 로그 요약 (최근 ${days}일) =="
 echo

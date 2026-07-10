@@ -1,17 +1,17 @@
 #!/usr/bin/env bash
 # PreToolUse: block edits to protected files/commands (block MUST be exit 2, allow exit 0).
 # Fail-closed: when jq is missing or JSON is malformed, the write paths block unconditionally
-# (D-01, GUARD-01). Stderr messages stay Korean to match the existing [guard] convention.
+# (D-01, GUARD-01). Stderr messages stay Korean to match the existing [carve-harness:guard] convention.
 
 # (1) FAIL-CLOSED PREAMBLE with cause-specific messages (D-03).
 # jq present-check runs BEFORE reading stdin (cat), so a missing jq blocks here immediately.
 if ! command -v jq >/dev/null 2>&1; then
-  echo "[guard] jq 미설치 → fail-closed 차단 (jq 설치 후 재시도)" >&2
+  echo "[carve-harness:guard] jq 미설치 → fail-closed 차단 (jq 설치 후 재시도)" >&2
   exit 2
 fi
 input=$(cat)
 if ! printf '%s' "$input" | jq empty >/dev/null 2>&1; then
-  echo "[guard] JSON 파싱 실패 → fail-closed 차단" >&2
+  echo "[carve-harness:guard] JSON 파싱 실패 → fail-closed 차단" >&2
   exit 2
 fi
 
@@ -33,7 +33,7 @@ if [ "$tool" = "Bash" ]; then
   if printf '%s' "$cmd" | grep -Eq "(>>?|(^|[[:space:]])tee[[:space:]])[[:space:]]*['\"]?[^[:space:]|;&<>]*${PROTECTED_RE}" \
     || printf '%s' "$cmd" | grep -Eq "(sed|perl)[[:space:]]+-i[^|;&]*${PROTECTED_RE}" \
     || printf '%s' "$cmd" | grep -Eq "(^|[;&|][[:space:]]*)(cp|mv|install)[[:space:]][^|;&]*${PROTECTED_RE}"; then
-    echo "[guard] Bash 쓰기 차단(보호 경로): $cmd" >&2
+    echo "[carve-harness:guard] Bash 쓰기 차단(보호 경로): $cmd" >&2
     bash "$LOG_EVENT" PreToolUse Bash block ""
     exit 2
   fi
@@ -46,7 +46,7 @@ fi
 # NotebookEdit uses notebook_path, so BOTH keys must be read (GUARD-02, Pitfall 2).
 p=$(printf '%s' "$input" | jq -r '.tool_input.file_path // .tool_input.notebook_path // empty')
 if printf '%s' "$p" | grep -Eq "$PROTECTED_RE"; then
-  echo "[guard] 보호 파일 수정 차단: $p" >&2
+  echo "[carve-harness:guard] 보호 파일 수정 차단: $p" >&2
   bash "$LOG_EVENT" PreToolUse "$tool" block "$p"
   exit 2
 fi
@@ -55,7 +55,7 @@ fi
 # Fields differ per tool; SECRETS_RE is length-anchored so benign content passes.
 content=$(printf '%s' "$input" | jq -r '.tool_input.content // .tool_input.new_string // .tool_input.new_source // (.tool_input.edits[]?.new_string) // empty' 2>/dev/null)
 if [ -n "$content" ] && printf '%s' "$content" | grep -Eq "$SECRETS_RE"; then
-  echo "[guard] 시크릿 내용 차단(하드코딩 시크릿 감지)" >&2
+  echo "[carve-harness:guard] 시크릿 내용 차단(하드코딩 시크릿 감지)" >&2
   bash "$LOG_EVENT" PreToolUse "$tool" block "$p"
   exit 2
 fi

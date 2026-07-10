@@ -125,11 +125,11 @@ your-project/
 ```bash
 #!/usr/bin/env bash
 # pretool-guard.sh — 최소 골격
-command -v jq >/dev/null 2>&1 || { echo "[guard] jq 없음 → fail-closed" >&2; exit 2; }
+command -v jq >/dev/null 2>&1 || { echo "[carve-harness:guard] jq 없음 → fail-closed" >&2; exit 2; }
 INPUT=$(cat)
 FILE=$(printf '%s' "$INPUT" | jq -r '.tool_input.file_path // empty' 2>/dev/null) || exit 2
 PROTECTED_RE='(\.env($|[./])|application-prod|secret|db/migration/)'
-printf '%s' "$FILE" | grep -Eq "$PROTECTED_RE" && { echo "[guard] 차단: $FILE" >&2; exit 2; }
+printf '%s' "$FILE" | grep -Eq "$PROTECTED_RE" && { echo "[carve-harness:guard] 차단: $FILE" >&2; exit 2; }
 exit 0
 ```
 
@@ -213,22 +213,22 @@ AUDIT-07  게이트웨이 룰 ↔ Stop 게이트(GATE-04) 매핑 (게이트웨�
 ```console
 $ printf '{"tool_name":"Write","tool_input":{"file_path":".env.production",...}}' \
     | bash .claude/hooks/pretool-guard.sh
-[guard] 보호 파일 수정 차단: .env.production
+[carve-harness:guard] 보호 파일 수정 차단: .env.production
 exit=2
 
 $ # 시크릿 하드코딩 (sk-... 를 src/config.ts 에 쓰려는 시도)
-[guard] 시크릿 내용 차단(하드코딩 시크릿 감지)
+[carve-harness:guard] 시크릿 내용 차단(하드코딩 시크릿 감지)
 exit=2
 
 $ # Bash 우회 시도: echo SECRET > .env.production
-[guard] Bash 쓰기 차단(보호 경로): echo SECRET > .env.production
+[carve-harness:guard] Bash 쓰기 차단(보호 경로): echo SECRET > .env.production
 exit=2
 
 $ # 정상 쓰기: src/app.ts
 exit=0
 
 $ # jq를 PATH에서 제거하고 실행 (fail-closed 증명)
-[guard] jq 미설치 → fail-closed 차단 (jq 설치 후 재시도)
+[carve-harness:guard] jq 미설치 → fail-closed 차단 (jq 설치 후 재시도)
 exit=2
 ```
 
