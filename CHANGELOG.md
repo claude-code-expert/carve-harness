@@ -4,6 +4,21 @@
 
 > **규칙**: `VERSION` 파일이 바뀌는 커밋에는 반드시 해당 버전 항목(`[X.Y.Z]`)이 이 파일에 함께 스테이징되어야 한다 — `.githooks/pre-commit`이 기계적으로 차단, 작성은 `/version-changelog` 스킬. 배포 절차는 `RELEASE.md`.
 
+## [0.0.10] - 2026-07-10
+
+### Added
+- **설치 구성 선택**: `install.sh`가 설치 전 5구성(필수 md·훅·스킬·커맨드·오케스트레이터) 선택 창을 표시 — 대화형 번호 선택 또는 `HARNESS_COMPONENTS=md,hooks,...` env(엔터=전체, core는 항상 설치). 선택은 `.claude/harness-components`에 기록되어 update의 신규 파일 필터로 작동, 재실행으로 구성 추가 가능(선택 합집합·manifest 보존). 훅 미선택 시 jq fail-closed 검사·최종 audit는 자동 생략.
+- **fable 오케스트레이터 에이전트 팀**: 워커 4종(`fable-builder`·`fable-doc-writer`·`fable-researcher`·`fable-visualizer`) + `fable-team-pipeline` 워크플로(Spec→Build+Verify→Document→Verify, worktree 격리·evaluator 즉시 검증) + `docs/md/orchestration.md`·`fable-team-guide.md`(호출법·모델 무관 SOP). 설치 시 orchestrator 구성으로 선택.
+- **npm 테스트 진입점**: 의존성 0 `package.json` — `npm test`(전 스위트, `tests/run-all.sh` 집계 러너)·`npm run test:install`·`test:guard`·`test:audit`.
+- `tests/install-components.test.sh` — 구성 선택 13케이스(env/대화형/무효 입력 폴백/재실행 합집합/update 필터/부분 uninstall).
+
+### Fixed
+- **macOS(BSD) 이식성**: `uninstall.sh`의 `sed -i`(BSD는 suffix 필요 → `-i.hbak`)·logs-report 테스트의 `touch -d '30 days ago'`(GNU 전용 → `date -v`/`-d` 겸용) 수정. 훅·git훅·테스트 스크립트 실행 비트(+x)를 git에 커밋(AUDIT-01이 요구 — 미부트스트랩 클론에서 audit FAIL 방지).
+- `stop-verify.sh` run_node: package.json 존재 ≠ TS 프로젝트 — `tsconfig.json` 있을 때만 tsc 실행, pnpm 부재 시 npm 폴백(셸 전용 리포 false fail 방지).
+
+### Changed
+- 인벤토리: 에이전트 16→20 · 테스트 12→13 스위트(134→147건) · 워크플로 디렉토리(`.claude/workflows/`) 신설 · 설치 대상에 orchestrator 구성(agents·workflows·오케스트레이션 가이드 2종) 추가.
+
 ## [0.0.9] - 2026-07-09
 
 ### Fixed (critical)

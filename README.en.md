@@ -1,6 +1,6 @@
 # Claude Harness (language-agnostic drop-in)
 
-[한국어](README.md) · Current version **v0.0.9** · Changes: [CHANGELOG.md](CHANGELOG.md) · Course: [HARNESS_GUIDE.md](HARNESS_GUIDE.md) (Korean)
+[한국어](README.md) · Current version **v0.0.10** · Changes: [CHANGELOG.md](CHANGELOG.md) · Course: [HARNESS_GUIDE.md](HARNESS_GUIDE.md) (Korean)
 
 A guardrail template that stops coding-agent rule violations with **hook exit 2 blocking** — not persuasion.
 Drop it into your project root and it works immediately.
@@ -15,7 +15,7 @@ Drop it into your project root and it works immediately.
 | **Observability** | Every hook verdict logged to `logs/*.jsonl` (PII masked), with report/rotation |
 | **Self-audit** | `/harness-audit` — 42 mechanical checks PASS/FAIL the harness configuration itself |
 
-**Inventory**: 9 hooks (6 events + 3 manual CLI) · 14 slash commands · 16 agents · 23 skills · 18 rule files · 12 test suites (134 cases)
+**Inventory**: 9 hooks (6 events + 3 manual CLI) · 14 slash commands · 20 agents · 23 skills · 18 rule files · 1 workflow · 13 test suites (147 cases)
 
 **Cross-agent**: hook blocking is Claude Code-only. Cursor/Codex/etc. follow `AGENTS.md` as the canonical rules, with `.githooks/pre-commit` as the final gate at commit time.
 
@@ -31,6 +31,7 @@ curl -fsSL -H "Authorization: token $GITHUB_TOKEN" \
   | GITHUB_TOKEN=$GITHUB_TOKEN bash
 ```
 
+- **Component selection**: before installing, a numbered menu offers 5 groups (required md / hooks / skills / commands / orchestrator; Enter = all). Non-interactive: `HARNESS_COMPONENTS=md,hooks bash install.sh`. The selection is recorded in `.claude/harness-components`, drives update-mode filtering, and re-running adds missing groups.
 - Existing files are never touched (reported as SKIP) — installed paths are recorded in `.claude/harness-manifest.txt`.
 - **Exception: `.claude/settings.json` is merged, not skipped** — your existing config (`permissions`, `model`, own hooks) is preserved while the harness's 6 hook events are registered via jq (idempotent). Skipping it would leave the hooks unregistered and every gate (banner, guard, verify) inert.
 - The installer ends by running `/harness-audit` — 42 PASS means all gates are live.
@@ -132,6 +133,7 @@ Once installed, the gates are automatic — protected-path writes are blocked, o
 | `/plan` `/verify` `/review` `/commit` | SC breakdown · SC verification · code review · commit prep |
 | `/squad-*` (8) | plan→review→QA→refactor→debug→security→docs→git pipeline |
 | `bash .claude/hooks/logs-report.sh [days]` | hook verdict log summary (`--rotate N` to rotate) |
+| `npm test` / `npm run test:install` | all 13 hook test suites / installer component-selection suite |
 
 For customization (protected paths, formatters, verify commands, new stacks) and the full reference, see **`GUIDE.md`**.
 
@@ -146,8 +148,9 @@ For customization (protected paths, formatters, verify commands, new stacks) and
 ├── specs/                   # state: handoffs & decision log
 └── .claude/
     ├── settings.json        # 6 hook events registered
-    ├── hooks/  (9 + 12 test suites)
-    ├── commands/ (14) · agents/ (16) · skills/ (23) · rules/ (18)
+    ├── hooks/  (9 + 13 test suites)
+    ├── workflows/ (fable-team-pipeline)
+    ├── commands/ (14) · agents/ (20) · skills/ (23) · rules/ (18)
 ```
 
 ## Limitations
@@ -170,6 +173,7 @@ For customization (protected paths, formatters, verify commands, new stacks) and
 
 | Version | Date | Summary |
 |---------|------|---------|
+| v0.0.10 | 2026-07-10 | installer component selection (5-group CLI + `HARNESS_COMPONENTS`) · fable orchestrator team (4 workers + workflow + guides) · npm test runner · macOS portability fixes |
 | v0.0.9 | 2026-07-09 | deterministic Java/Spring output-verification evaluator (`eval-java.sh` — reproducible P without an LLM) · ArchUnit rule promotion · AUDIT-08 |
 | v0.0.8 | 2026-07-09 | gateway verification layer (rule + Stop gate GATE-04/05 + AUDIT-07) · commit-msg discipline gate · 3 test subagents · anti-ai-slop skill |
 | v0.0.7 | 2026-07-09 | revert v0.0.6 (private source is intentional) + restore private-repo token guidance (404 root cause = missing auth) |

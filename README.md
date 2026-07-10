@@ -1,6 +1,6 @@
 # Claude 하네스 (언어 무관 드롭인)
 
-[English](README.en.md) · 현재 버전 **v0.0.9** · 변경 내역 [CHANGELOG.md](CHANGELOG.md) · 강좌 [HARNESS_GUIDE.md](HARNESS_GUIDE.md)
+[English](README.en.md) · 현재 버전 **v0.0.10** · 변경 내역 [CHANGELOG.md](CHANGELOG.md) · 강좌 [HARNESS_GUIDE.md](HARNESS_GUIDE.md)
 
 코딩 에이전트의 규칙 위반을 "설득"이 아니라 **훅 exit 2로 차단**하는 가드레일 템플릿.
 프로젝트 루트에 드롭인하면 즉시 동작한다.
@@ -15,7 +15,7 @@
 | **관측** | 모든 훅 판정을 `logs/*.jsonl`에 기록 (PII 마스킹), 리포트·회전 지원 |
 | **자가감사** | `/harness-audit` — 42개 기계 체크로 하네스 오구성 PASS/FAIL |
 
-**구성 요소**: 훅 9종(6 이벤트 + 수동 CLI 3) · 슬래시 커맨드 14종 · 에이전트 16종 · 스킬 23종 · 규칙 18종 · 테스트 12 스위트(134건)
+**구성 요소**: 훅 9종(6 이벤트 + 수동 CLI 3) · 슬래시 커맨드 14종 · 에이전트 20종 · 스킬 23종 · 규칙 18종 · 워크플로 1종 · 테스트 13 스위트(147건)
 
 **크로스 에이전트**: 훅 차단은 Claude Code 전용. Cursor/Codex 등은 `AGENTS.md` 정본 + `.githooks/pre-commit`이 커밋 시점에 최종 차단.
 
@@ -31,6 +31,7 @@ curl -fsSL -H "Authorization: token $GITHUB_TOKEN" \
   | GITHUB_TOKEN=$GITHUB_TOKEN bash
 ```
 
+- **구성 선택**: 설치 전 5구성(필수 md·훅·스킬·커맨드·오케스트레이터) 번호 선택 창이 뜬다(엔터=전체). 비대화형은 `HARNESS_COMPONENTS=md,hooks bash install.sh`. 선택은 `.claude/harness-components`에 기록돼 update의 신규 파일 필터로 작동하고, 재실행하면 빠진 구성을 추가할 수 있다.
 - 기존 파일은 건드리지 않는다(SKIP 보고) — 설치 목록은 `.claude/harness-manifest.txt`에 기록.
 - **예외: `.claude/settings.json`은 스킵이 아니라 병합**한다 — 기존 설정(`permissions`·`model`·자체 훅)을 보존하며 하네스 훅 6이벤트를 jq로 등록(멱등). 이걸 스킵하면 훅이 미등록돼 배너·가드·검증이 전부 무력화되기 때문.
 - 설치 끝에 `/harness-audit` 자동 실행 — 42 PASS면 전 게이트 활성.
@@ -132,6 +133,7 @@ bash uninstall.sh --yes    # 실제 제거 (manifest 범위만, 원래 있던 �
 | `/plan` `/verify` `/review` `/commit` | SC 분해 · SC 검증 · 코드 검토 · 커밋 준비 |
 | `/squad-*` (8종) | 기획→리뷰→QA→리팩토링→디버그→보안→문서→Git 파이프라인 |
 | `bash .claude/hooks/logs-report.sh [days]` | 훅 판정 로그 요약 (`--rotate N` 회전) |
+| `npm test` / `npm run test:install` | 전체 훅 테스트 13 스위트 / 설치 구성 선택 스위트 |
 
 커스터마이징(보호 경로·포맷터·검증 명령·새 스택)·전체 레퍼런스는 **`GUIDE.md`** 참고.
 
@@ -146,8 +148,9 @@ bash uninstall.sh --yes    # 실제 제거 (manifest 범위만, 원래 있던 �
 ├── specs/                   # 상태: 핸드오프·결정 기록
 └── .claude/
     ├── settings.json        # 훅 6이벤트 등록
-    ├── hooks/  (9종 + tests 12 스위트)
-    ├── commands/ (14종) · agents/ (16종) · skills/ (23종) · rules/ (18종)
+    ├── hooks/  (9종 + tests 13 스위트)
+    ├── workflows/ (fable-team-pipeline)
+    ├── commands/ (14종) · agents/ (20종) · skills/ (23종) · rules/ (18종)
 ```
 
 ## 한계
@@ -170,6 +173,7 @@ bash uninstall.sh --yes    # 실제 제거 (manifest 범위만, 원래 있던 �
 
 | 버전 | 날짜 | 요약 |
 |------|------|------|
+| v0.0.10 | 2026-07-10 | 설치 구성 선택(5구성 CLI + `HARNESS_COMPONENTS`) · fable 오케스트레이터 팀(워커 4종+워크플로+가이드) · npm test 러너 · macOS 이식성 수정 |
 | v0.0.9 | 2026-07-09 | Java/Spring 결정적 출력검증 evaluator(`eval-java.sh` — LLM 없이 재현 가능한 P) · ArchUnit 규칙 승격 · AUDIT-08 |
 | v0.0.8 | 2026-07-09 | 게이트웨이 검증 계층(룰+Stop 게이트 GATE-04/05+AUDIT-07) · commit-msg 규율 게이트 · 테스트 서브에이전트 3종 · anti-ai-slop 스킬 |
 | v0.0.7 | 2026-07-09 | revert v0.0.6 (소스는 사설이 정상) + 사설 레포 토큰 안내 복원 (404 원인=인증 누락) |
