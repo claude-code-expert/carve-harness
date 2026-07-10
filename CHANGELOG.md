@@ -4,6 +4,19 @@
 
 > **규칙**: `VERSION` 파일이 바뀌는 커밋에는 반드시 해당 버전 항목(`[X.Y.Z]`)이 이 파일에 함께 스테이징되어야 한다 — `.githooks/pre-commit`이 기계적으로 차단, 작성은 `/version-changelog` 스킬. 배포 절차는 `RELEASE.md`.
 
+## [0.0.11] - 2026-07-10
+
+### Added
+- **체크박스 TUI 구성 선택**: 설치 구성 선택을 5구성 번호 입력에서 **항목 단위 체크박스 TUI**로 교체 — 전 항목이 섹션별(필수 md·훅·스킬·커맨드·오케스트레이터)로 펼쳐지고 `↑↓`/`jk` 이동 · 스페이스 토글(섹션 행은 하위 일괄) · `1`-`5` 섹션 점프 · `a` 전체 토글 · 엔터 설치. 비대화형/`HARNESS_COMPONENTS` env는 기존 구성 단위 폴백 유지.
+- **세션 배너 인벤토리 + 메시지 프리픽스 통일**: SessionStart 배너가 로드된 전 구성(훅·git훅·스킬·커맨드·에이전트·워크플로·문서·규칙)을 항목명까지 표시. 모든 훅 메시지를 `[carve-harness:<hook>]` 프리픽스로 통일 — 어느 게이트가 차단·경고했는지 즉시 식별.
+- **LSP·ponytail 플러그인 선언 배포**: `.claude/settings.json`이 `claude-code-lsps` 마켓플레이스와 `vtsls`(TypeScript·React·JavaScript LSP)·`jdtls`(Java LSP)·`ponytail` 플러그인을 선언 — 세션 시작 시 신뢰 승인 후 자동 설치. 서버 바이너리는 별도: `install.sh setup`이 vtsls npm 전역 설치 제안, jdtls는 `brew install jdtls`, 미설치는 install 끝 NOTE로 안내.
+
+### Fixed
+- **공개 레포 전환**: `GITHUB_TOKEN` 요구 제거 — 기본 설치 소스를 공개 `claude-code-expert/carve-harness`로 변경, 사설 레포 토큰 안내 절 삭제(README·GUIDE·RELEASE).
+
+### Changed
+- 인벤토리: 테스트 13 스위트 147→152건(TUI 선택·settings LSP 선언·remote-install NOTE 케이스 추가).
+
 ## [0.0.10] - 2026-07-10
 
 ### Added

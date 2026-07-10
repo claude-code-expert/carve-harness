@@ -1,6 +1,6 @@
 # Claude Harness (language-agnostic drop-in)
 
-[한국어](README.md) · Current version **v0.0.10** · Changes: [CHANGELOG.md](CHANGELOG.md) · Course: [HARNESS_GUIDE.md](HARNESS_GUIDE.md) (Korean)
+[한국어](README.md) · Current version **v0.0.11** · Changes: [CHANGELOG.md](CHANGELOG.md) · Course: [HARNESS_GUIDE.md](HARNESS_GUIDE.md) (Korean)
 
 A guardrail template that stops coding-agent rule violations with **hook exit 2 blocking** — not persuasion.
 Drop it into your project root and it works immediately.
@@ -12,10 +12,10 @@ Drop it into your project root and it works immediately.
 | **Constraints** | PreToolUse hook blocks writes to protected paths (`.env`, prod configs, migrations) and hardcoded secrets. Fail-closed when jq is missing or JSON is malformed |
 | **Feedback** | Stop hook blocks "done" claims while build/type/tests fail — incremental, changed stacks only |
 | **State** | Handoff auto-saved at session end/compaction (real TODOs and decisions), restored at start |
-| **Observability** | Every hook verdict logged to `logs/*.jsonl` (PII masked), with report/rotation |
+| **Observability** | Every hook verdict logged to `logs/*.jsonl` (PII masked), with report/rotation. The session-start banner lists every loaded component, and all hook messages carry a unified `[carve-harness:<hook>]` prefix |
 | **Self-audit** | `/harness-audit` — 42 mechanical checks PASS/FAIL the harness configuration itself |
 
-**Inventory**: 9 hooks (6 events + 3 manual CLI) · 14 slash commands · 20 agents · 23 skills · 18 rule files · 1 workflow · 13 test suites (147 cases)
+**Inventory**: 9 hooks (6 events + 3 manual CLI) · 14 slash commands · 20 agents · 23 skills · 18 rule files · 1 workflow · 13 test suites (152 cases)
 
 **Cross-agent**: hook blocking is Claude Code-only. Cursor/Codex/etc. follow `AGENTS.md` as the canonical rules, with `.githooks/pre-commit` as the final gate at commit time.
 
@@ -140,6 +140,7 @@ For customization (protected paths, formatters, verify commands, new stacks) and
 
 | Version | Date | Summary |
 |---------|------|---------|
+| v0.0.11 | 2026-07-10 | checkbox TUI component selection · session banner inventory + unified `[carve-harness:<hook>]` prefix · LSP (vtsls/jdtls) + ponytail plugin declarations · public source repo (no token needed) |
 | v0.0.10 | 2026-07-10 | installer component selection (5-group CLI + `HARNESS_COMPONENTS`) · fable orchestrator team (4 workers + workflow + guides) · npm test runner · macOS portability fixes |
 | v0.0.9 | 2026-07-09 | deterministic Java/Spring output-verification evaluator (`eval-java.sh` — reproducible P without an LLM) · ArchUnit rule promotion · AUDIT-08 |
 | v0.0.8 | 2026-07-09 | gateway verification layer (rule + Stop gate GATE-04/05 + AUDIT-07) · commit-msg discipline gate · 3 test subagents · anti-ai-slop skill |
