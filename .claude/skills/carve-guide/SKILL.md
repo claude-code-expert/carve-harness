@@ -55,9 +55,10 @@ run-ai.kr는 이 HTML을 `<iframe srcdoc="…">`로 감싸고 `<head>` 최상단
 <script>
   document.querySelectorAll('a[href^="#"]').forEach(function (a) {   // 내부 앵커: 해시 미변경 스크롤
     a.addEventListener('click', function (e) {
+      e.preventDefault();   // 항상 — 빈("#")·미존재 ID라도 해시 변경 차단(SPA 크래시 방지)
       var id = this.getAttribute('href').slice(1);
       var el = id && document.getElementById(id);
-      if (el) { e.preventDefault(); el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
   });
   document.querySelectorAll('a.ext').forEach(function (a) {          // 외부 링크: 새 탭 강제

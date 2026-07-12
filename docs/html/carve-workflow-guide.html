@@ -722,9 +722,10 @@ bash install.sh prune --keep-list &lt;파일&gt;   # KEEP 밖 비보호 파일 �
   // API fetch(CORS 차단)·리액트 크래시를 유발하므로 preventDefault로 차단한다.
   document.querySelectorAll('a[href^="#"]').forEach(function (a) {
     a.addEventListener('click', function (e) {
+      e.preventDefault();   // 내부 앵커는 항상 — 빈("#")·미존재 ID라도 URL 해시 변경 차단(SPA 라우터 크래시 방지)
       var id = this.getAttribute('href').slice(1);
       var el = id && document.getElementById(id);
-      if (el) { e.preventDefault(); el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
   });
   // 외부 링크(a.ext)는 window.open으로 새 탭을 강제한다 — 호스트가 target="_blank"를
