@@ -41,7 +41,7 @@ bash .claude/hooks/tests/run-all.sh 2>&1 | grep -oE '[0-9]+ passed' | awk '{s+=$
 
 **레이아웃 폭(기본)**: 콘텐츠 컨테이너는 **기본 1000px 고정폭**으로 설계한다 — `.wrap { max-width: 1000px; margin:0 auto; }`. 뷰포트가 그보다 좁으면 패딩으로 자연 축소(반응형), `@media (max-width: 640px)`에서 모바일 여백 조정. 이 폭 기준은 carve-guide로 생성하는 모든 HTML 산출물의 기본값이다.
 
-> **임베드 주의**: run-ai.kr는 이 파일을 `<iframe sandbox="allow-scripts" srcdoc="…">`로 감싸고 `.wrap{max-width:80%!important}` 등 CSS를 **주입**한다. `!important` 주입은 파일의 `max-width:1000px`를 이기므로 **임베드 시 최종 폭은 호스트가 결정**한다 — 폭을 바꾸려면 호스트 iframe wrapper의 주입 CSS를 고쳐야 한다(파일만 고치면 standalone/Pages에서만 반영). 또한 그 CSP는 `style-src`에 `cdn.jsdelivr.net`이 없어 **Pretendard CDN이 차단**된다(폴백 폰트). 이 파일은 standalone 기준으로 설계하고, 임베드 폭·폰트는 호스트 설정 사항으로 남긴다.
+> **임베드 대응(필수)**: run-ai.kr는 이 파일을 `<iframe srcdoc="…">`로 감싸고 `<head>` 최상단에 `.wrap{max-width:80%!important;margin-left:0!important}` 등 CSS를 **주입**한다. 파일의 `.wrap`은 소스 순서상 그 주입보다 **뒤**에 오므로 `.wrap{ max-width:1000px !important; margin:0 auto !important; }`로 **폭·정렬을 `!important`로 주장하면 주입을 이긴다**(같은 specificity `.wrap`은 뒤 규칙 승). 따라서 생성 HTML의 `.wrap` 폭은 **`!important`로 고정**하고, `@media print`의 `.wrap` max-width도 `none !important`로 맞춘다. (참고: 그 CSP `style-src`에 `cdn.jsdelivr.net`이 없어 Pretendard CDN이 임베드에선 차단→폴백 폰트. 폰트까지 살리려면 호스트 CSP에 jsdelivr 추가가 필요하며 이는 호스트 설정 사항.)
 
 **SPA 임베드 안전 (필수)**: 이 가이드는 run-ai.kr/learn에 임베드된다. TOC·본문 내부 앵커(`href="#..."`)가 URL 해시를 바꾸면 호스트 SPA(React) 라우터가 route 변경으로 오인해 API fetch(CORS 차단)·크래시를 유발한다. `<body>` 끝에 내부 앵커 클릭을 가로채 `e.preventDefault()` + `scrollIntoView`만 하는 스크립트를 **반드시 포함**한다(해시 미변경):
 ```html

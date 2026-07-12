@@ -45,8 +45,11 @@
     }
 
     .wrap {
-      max-width: 1000px;   /* 기본 1000px 고정폭, 좁은 뷰포트에선 패딩으로 반응형 축소 */
-      margin: 0 auto;
+      /* !important: 임베드 호스트(run-ai.kr iframe)가 .wrap{max-width:80%!important}를 주입하므로,
+         소스 순서상 뒤인 이 규칙이 !important로 그 주입을 이겨 1000px를 강제한다. 좁은 뷰포트에선
+         max-width가 컨테이너보다 크므로 자연 축소(반응형) — !important가 반응성을 깨지 않는다. */
+      max-width: 1000px !important;
+      margin: 0 auto !important;
       padding: 64px 32px 96px;
     }
 
@@ -267,7 +270,7 @@
 
     @media print {
       body { font-size: 11pt; }
-      .wrap { padding: 0; max-width: none; }
+      .wrap { padding: 0; max-width: none !important; }
       pre, table, .callout, .mono-panel { break-inside: avoid; }
       h2 { break-after: avoid; }
       a { color: var(--ink); border-bottom: 0; }
