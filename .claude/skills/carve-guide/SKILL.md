@@ -39,6 +39,8 @@ bash .claude/hooks/tests/run-all.sh 2>&1 | grep -oE '[0-9]+ passed' | awk '{s+=$
 ### 5. 시각 게이트 (필수)
 시각 산출물이므로 **먼저 `anti-ai-slop` 스킬을 발동**한다. 기존 `carve-workflow-guide.html` 디자인 시스템 유지: Pretendard + JetBrains Mono, teal 액센트 1색, 무채색 베이스, 1px border. 그라데이션·글로우·이모지·장식 모션 0.
 
+**레이아웃 폭(기본)**: 콘텐츠 컨테이너는 **기본 1000px 고정폭**으로 설계한다 — `.wrap { max-width: 1000px; margin:0 auto; }`. 뷰포트가 그보다 좁으면 패딩으로 자연 축소(반응형), `@media (max-width: 640px)`에서 모바일 여백 조정. 이 폭 기준은 carve-guide로 생성하는 모든 HTML 산출물의 기본값이다.
+
 **SPA 임베드 안전 (필수)**: 이 가이드는 run-ai.kr/learn에 임베드된다. TOC·본문 내부 앵커(`href="#..."`)가 URL 해시를 바꾸면 호스트 SPA(React) 라우터가 route 변경으로 오인해 API fetch(CORS 차단)·크래시를 유발한다. `<body>` 끝에 내부 앵커 클릭을 가로채 `e.preventDefault()` + `scrollIntoView`만 하는 스크립트를 **반드시 포함**한다(해시 미변경):
 ```html
 <script>
