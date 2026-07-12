@@ -118,7 +118,7 @@ bash uninstall.sh --yes    # 실제 제거 (manifest 범위만, 원래 있던 �
 | 명령 | 용도 |
 |------|------|
 | `/harness-audit` | 하네스 구성 42체크 PASS/FAIL |
-| `/plan` `/verify` `/review` `/commit` | SC 분해 · SC 검증 · 코드 검토 · 커밋 준비 |
+| `/plan` `/verify` `/review` `/commit` | SC 분해 · SC 검증 · 코드 검토 · 인자 메시지로 commit→pull→push |
 | `/squad-*` (8종) | 기획→리뷰→QA→리팩토링→디버그→보안→문서→Git 파이프라인 |
 | `bash .claude/hooks/logs-report.sh [days]` | 훅 판정 로그 요약 (`--rotate N` 회전) |
 | `npm test` / `npm run test:install` | 전체 훅 테스트 14 스위트 / 설치 구성 선택 스위트 |
@@ -171,7 +171,7 @@ bash uninstall.sh --yes    # 실제 제거 (manifest 범위만, 원래 있던 �
 | `/plan` | 작업을 완료 기준(SC) 단위로 분해 → `specs/` |
 | `/verify` | 현재 변경을 SC·빌드·타입·테스트로 검증 |
 | `/review` | 변경분을 타입·보안·예외·상태관리 관점 검토 |
-| `/commit` | commitlint 준수 메시지로 커밋 준비 |
+| `/commit` | 인자를 메시지로 현재 브랜치에 commit→pull→push (문제 시 해결책 제시) |
 | `/squad` | Squad 에이전트 호출 — `/squad <멤버> [작업]` |
 | `/squad-plan` | 기능 기획 |
 | `/squad-review` | 코드 리뷰 |

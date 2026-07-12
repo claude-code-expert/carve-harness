@@ -118,7 +118,7 @@ Once installed, the gates are automatic — protected-path writes are blocked, o
 | Command | Purpose |
 |---------|---------|
 | `/harness-audit` | 42-check PASS/FAIL of the harness configuration |
-| `/plan` `/verify` `/review` `/commit` | SC breakdown · SC verification · code review · commit prep |
+| `/plan` `/verify` `/review` `/commit` | SC breakdown · SC verification · code review · commit→pull→push with your message |
 | `/squad-*` (8) | plan→review→QA→refactor→debug→security→docs→git pipeline |
 | `bash .claude/hooks/logs-report.sh [days]` | hook verdict log summary (`--rotate N` to rotate) |
 | `npm test` / `npm run test:install` | all 14 hook test suites / installer component-selection suite |
@@ -171,7 +171,7 @@ For customization (protected paths, formatters, verify commands, new stacks) and
 | `/plan` | Break work into success-criteria (SC) units → `specs/` |
 | `/verify` | Verify current changes against SC · build · types · tests |
 | `/review` | Review a diff for types, security, exceptions, state |
-| `/commit` | Prepare a commitlint-compliant commit message |
+| `/commit` | Commit + push current branch with your message (syncs before push) |
 | `/squad` | Invoke a Squad agent — `/squad <member> [task]` |
 | `/squad-plan` | Feature planning |
 | `/squad-review` | Code review |
