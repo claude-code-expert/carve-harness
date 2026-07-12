@@ -442,7 +442,7 @@
       </thead>
       <tbody>
         <tr><td><strong>훅</strong></td><td class="num">9</td><td><code>pretool-guard</code> · <code>stop-verify</code> · <code>session-handoff</code> · <code>harness-audit</code></td><td><code>.claude/hooks/</code></td></tr>
-        <tr><td><strong>슬래시 커맨드</strong></td><td class="num">14</td><td><code>commit</code> · <code>plan</code> · <code>review</code> · <code>verify</code> · <code>harness-audit</code> · <code>squad-*</code></td><td><code>.claude/commands/</code></td></tr>
+        <tr><td><strong>슬래시 커맨드</strong></td><td class="num">15</td><td><code>commit</code> · <code>commit-branch</code> · <code>plan</code> · <code>verify</code> · <code>review</code> · <code>squad-*</code></td><td><code>.claude/commands/</code></td></tr>
         <tr><td><strong>에이전트</strong></td><td class="num">20</td><td><code>evaluator</code> · <code>code-reviewer</code> · <code>security-reviewer</code> · <code>fable-*</code> · <code>squad-*</code></td><td><code>.claude/agents/</code></td></tr>
         <tr><td><strong>스킬</strong></td><td class="num">26</td><td><code>anti-ai-slop</code> · <code>carve-guide</code> · <code>handoff</code> · <code>implement</code> · <code>theme-factory</code></td><td><code>.claude/skills/</code></td></tr>
         <tr><td><strong>규칙(.md)</strong></td><td class="num">18</td><td><code>safety</code> · <code>common/*</code> · <code>code-convention/dev-stack-*</code></td><td><code>.claude/rules/</code></td></tr>
@@ -635,7 +635,7 @@ bash install.sh prune --keep-list &lt;파일&gt;   # KEEP 밖 비보호 파일 �
   <!-- Part 8 -->
   <section id="p8">
     <h2><span class="part">PART 8</span>전체 목록 (스킬 · 커맨드)</h2>
-    <p>배포되는 전체 스킬 26종과 슬래시 커맨드 14종입니다(훅 9종은 <a href="#p3">PART 3</a>).</p>
+    <p>배포되는 전체 스킬 26종과 슬래시 커맨드 15종입니다(훅 9종은 <a href="#p3">PART 3</a>).</p>
 
     <h3>스킬 (26종)</h3>
     <table>
@@ -670,11 +670,12 @@ bash install.sh prune --keep-list &lt;파일&gt;   # KEEP 밖 비보호 파일 �
       </tbody>
     </table>
 
-    <h3>슬래시 커맨드 (14종)</h3>
+    <h3>슬래시 커맨드 (15종)</h3>
     <table>
       <thead><tr><th style="width:210px;">커맨드</th><th>용도</th></tr></thead>
       <tbody>
         <tr><td><code>/harness-audit</code></td><td>하네스 구성 42체크 PASS/FAIL</td></tr>
+        <tr><td><code>/commit-branch</code></td><td>현재 브랜치에 Conventional Commits로 커밋 + 푸시(<code>main</code> 직접 금지)</td></tr>
         <tr><td><code>/plan</code></td><td>작업을 완료 기준(SC) 단위로 분해 → <code>specs/</code></td></tr>
         <tr><td><code>/verify</code></td><td>현재 변경을 SC·빌드·타입·테스트로 검증</td></tr>
         <tr><td><code>/review</code></td><td>변경분을 타입·보안·예외·상태관리 관점 검토</td></tr>

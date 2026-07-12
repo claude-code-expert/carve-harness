@@ -15,7 +15,7 @@ Drop it into your project root and it works immediately.
 | **Observability** | Every hook verdict logged to `logs/*.jsonl` (PII masked), with report/rotation. The session-start banner lists every loaded component, and all hook messages carry a unified `[carve-harness:<hook>]` prefix |
 | **Self-audit** | `/harness-audit` — 42 mechanical checks PASS/FAIL the harness configuration itself |
 
-**Inventory**: 9 hooks (6 events + 3 manual CLI) · 14 slash commands · 20 agents · 26 skills · 18 rule files · 1 workflow · 14 test suites (172 cases) — full lists in the [component tables](#full-component-list-skills--commands--hooks) below
+**Inventory**: 9 hooks (6 events + 3 manual CLI) · 15 slash commands · 20 agents · 26 skills · 18 rule files · 1 workflow · 14 test suites (172 cases) — full lists in the [component tables](#full-component-list-skills--commands--hooks) below
 
 **Cross-agent**: hook blocking is Claude Code-only. Cursor/Codex/etc. follow `AGENTS.md` as the canonical rules, with `.githooks/pre-commit` as the final gate at commit time.
 
@@ -143,11 +143,12 @@ For customization (protected paths, formatters, verify commands, new stacks) and
 
 > The vendored skill (`theme-factory`) is SKILL.md-only, sourced from `composiohq/awesome-claude-plugins`. Plugins `frontend-design` (design direction) and `ponytail` (simplification) ship as settings.json declarations, not skills.
 
-### Slash commands (14)
+### Slash commands (15)
 
 | Command | Purpose |
 |------|------|
 | `/harness-audit` | 42-check PASS/FAIL of the harness configuration |
+| `/commit-branch` | Commit + push on the current branch, Conventional Commits (never `main` directly) |
 | `/plan` | Break work into success-criteria (SC) units → `specs/` |
 | `/verify` | Verify current changes against SC · build · types · tests |
 | `/review` | Review a diff for types, security, exceptions, state |
@@ -189,7 +190,7 @@ For customization (protected paths, formatters, verify commands, new stacks) and
     ├── settings.json        # 6 hook events registered
     ├── hooks/  (9 + 14 test suites)
     ├── workflows/ (fable-team-pipeline)
-    ├── commands/ (14) · agents/ (20) · skills/ (26) · rules/ (18)
+    ├── commands/ (15) · agents/ (20) · skills/ (26) · rules/ (18)
 ```
 
 ## Limitations
