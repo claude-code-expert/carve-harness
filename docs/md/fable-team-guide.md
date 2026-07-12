@@ -13,7 +13,7 @@
 
 | 역할 | 에이전트 | 모델 | 파일 소유권 | 담당 |
 | --- | --- | --- | --- | --- |
-| 지휘·분해·종합 | (메인 세션) | fable/opus · high | tasks.json, 공유 계약 | Phase 설계, 승인 게이트, 결과 종합 |
+| 지휘·분해·종합 | (메인 세션) | fable/opus · xhigh | tasks.json, 공유 계약 | Phase 설계, 승인 게이트, 결과 종합 |
 | 개발 | `fable-builder` | sonnet | 배정된 `owns` glob | 구현 + 테스트, worktree 격리 |
 | 문서 | `fable-doc-writer` | sonnet | `docs/**`, `*.md` | README·가이드·API 문서 |
 | 이미지 | `fable-visualizer` | sonnet | `docs/img/**`, `*.puml`, `*.svg` | 다이어그램·목업 (시각 게이트 준수) |

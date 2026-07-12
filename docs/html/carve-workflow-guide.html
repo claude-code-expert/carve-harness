@@ -1,0 +1,628 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>carve-harness — 사용 가이드</title>
+  <meta name="description" content="carve-harness v0.0.12 전체 개요 — 3기둥(제약·피드백·상태) 하네스, 훅 9·커맨드 14·에이전트 20·스킬 24·규칙 18·워크플로 1, 설치·프루닝·오케스트레이션·크로스 에이전트.">
+  <link rel="preconnect" href="https://cdn.jsdelivr.net">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css">
+  <style>
+    /* 폰트 선택 이유: Pretendard — 한/영/숫자 혼용 정합이 좋고 자간이 균일해
+       가드레일·훅명 같은 기술 식별자가 본문에 섞여도 위계가 흐트러지지 않는다.
+       코드는 JetBrains Mono로 본문과 명확히 분리한다. */
+    :root {
+      --ink:        #0F172A;
+      --ink-mute:   #475569;
+      --ink-faint:  #94A3B8;
+      --bg:         #FFFFFF;
+      --surface:    #F8FAFC;
+      --surface-2:  #F1F5F9;
+      --border:     #E2E8F0;
+      --border-2:   #CBD5E1;
+      --accent:     #0F766E;   /* 액센트 1색: 파트 번호·상태·판정 등 '위계와 의미'에만 사용 */
+      --accent-bg:  #F0FDFA;
+      --warn:       #B45309;
+      --warn-bg:    #FFFBEB;
+      --good:       #15803D;
+      --good-bg:    #F0FDF4;
+      --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+      --sans: "Pretendard Variable", Pretendard, -apple-system, "Apple SD Gothic Neo",
+              "Noto Sans KR", "Segoe UI", system-ui, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--sans);
+      font-size: 16px;
+      line-height: 1.72;
+      color: var(--ink);
+      background: var(--bg);
+      font-feature-settings: "kern" 1, "liga" 1;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .wrap {
+      max-width: 880px;
+      margin: 0 auto;
+      padding: 64px 32px 96px;
+    }
+
+    /* --- Header --- */
+    header.doc-head {
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 28px;
+      margin-bottom: 40px;
+    }
+    .eyebrow {
+      font-family: var(--mono);
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      color: var(--accent);
+      text-transform: uppercase;
+      margin: 0 0 12px;
+    }
+    h1.doc-title {
+      font-size: 34px;
+      line-height: 1.25;
+      font-weight: 700;
+      color: var(--ink);
+      margin: 0 0 14px;
+      letter-spacing: -0.01em;
+    }
+    h1.doc-title code { font-size: 30px; }
+    .doc-sub {
+      font-size: 16px;
+      color: var(--ink-mute);
+      margin: 0;
+      max-width: 720px;
+    }
+    .doc-meta {
+      margin-top: 22px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0;
+      border: 1px solid var(--border);
+    }
+    .doc-meta > div { padding: 12px 14px; border-right: 1px solid var(--border); }
+    .doc-meta > div:last-child { border-right: 0; }
+    .doc-meta dt {
+      font-family: var(--mono); font-size: 11px; color: var(--ink-faint);
+      letter-spacing: 0.08em; text-transform: uppercase; margin: 0 0 4px;
+    }
+    .doc-meta dd { margin: 0; font-size: 14px; color: var(--ink); }
+
+    /* --- Table of contents --- */
+    nav.toc {
+      border: 1px solid var(--border);
+      padding: 18px 22px;
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+    nav.toc .label {
+      font-family: var(--mono);
+      font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase;
+      color: var(--ink-faint); margin-bottom: 10px;
+    }
+    nav.toc ol { margin: 0; padding-left: 20px; columns: 2; column-gap: 36px; }
+    nav.toc li { margin: 3px 0; }
+    nav.toc a { color: var(--ink); border-bottom: 0; }
+    nav.toc a:hover { color: var(--accent); }
+    nav.toc .part-no { font-family: var(--mono); font-size: 12px; color: var(--accent); margin-right: 8px; }
+
+    /* --- Section headings --- */
+    h2 {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--ink);
+      margin: 56px 0 18px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+      letter-spacing: -0.005em;
+    }
+    h2 .part {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--accent);
+      margin-right: 10px;
+      letter-spacing: 0.06em;
+    }
+    h3 {
+      font-size: 17px;
+      font-weight: 600;
+      margin: 32px 0 12px;
+      color: var(--ink);
+    }
+    h4 {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--ink-mute);
+      margin: 24px 0 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      font-family: var(--mono);
+    }
+
+    p { margin: 0 0 14px; }
+    p + p { margin-top: -2px; }
+
+    strong { color: var(--ink); font-weight: 600; }
+    em { font-style: italic; color: var(--ink); }
+
+    /* --- Inline code & code blocks --- */
+    code {
+      font-family: var(--mono);
+      font-size: 0.92em;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 1px 6px;
+      color: var(--ink);
+    }
+    pre {
+      font-family: var(--mono);
+      font-size: 13.5px;
+      line-height: 1.65;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 16px 18px;
+      overflow-x: auto;
+      margin: 14px 0 18px;
+    }
+    pre code { background: none; border: 0; padding: 0; font-size: inherit; }
+
+    /* --- Tables --- */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 16px 0 22px;
+      font-size: 14px;
+    }
+    th, td {
+      border: 1px solid var(--border);
+      padding: 10px 12px;
+      vertical-align: top;
+      text-align: left;
+    }
+    th {
+      background: var(--surface);
+      font-weight: 600;
+      color: var(--ink);
+      font-size: 13px;
+      letter-spacing: 0.01em;
+    }
+    td code { font-size: 0.88em; }
+    .num { font-family: var(--mono); text-align: right; white-space: nowrap; color: var(--accent); font-weight: 600; }
+
+    /* --- Lists --- */
+    ul, ol { padding-left: 22px; margin: 8px 0 18px; }
+    li { margin: 4px 0; }
+    li > ul, li > ol { margin: 4px 0; }
+
+    /* --- Callouts (단색 + border, 그라데이션·글로우 금지) --- */
+    .callout {
+      border: 1px solid var(--border-2);
+      background: var(--surface);
+      padding: 14px 18px;
+      margin: 18px 0;
+    }
+    .callout .label {
+      display: inline-block;
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--ink-mute);
+      margin-bottom: 6px;
+    }
+    .callout.good { background: var(--good-bg); border-color: #BBF7D0; }
+    .callout.good .label { color: var(--good); }
+    .callout.warn { background: var(--warn-bg); border-color: #FDE68A; }
+    .callout.warn .label { color: var(--warn); }
+    .callout.accent { background: var(--accent-bg); border-color: #99F6E4; }
+    .callout.accent .label { color: var(--accent); }
+    .callout p:last-child { margin-bottom: 0; }
+
+    /* --- Mono panel (핵심 동작 한 줄 · Phase 흐름 등 고정폭 요약) --- */
+    .mono-panel {
+      font-family: var(--mono);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 14px 18px;
+      font-size: 13.5px;
+      line-height: 1.85;
+      overflow-x: auto;
+    }
+    .mono-panel strong { color: var(--accent); }
+
+    /* --- Footnote / closing --- */
+    .pull {
+      margin: 36px 0 0;
+      padding: 22px 24px;
+      border: 1px solid var(--border-2);
+      background: var(--surface);
+      font-size: 15px;
+      color: var(--ink);
+    }
+    .pull p { margin: 0; }
+
+    footer.doc-foot {
+      margin-top: 72px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border);
+      font-size: 13px;
+      color: var(--ink-faint);
+      font-family: var(--mono);
+      line-height: 1.7;
+    }
+
+    /* --- Anchor links --- */
+    a {
+      color: var(--accent);
+      text-decoration: none;
+      border-bottom: 1px solid var(--border);
+    }
+    a:hover { border-bottom-color: var(--accent); }
+
+    @media print {
+      body { font-size: 11pt; }
+      .wrap { padding: 0; max-width: none; }
+      pre, table, .callout, .mono-panel { break-inside: avoid; }
+      h2 { break-after: avoid; }
+      a { color: var(--ink); border-bottom: 0; }
+      nav.toc { break-inside: avoid; }
+    }
+
+    @media (max-width: 640px) {
+      .wrap { padding: 32px 18px 64px; }
+      h1.doc-title { font-size: 26px; }
+      h1.doc-title code { font-size: 22px; }
+      .doc-meta { grid-template-columns: 1fr; }
+      .doc-meta > div { border-right: 0; border-bottom: 1px solid var(--border); }
+      .doc-meta > div:last-child { border-bottom: 0; }
+      nav.toc ol { columns: 1; }
+    }
+  </style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="doc-head">
+    <p class="eyebrow">carve-harness · 하네스 개요 가이드</p>
+    <h1 class="doc-title">carve-harness — 사용 가이드</h1>
+    <p class="doc-sub">
+      코딩 에이전트의 규칙 위반을 "설득"이 아니라 <strong>훅 exit 2로 차단</strong>하는 언어 무관 드롭인 가드레일 템플릿.
+      프로젝트 루트에 드롭인하면 즉시 동작하며, <strong>제약 · 피드백 · 상태</strong> 3기둥으로 위험 명령·미검증 완료·컨텍스트 유실을
+      결정적으로 막는다.
+    </p>
+    <dl class="doc-meta">
+      <div>
+        <dt>GitHub</dt>
+        <dd><a href="https://github.com/claude-code-expert/carve-harness">claude-code-expert/carve-harness</a></dd>
+      </div>
+      <div>
+        <dt>버전</dt>
+        <dd><code>v0.0.12</code> · 2026-07-11</dd>
+      </div>
+      <div>
+        <dt>성격</dt>
+        <dd>언어 무관 드롭인 · Bash 훅 · 오프라인 설치</dd>
+      </div>
+    </dl>
+  </header>
+
+  <nav class="toc">
+    <div class="label">목차</div>
+    <ol>
+      <li><a href="#about"><span class="part-no">00</span>carve-harness 한눈에</a></li>
+      <li><a href="#p1"><span class="part-no">01</span>3기둥 모델</a></li>
+      <li><a href="#p2"><span class="part-no">02</span>구성 인벤토리</a></li>
+      <li><a href="#p3"><span class="part-no">03</span>훅 9종 게이트</a></li>
+      <li><a href="#p4"><span class="part-no">04</span>설치 · 업데이트 · 프루닝</a></li>
+      <li><a href="#p5"><span class="part-no">05</span>오케스트레이션(fable 팀)</a></li>
+      <li><a href="#p6"><span class="part-no">06</span>크로스 에이전트</a></li>
+      <li><a href="#p7"><span class="part-no">07</span>언제 무엇을 쓰나</a></li>
+    </ol>
+  </nav>
+
+  <!-- About -->
+  <section id="about">
+    <h2><span class="part">ABOUT</span>carve-harness 한눈에</h2>
+
+    <p>
+      <strong>carve-harness</strong>는 규칙을 문서로 "권고"하는 대신, 위반이 일어나는 <em>바로 그 순간</em> 훅으로 차단하는
+      가드레일 하네스입니다. 자동 커밋·시크릿 하드코딩·보호 경로 덮어쓰기·미검증 완료 선언 같은 LLM의 반복 실수를
+      <strong>결정적(deterministic)</strong>으로 막습니다. 별도 런타임·빌드가 필요 없고, <code>.claude/</code> 자산과 Bash 훅만으로 동작합니다.
+    </p>
+
+    <h3>핵심 동작 한 줄</h3>
+    <div class="mono-panel">
+      curl 설치 → 스택 탐지 → (구성요소 선택) → <strong>.claude/</strong>에 자산 생성<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;→ 생성된 <strong>PreToolUse 훅</strong>이 위험 명령·시크릿 쓰기를 <strong>exit 2</strong>로 결정적 차단
+    </div>
+
+    <h3>다섯 기능 축</h3>
+    <table>
+      <thead>
+        <tr><th style="width:96px;">축</th><th>동작</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>제약</strong></td><td>보호 경로(<code>.env</code>·prod·마이그레이션)·하드코딩 시크릿·위험 git 쓰기를 PreToolUse 훅이 차단. jq 부재·JSON 파손 시 <em>fail-closed</em>.</td></tr>
+        <tr><td><strong>피드백</strong></td><td>PostToolUse가 포맷·린트 후처리, Stop 훅이 빌드·타입·테스트 실패 시 완료 선언 차단 — <em>변경된 스택만 증분 검증</em>.</td></tr>
+        <tr><td><strong>상태</strong></td><td>세션 종료·압축 시 핸드오프 자동 저장(실제 TODO·결정 수집), 시작 시 복원.</td></tr>
+        <tr><td><strong>관측</strong></td><td>모든 훅 판정을 <code>logs/*.jsonl</code>에 기록(PII 마스킹), 리포트·회전. 세션 시작 배너가 로드된 전 구성을 표시, 훅 메시지는 <code>[carve-harness:&lt;hook&gt;]</code> 프리픽스로 통일.</td></tr>
+        <tr><td><strong>자가감사</strong></td><td><code>/harness-audit</code> — 42개 기계 체크로 하네스 오구성을 PASS/FAIL 판정.</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout accent">
+      <span class="label">이 문서의 위상</span>
+      <p style="margin-bottom:0;">
+        이 가이드는 <strong>carve-harness v0.0.12 전체 개요</strong>입니다. 3기둥 모델부터 구성 인벤토리(훅 9 · 커맨드 14 ·
+        에이전트 20 · 스킬 24 · 규칙 18 · 워크플로 1) · 설치/프루닝 · 오케스트레이션 · 크로스 에이전트까지, <em>실제 리포에 존재하는 자산만</em> 근거로 다룹니다.
+        단일 출처는 <code>README.md</code> · <code>CHANGELOG.md</code> · <code>docs/md/orchestration.md</code>입니다.
+      </p>
+    </div>
+  </section>
+
+  <!-- Part 1 -->
+  <section id="p1">
+    <h2><span class="part">PART 1</span>3기둥 모델</h2>
+
+    <p>
+      하네스는 세 개의 기둥으로 서 있습니다 — <strong>제약(막는다)</strong> · <strong>피드백(검증한다)</strong> · <strong>상태(잇는다)</strong>.
+      여기에 <em>관측</em>과 <em>자가감사</em>가 각 기둥이 실제로 작동하는지를 증명합니다. 각 기둥은 "말"이 아니라 <em>훅</em>으로 강제됩니다.
+    </p>
+
+    <table>
+      <thead>
+        <tr><th style="width:96px;">기둥</th><th>하는 일</th><th style="width:230px;">구현 (훅 / 파일)</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>제약</strong></td>
+          <td>위험 명령·시크릿·보호 경로 쓰기를 <em>쓰기 시점</em>에 차단</td>
+          <td><code>pretool-guard.sh</code> (PreToolUse, exit 2) + <code>CLAUDE.md</code> · <code>AGENTS.md</code> · <code>.claude/rules/*</code></td>
+        </tr>
+        <tr>
+          <td><strong>피드백</strong></td>
+          <td>포맷·린트 자동 후처리 + 빌드·타입·테스트 실패 시 완료 차단</td>
+          <td><code>posttool-format.sh</code> (PostToolUse) + <code>stop-verify.sh</code> (Stop, exit 2, 증분)</td>
+        </tr>
+        <tr>
+          <td><strong>상태</strong></td>
+          <td>진행상황·결정·TODO를 저장하고 다음 세션에 복원</td>
+          <td><code>session-handoff.sh</code> (SessionStart / PreCompact / SessionEnd)</td>
+        </tr>
+        <tr>
+          <td><strong>관측</strong></td>
+          <td>모든 훅 판정을 JSONL로 남기고 요약·회전</td>
+          <td><code>log-event.sh</code> 헬퍼 + <code>logs-report.sh</code> + <code>logs/*.jsonl</code></td>
+        </tr>
+        <tr>
+          <td><strong>자가감사</strong></td>
+          <td>하네스가 실제로 무장돼 있는지 기계 검증</td>
+          <td><code>harness-audit.sh</code> — <code>/harness-audit</code>, 42 체크</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="callout warn">
+      <span class="label">fail-closed 원칙</span>
+      <p style="margin-bottom:0;">
+        <code>jq</code>가 없거나 훅에 전달된 JSON이 파손되면 <strong>쓰기 경로는 무조건 차단</strong>합니다(GUARD-01 / D-01).
+        게이트를 조용히 통과시키느니 막고 보고하는 쪽을 택합니다 — "판단 불가"는 "허용"이 아닙니다.
+      </p>
+    </div>
+  </section>
+
+  <!-- Part 2 -->
+  <section id="p2">
+    <h2><span class="part">PART 2</span>구성 인벤토리 (v0.0.12)</h2>
+
+    <p>설치되는 자산 전체입니다. 수치는 파일시스템 실측 기준이며, 세션 시작 배너가 매번 항목명까지 표시합니다.</p>
+
+    <table>
+      <thead>
+        <tr><th style="width:150px;">카테고리</th><th class="num" style="width:64px;">수</th><th>대표 항목</th><th style="width:170px;">위치</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>훅</strong></td><td class="num">9</td><td><code>pretool-guard</code> · <code>stop-verify</code> · <code>session-handoff</code> · <code>harness-audit</code></td><td><code>.claude/hooks/</code></td></tr>
+        <tr><td><strong>슬래시 커맨드</strong></td><td class="num">14</td><td><code>commit</code> · <code>plan</code> · <code>review</code> · <code>verify</code> · <code>harness-audit</code> · <code>squad-*</code></td><td><code>.claude/commands/</code></td></tr>
+        <tr><td><strong>에이전트</strong></td><td class="num">20</td><td><code>evaluator</code> · <code>code-reviewer</code> · <code>security-reviewer</code> · <code>fable-*</code> · <code>squad-*</code></td><td><code>.claude/agents/</code></td></tr>
+        <tr><td><strong>스킬</strong></td><td class="num">24</td><td><code>anti-ai-slop</code> · <code>handoff</code> · <code>changelog</code> · <code>implement</code> · <code>version-changelog</code></td><td><code>.claude/skills/</code></td></tr>
+        <tr><td><strong>규칙(.md)</strong></td><td class="num">18</td><td><code>safety</code> · <code>common/*</code> · <code>code-convention/dev-stack-*</code></td><td><code>.claude/rules/</code></td></tr>
+        <tr><td><strong>워크플로</strong></td><td class="num">1</td><td><code>fable-team-pipeline.js</code></td><td><code>.claude/workflows/</code></td></tr>
+        <tr><td><strong>git 훅</strong></td><td class="num">2</td><td><code>commit-msg</code> · <code>pre-commit</code></td><td><code>.githooks/</code></td></tr>
+        <tr><td><strong>크로스에이전트 문서</strong></td><td class="num">7</td><td><code>CLAUDE.md</code> · <code>AGENTS.md</code> · <code>RULES.md</code> · <code>codex.md</code> · <code>.cursorrules</code></td><td>루트 · <code>.claude/</code></td></tr>
+        <tr><td><strong>테스트</strong></td><td class="num">167</td><td><code>npm test</code> — 14 스위트(<code>tests/run-all.sh</code> 집계)</td><td><code>tests/</code></td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout accent">
+      <span class="label">v0.0.12 신규</span>
+      <p style="margin-bottom:0;">
+        <strong>프로젝트 맞춤 구축</strong> — 설치 시 <code>/carve-harness-create</code> 스킬이 스택(Java/Spring · TS/React/Next · Python/FastAPI · ORM)을 분석해
+        맞지 않는 규칙·에이전트·스킬을 KEEP/PRUNE 표로 제안하고, <code>install.sh prune</code>으로 상시 로드 토큰 표면을 줄입니다.
+        코어(훅·settings·크로스에이전트 진입·<code>safety</code>/<code>common</code> 규칙)는 절대 잘리지 않습니다.
+      </p>
+    </div>
+  </section>
+
+  <!-- Part 3 -->
+  <section id="p3">
+    <h2><span class="part">PART 3</span>훅 9종 게이트</h2>
+
+    <p>
+      훅이 하네스의 심장입니다. 9개 스크립트는 세 부류로 나뉩니다 —
+      <strong>이벤트 게이트 4</strong>(6개 이벤트 슬롯) · <strong>공유 헬퍼 2</strong> · <strong>수동 CLI 3</strong>.
+      차단은 <code>exit 2</code>, 허용/후처리는 <code>exit 0</code>입니다.
+    </p>
+
+    <table>
+      <thead>
+        <tr><th style="width:160px;">스크립트</th><th style="width:200px;">트리거</th><th>역할</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>pretool-guard</code></td><td>PreToolUse</td><td>보호 경로·시크릿·위험 git 쓰기 <strong>차단(exit 2)</strong>. jq/JSON 이상 시 fail-closed.</td></tr>
+        <tr><td><code>posttool-format</code></td><td>PostToolUse</td><td>확장자로 언어 감지 후 포맷(후처리 전용, exit 0). 매 실행 1건 결과를 JSONL 기록.</td></tr>
+        <tr><td><code>stop-verify</code></td><td>Stop</td><td>변경 스택 감지 후 빌드·타입·테스트 게이트. <strong>실패 시 exit 2</strong>로 완료 선언 차단.</td></tr>
+        <tr><td><code>session-handoff</code></td><td>SessionStart · PreCompact · SessionEnd</td><td><code>start</code>=핸드오프 복원 + 구성 배너, <code>save</code>=진행상황 저장.</td></tr>
+        <tr><td><code>log-event</code></td><td>서브프로세스 호출</td><td>JSONL append 헬퍼 — 스키마·타임스탬프·PII 마스킹 정규식의 <em>단일 출처</em>(D-04).</td></tr>
+        <tr><td><code>lib-protected</code></td><td>source 참조</td><td>보호 경로 정규식의 유일한 정의(순수 데이터, 부수효과 없음). guard·log-event가 공유.</td></tr>
+        <tr><td><code>harness-audit</code></td><td>수동 · <code>/harness-audit</code></td><td>42 체크 PASS/FAIL, read-only. 실패 항목 있으면 non-zero.</td></tr>
+        <tr><td><code>logs-report</code></td><td>수동 CLI</td><td>JSONL 판정 분포·차단 상세 요약 + N일 회전(유일한 쓰기 동작).</td></tr>
+        <tr><td><code>eval-java</code></td><td>수동 · 스코어러</td><td>Java/Spring 결정적 품질 확률 <code>P∈[0,1]</code> 산출. LLM 없음 — 같은 입력이면 같은 P.</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout warn">
+      <span class="label">settings.json은 SKIP이 아니라 병합</span>
+      <p style="margin-bottom:0;">
+        기존 프로젝트에 이미 <code>.claude/settings.json</code>이 있으면, 하네스는 그것을 덮지 않고 <strong>jq로 훅 6이벤트를 병합</strong>합니다
+        (사용자 <code>permissions</code>·<code>model</code>·자체 훅 보존, 멱등). 이 병합을 건너뛰면 훅이 미등록돼 배너·가드·검증이 <em>전부 조용히 무력화</em>됩니다(v0.0.9에서 고친 근본 버그).
+      </p>
+    </div>
+  </section>
+
+  <!-- Part 4 -->
+  <section id="p4">
+    <h2><span class="part">PART 4</span>설치 · 업데이트 · 프루닝</h2>
+
+    <h3>설치</h3>
+    <pre><code>cd /path/to/your-project
+curl -fsSL https://raw.githubusercontent.com/claude-code-expert/carve-harness/main/install.sh | bash</code></pre>
+
+    <p>설치 시작 시 두 갈래를 묻습니다:</p>
+    <ul>
+      <li><strong>[1] 맞춤 구축(권장)</strong> — 전체 설치 후 세션에서 <code>/carve-harness-create</code>를 실행하면 스택을 분석해 맞지 않는 규칙·에이전트·스킬을 제안·정리(prune). <em>정리 전에도 전체 구성으로 동작</em>합니다.</li>
+      <li><strong>[2] 수동 선택</strong> — 항목 단위 체크박스 TUI. <code>↑↓</code>/<code>jk</code> 이동 · 스페이스 토글 · <code>1</code>-<code>5</code> 섹션 점프 · <code>a</code> 전체 · 엔터 설치. 기본은 전체 선택.</li>
+    </ul>
+    <p style="color:var(--ink-mute); font-size:14px;">비대화형은 <code>HARNESS_COMPONENTS=md,hooks bash install.sh</code>. 선택은 <code>.claude/harness-components</code>에 기록돼 update의 신규 파일 필터로 작동합니다.</p>
+
+    <h3>주변 배선 — 놓치면 안 되는 것</h3>
+    <ul>
+      <li><strong>settings.json 병합</strong> — 훅 6이벤트 + <code>vtsls</code>(TS·React·JS)·<code>jdtls</code>(Java)·<code>ponytail</code> 플러그인 선언을 jq로 등록(멱등). 서버 바이너리는 별도(<code>install.sh setup</code>이 안내).</li>
+      <li><strong>오프라인 완결</strong> — <code>jq</code>·<code>shellcheck</code> 정적 바이너리를 <code>vendor/bin</code>에 SHA256 검증과 함께 내장. 인터넷 없이 설치 가능.</li>
+      <li><strong>설치 끝 <code>/harness-audit</code> 자동 실행</strong> — 42 PASS면 전 게이트 활성.</li>
+    </ul>
+
+    <h3>업데이트 · 롤백 · 프루닝</h3>
+    <pre><code>bash install.sh update    # 신규/변경 자산만 갱신 (선택 구성 필터 존중)
+bash install.sh rollback  # 직전 백업( logs/harness-backup/v&lt;버전&gt;/ )으로 복원
+bash install.sh prune --keep-list &lt;파일&gt;   # KEEP 밖 비보호 파일 백업 후 제거</code></pre>
+    <p style="color:var(--ink-mute); font-size:14px;">
+      <code>prune</code>은 PROTECTED 코어(훅·settings·크로스에이전트 진입·vendor·<code>safety</code>/<code>common</code> 규칙)를 제거 거부하고, 빈 keep-list는 전체 삭제 방지로 차단합니다.
+      백업은 <code>update</code>와 같은 경로라 <code>rollback</code>이 그대로 복원합니다.
+    </p>
+  </section>
+
+  <!-- Part 5 -->
+  <section id="p5">
+    <h2><span class="part">PART 5</span>오케스트레이션 — fable 팀 워크플로</h2>
+
+    <p>
+      다단계·다모듈 작업은 단일 세션 대신 <strong>오케스트레이터 + 워커</strong> 구조로 처리합니다. 규칙 정본은
+      <code>docs/md/orchestration.md</code>, 이를 코드로 고정한 것이 유일한 워크플로 <code>fable-team-pipeline.js</code>입니다.
+      핵심 원칙: <em>병목은 코드 생성이 아니라 검증(Verification)</em> — 그래서 생성자와 검증자를 분리합니다.
+    </p>
+
+    <h3>4-Phase 흐름 (워크플로가 자동 실행)</h3>
+    <div class="mono-panel">
+      <strong>P1 Spec</strong>&nbsp;&nbsp;&nbsp;&nbsp;fable-researcher 리서치 → 태스크 3~5개 분해(owns·acceptance 필수)<br>
+      <strong>P2 Build</strong>&nbsp;&nbsp;&nbsp;태스크별 fable-builder(worktree) → 완료 즉시 evaluator 검증&nbsp;&nbsp;[파이프라인]<br>
+      <strong>P3 Document</strong> fable-doc-writer + fable-visualizer 병렬&nbsp;&nbsp;[배리어: 전체 빌드 결과 필요]<br>
+      <strong>P4 Verify</strong>&nbsp;&nbsp;evaluator 최종 SC 판정 → {passed, escalations, finalVerdict}
+    </div>
+
+    <h3>모델 라우팅 (orchestration.md 1절)</h3>
+    <table>
+      <thead>
+        <tr><th>역할</th><th style="width:150px;">모델 · effort</th><th>담당</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>오케스트레이터(메인 세션)</td><td><code>Fable5 · xhigh</code></td><td>작업 분해 · 결과 종합 · 승인 게이트</td></tr>
+        <tr><td>워커(빌드·테스트·디버깅)</td><td><code>sonnet-5 · high</code></td><td>구현 · 마이그레이션 · 테스트 작성</td></tr>
+        <tr><td>읽기 전용 리뷰어</td><td><code>sonnet-5 · high</code></td><td>lint·테스트·보안 스캔 도구만 허용</td></tr>
+        <tr><td>포매팅 · 단순 변환</td><td><code>haiku · low</code></td><td>기계적 작업</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout accent">
+      <span class="label">옵트인 + 모델 무관</span>
+      <p style="margin-bottom:8px;">
+        워크플로는 <strong>명시해야 실행</strong>됩니다 — 발화에 <code>ultracode</code> 키워드, "워크플로우로 돌려줘",
+        또는 <em>"fable-team-pipeline 실행해줘"</em>.
+      </p>
+      <p style="margin-bottom:0;">
+        <strong>이 프로세스는 모델에 의존하지 않습니다.</strong> Fable 5가 아니어도(opus/sonnet) <code>fable-team-guide.md</code>의
+        SOP(S0~S7)를 수동 실행하면 동일하게 동작합니다. 권위는 도구가 아니라 절차에 있습니다.
+      </p>
+    </div>
+  </section>
+
+  <!-- Part 6 -->
+  <section id="p6">
+    <h2><span class="part">PART 6</span>크로스 에이전트</h2>
+
+    <p>
+      훅 차단은 <strong>Claude Code 전용</strong>입니다. Cursor · Codex · Aider · Gemini CLI 등 훅이 없는 에이전트를 위해,
+      규칙의 권위는 강제 수단이 아니라 <strong><code>AGENTS.md</code> 정본 문서</strong>에 둡니다. 그리고 어떤 에이전트가 작업했든
+      <strong><code>.githooks/pre-commit</code>이 커밋 시점에 최종 차단</strong>합니다.
+    </p>
+
+    <table>
+      <thead>
+        <tr><th style="width:200px;">문서</th><th>역할</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>CLAUDE.md</code></td><td>Claude Code 진입점 — 하네스 전역 가드레일</td></tr>
+        <tr><td><code>.claude/CLAUDE.md</code></td><td>행동 지침 — LLM 반복 실수 방지 규율</td></tr>
+        <tr><td><code>AGENTS.md</code></td><td>크로스 에이전트 <em>정본</em> — 훅 없는 에이전트가 스스로 준수</td></tr>
+        <tr><td><code>RULES.md</code> · <code>codex.md</code> · <code>.cursorrules</code></td><td>에이전트별 진입 표면 — 같은 규칙을 공유</td></tr>
+        <tr><td><code>specs/README.md</code></td><td>SDD 산출물(상태 기둥)의 규약</td></tr>
+      </tbody>
+    </table>
+
+    <p style="color:var(--ink-mute); font-size:14px;">
+      이 문서들은 같은 규칙을 공유합니다 — <strong>하나를 고치면 나머지도 맞춰야</strong> 합니다. Claude Code는 <code>CLAUDE.md</code>로 진입하고,
+      그 외 에이전트는 <code>AGENTS.md</code>를 정본으로 읽습니다.
+    </p>
+  </section>
+
+  <!-- Part 7 -->
+  <section id="p7">
+    <h2><span class="part">PART 7</span>언제 무엇을 쓰나</h2>
+
+    <table>
+      <thead>
+        <tr><th style="width:280px;">상황</th><th>쓸 것</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>규칙 위반을 원천 차단하고 싶다</td><td>설치만 하면 됨 — <code>pretool-guard</code>·<code>stop-verify</code>가 자동 작동</td></tr>
+        <tr><td>완료 기준(SC)이 있는 작업 분해</td><td><code>/plan</code> → <code>/verify</code></td></tr>
+        <tr><td>변경분 검토</td><td><code>/review</code> · <code>code-reviewer</code>·<code>security-reviewer</code> 에이전트</td></tr>
+        <tr><td>시각 산출물(HTML·SVG·슬라이드) 제작</td><td><code>anti-ai-slop</code> 스킬 먼저 발동 후 작업</td></tr>
+        <tr><td>다단계·다모듈 (스펙→구현→문서→검증)</td><td><code>fable-team-pipeline</code> 워크플로</td></tr>
+        <tr><td>하네스가 제대로 무장됐는지 확인</td><td><code>/harness-audit</code> — 42 체크</td></tr>
+        <tr><td>세션 종료 · 컨텍스트 인계</td><td><code>handoff</code> 스킬 (또는 자동 <code>session-handoff</code>)</td></tr>
+      </tbody>
+    </table>
+
+    <div class="pull">
+      <p>
+        <strong>하네스는 규칙을 "설득"하지 않습니다 — 훅 <code>exit 2</code>로 차단합니다.</strong><br>
+        <em>제약은 막고, 피드백은 검증하고, 상태는 잇는다. 관측이 그것을 기록하고, 자가감사가 그것을 증명한다.</em>
+      </p>
+    </div>
+  </section>
+
+  <footer class="doc-foot">
+    docs/html/carve-workflow-guide.html · carve-harness v0.0.12<br>
+    단일 출처: README.md · CHANGELOG.md · docs/md/orchestration.md · docs/md/fable-team-guide.md
+  </footer>
+
+</div>
+</body>
+</html>

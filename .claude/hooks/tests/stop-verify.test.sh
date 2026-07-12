@@ -161,5 +161,26 @@ else
   echo "SKIP: GATE-04/05 fixture (git absent)"
 fi
 
+# (14,15) Node lint gate (shift-left): the project's `lint` script runs on Stop so
+#         lint-only rules (react-hooks/set-state-in-effect) don't escape to CI. Gated on
+#         a `lint` script existing — projects without one are unaffected.
+NABS_HOOK="$(cd "$(dirname "$HOOK")" && pwd)/stop-verify.sh"
+if command -v git >/dev/null 2>&1 && { command -v pnpm >/dev/null 2>&1 || command -v npm >/dev/null 2>&1; }; then
+  nd=$(mktemp -d)
+  ( cd "$nd" && git init -q && git config user.email t@t && git config user.name t )
+  printf 'export const x = 1;\n' > "$nd/foo.ts"
+  printf '{"scripts":{"lint":"exit 1"}}' > "$nd/package.json"
+  code=$( cd "$nd" && printf '{}' | bash "$NABS_HOOK" >/dev/null 2>&1; echo $? )
+  [ "$code" -eq 2 ] && { echo "PASS: Node lint gate -> failing lint blocks (exit 2)"; pass=$((pass + 1)); } \
+                    || { echo "FAIL: Node lint gate blocks (exit $code)"; fail=$((fail + 1)); }
+  printf '{"scripts":{"lint":"exit 0"}}' > "$nd/package.json"
+  code=$( cd "$nd" && printf '{}' | bash "$NABS_HOOK" >/dev/null 2>&1; echo $? )
+  [ "$code" -eq 0 ] && { echo "PASS: Node lint gate -> passing lint allows (exit 0)"; pass=$((pass + 1)); } \
+                    || { echo "FAIL: Node lint pass (exit $code)"; fail=$((fail + 1)); }
+  rm -rf "$nd"
+else
+  echo "SKIP: Node lint gate fixture (git/npm absent)"
+fi
+
 printf -- '---\n%s passed, %s failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]

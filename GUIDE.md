@@ -98,7 +98,7 @@ harness/
 |----|--------|------|----------|
 | `pretool-guard.sh` | PreToolUse (Write/Edit/MultiEdit/NotebookEdit/Bash) | ① jq 부재·JSON 파싱실패 → **차단**(fail-closed) ② 보호경로(`.env`·prod·시크릿·마이그레이션) 수정 차단 ③ Bash 쓰기명령이 보호경로 대상 시 차단 ④ **파일 내용 하드코딩 시크릿**(AKIA/sk-/ghp_/PEM/JWT) 차단 | 차단 **exit 2** / 허용 0 |
 | `posttool-format.sh` | PostToolUse (Write/Edit) | 확장자 감지 포맷(spotless/prettier 등); 포맷터 미설치·오류를 **JSONL에 기록**(삼키지 않음) | 0 (비차단) |
-| `stop-verify.sh` | Stop | 스택 감지 후 빌드/타입/테스트; `stop_hook_active` **루프 차단**; jq 부재 시 best-effort 스킵; **변경 모듈만 증분**(git diff) | 실패 **exit 2** / 통과 0 |
+| `stop-verify.sh` | Stop | 스택 감지 후 빌드/타입/린트/테스트(Node는 `lint`/`test` 스크립트 있을 때 — CI `npm run lint`를 로컬로 앞당김); `stop_hook_active` **루프 차단**; jq 부재 시 best-effort 스킵; **변경 모듈만 증분**(git diff) | 실패 **exit 2** / 통과 0 |
 | `session-handoff.sh` | SessionStart / PreCompact / SessionEnd | start=핸드오프 복원, save=**실제 수집**(STATE.md TODO·미완료 플랜·git 카운트·DECISIONS 최근5) → `specs/HANDOFF.md` | 0 |
 | `log-event.sh` | (서브프로세스 헬퍼) | 6훅 진입점의 이벤트를 `logs/*.jsonl`에 1줄 append; 보호경로/PII는 `<masked>` | 항상 0 |
 | `lib-protected.sh` | (데이터) | `PROTECTED_RE`(보호경로) + `SECRETS_RE`(시크릿) 단일 정의 — 재정의 금지. `protected-extra.regex`/`secrets-extra.regex` OR-병합(업데이트 보존) | — |
@@ -182,7 +182,7 @@ harness/
 | `squad-docs.md` | sonnet | 문서. 키워드: "문서","README","docs","API 문서","JSDoc","아키텍처 문서","주석" |
 | `squad-gitops.md` | haiku | Git 워크플로. 키워드: "커밋 메시지","commit message","PR 작성","체인지로그","릴리즈 노트" |
 
-### 5.3 스킬 (`.claude/skills/`, 23종)
+### 5.3 스킬 (`.claude/skills/`, 25종)
 
 **하네스 코어 스킬** (자동발동):
 
@@ -192,6 +192,7 @@ harness/
 | `changelog/` | 자동/`/changelog` | 되돌릴 수 없는 결정·근거를 `specs/DECISIONS.md`에 시간순 기록(append-only) |
 | `version-changelog/` | 자동/`/version-changelog` | 릴리스 시 VERSION·CHANGELOG·README 버전이력 동시 갱신. **VERSION만 바꾸면 pre-commit 차단** |
 | `anti-ai-slop/` | 자동/`/anti-ai-slop` | 이미지·HTML·SVG 생성 전 발동 — 그라데이션·글로우·장식 모션 차단 게이트 |
+| `carve-harness-create/` | `/carve-harness-create` | 프로젝트 스택 분석 → 맞지 않는 규칙·에이전트·스킬을 KEEP/PRUNE 표로 제안, 1회 확인 후 `install.sh prune` 실행. 명시 호출 전용(`disable-model-invocation`). 의존성 간선(eval-java↔archunit·squad↔에이전트·fable↔워크플로) 미분리 |
 
 **mattpocock 파생 스킬 19종** (대부분 `/이름` 사용자 호출 전용 = `disable-model-invocation`):
 
@@ -216,6 +217,14 @@ harness/
 | `resolving-merge-conflicts/` | 자동 | 진행 중인 git merge/rebase 충돌 해결 |
 | `scaffold-exercises/` | 자동 | 연습문제 디렉토리 구조(문제·해답·해설) 스캐폴딩 |
 | `setup-pre-commit/` | 자동 | Husky + lint-staged pre-commit(Prettier·타입체크·테스트) 세팅 |
+
+**벤더 스킬 1종** (외부 출처 벤더링, SKILL.md만):
+
+| 파일 | 호출 | 설명 |
+|------|------|------|
+| `theme-factory/` | 자동/`/theme-factory` | 산출물에 테마(색·폰트) 적용. 출처 `composiohq/awesome-claude-plugins` — anti-slop 게이트 여전히 적용 |
+
+> 플러그인 `frontend-design`(디자인 방향)·`ponytail`(간결화)은 스킬이 아니라 `settings.json` 선언으로 배포된다(§5.1 참고).
 
 ### 5.4 룰 (`.claude/rules/`, 18파일, glob 자동적용)
 
@@ -244,6 +253,16 @@ cd /path/to/your-project
 curl -fsSL https://raw.githubusercontent.com/claude-code-expert/carve-harness/main/install.sh | bash
 # 오프라인: HARNESS_SRC_DIR=/path/to/harness-copy bash /path/to/harness-copy/install.sh
 ```
+
+**프로젝트 맞춤 구축** (설치 후 스택에 맞게 절단):
+```
+설치 시작 → [1] 맞춤 구축(권장) 선택 → 전체 설치 + 안내
+세션에서 → /carve-harness-create        → 스택 분석 → KEEP/PRUNE 표 → 1회 확인
+                                        → install.sh prune → harness-audit 검증
+되돌리기 → bash install.sh rollback      (제거분 백업에서 복원)
+```
+- 전체 설치 후 동작하므로 절단은 선택 — 상시 로드 규칙(rules/)이 세션 시작 토큰을 늘리는 걸 스택 맞춤으로 줄인다.
+- 절단 단위·의존성 간선(eval-java↔archunit·squad 커맨드↔에이전트·fable 워크플로↔에이전트)·ALWAYS-KEEP 코어는 `.claude/skills/carve-harness-create/SKILL.md` 참조. 코어(훅·settings·크로스에이전트 진입·safety/common 규칙)는 `prune`이 제거 거부.
 
 **GSD SDD 흐름** (설치돼 있음):
 ```

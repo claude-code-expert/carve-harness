@@ -8,6 +8,8 @@
 #               설치 전 전체 항목 체크박스 목록 표시 (섹션: 필수md·훅·스킬·커맨드·오케스트레이터)
 #               ↑↓/jk 이동 · 스페이스 토글(섹션 행=하위 일괄) · 1-5 섹션 점프 · a 전체 · 엔터 설치
 #               기본 전체 선택 — 엔터만 치면 전체 설치
+#               설치 시작 시 '맞춤 구축(권장)/수동 선택' 질문 — 맞춤은 전체 설치 후
+#               /carve-harness-create 스킬로 스택에 맞게 정리(prune)
 #               비대화형은 HARNESS_COMPONENTS=md,hooks,skills,commands,orchestrator (또는 all)
 #               재실행하면 빠진 구성을 추가 설치할 수 있다 (기존 파일은 SKIP)
 #   [update]    설치된 하네스를 새 버전으로 패치 — manifest 범위만 갱신
@@ -22,6 +24,11 @@
 #               bash install.sh setup
 #               git init · PATH · LSP 서버(vtsls) · LICENSE 생성 · 보호경로 추가 ·
 #               도메인 규칙 · 스택 감지 리포트 · GSD 설치 제안
+#   [prune]     설치된 하네스에서 프로젝트에 불필요한 구성만 제거 — 네트워크 불필요
+#               bash install.sh prune --keep-list <파일>   (KEEP 경로 목록, 나머지 제거)
+#               --keep-file <경로>(반복) · --remove-file <경로> · --dry-run(미리보기)
+#               제거분은 logs/harness-backup/v<현재>/ 백업 → rollback으로 복원. 코어는 제거 거부.
+#               /carve-harness-create 스킬이 프로젝트 분석 후 자동 호출한다.
 #   [bootstrap] 하네스 파일이 이미 있으면 → 머신 준비만
 #               1) vendor 체크섬 검증  2) .claude/bin 배치(jq·shellcheck)
 #               3) jq 없으면 ~/.local/bin/jq  4) 훅 권한 + core.hooksPath
@@ -37,6 +44,7 @@ CBIN="$HERE/.claude/bin"
 MANIFEST="$HERE/.claude/harness-manifest.txt"
 VSTAMP="$HERE/.claude/harness-version"
 warn=0
+AUTO_PROJECT=0          # set by choose_setup_mode: 1 = 전체 설치 후 /carve-harness-create로 맞춤 정리
 MERGE_SETTINGS_SRC=""   # set in copy loop when the target already has settings.json
 say()  { printf '%s\n' "$*"; }
 fail() { printf 'FAIL: %s\n' "$*" >&2; exit 1; }
@@ -78,7 +86,7 @@ merge_settings_hooks() {  # $1=harness settings (source)  $2=user settings (in p
 }
 
 MODE="${1:-install}"
-case "$MODE" in install|update|rollback|setup) ;; *) fail "알 수 없는 모드: $MODE (install|update|rollback|setup)" ;; esac
+case "$MODE" in install|update|rollback|setup|prune) ;; *) fail "알 수 없는 모드: $MODE (install|update|rollback|setup|prune)" ;; esac
 
 # ── [setup] 대화형 초기 설정 ──────────────────────────────────────────────────
 # 입력은 /dev/tty (curl|bash에서도 동작). 테스트는 HARNESS_SETUP_STDIN=1 로 stdin 주입.
@@ -402,7 +410,25 @@ sel_from_components() { # env/비대화형 — 구성 단위 coarse 경로
   done
 }
 
-select_components() { # → $COMPONENTS + $SELECTED_PATHS. env > TUI > 전체.
+choose_setup_mode() { # 설치 최상단: 맞춤 구축(전체+스킬 정리) vs 수동 선택. AUTO_PROJECT 설정.
+  [ -n "${HARNESS_COMPONENTS:-}" ] && return    # env 설치 → 무변경 (회귀 가드)
+  { : < "$ASK_IN"; } 2>/dev/null || return      # tty 없음 → 무변경 (회귀 가드)
+  say "── 하네스 구축 방식 ──"
+  say "  [1] 프로젝트 분석 후 맞춤 하네스 구축 (권장)"
+  say "  [2] 수동 컴포넌트 선택"
+  ask "선택 [1/2] (엔터=1): "
+  case "$REPLY" in
+    2) return ;;                    # 기존 체크박스 TUI로 진행
+    *) AUTO_PROJECT=1 ;;            # 빈 엔터/1/기타 = 맞춤(권장)
+  esac
+}
+
+select_components() { # → $COMPONENTS + $SELECTED_PATHS. env > AUTO_PROJECT > TUI > 전체.
+  if [ "$AUTO_PROJECT" = 1 ]; then               # 맞춤 구축 → 전체 설치(스킬이 이후 정리)
+    COMPONENTS="$COMP_ALL"; say "구성 선택: 전체 (프로젝트 맞춤 예정 — /carve-harness-create)"
+    sel_from_components
+    return
+  fi
   if [ -n "${HARNESS_COMPONENTS:-}" ]; then
     [ "$HARNESS_COMPONENTS" = "all" ] && COMPONENTS="$COMP_ALL" \
       || COMPONENTS=$(printf '%s' "$HARNESS_COMPONENTS" | tr ',' ' ')
@@ -419,6 +445,87 @@ select_components() { # → $COMPONENTS + $SELECTED_PATHS. env > TUI > 전체.
   menu_loop
   collect_selected
   comp_in hooks || say "NOTE: 훅 미선택 — 차단 가드·커밋 게이트 비활성 (하네스 제약 기둥 없음)"
+}
+
+# ── prune 헬퍼 ────────────────────────────────────────────────────────────────
+# manifest의 coarse 디렉토리 줄을 현재 on-disk per-child 줄로 펼쳐 stdout에 출력(원본 불변).
+# 파일 단위 제거의 선행. rules는 프루닝 단위가 불규칙 — code-convention만 파일 단위로,
+# 나머지 하위는 dir 단위로. 멱등: 이미 펼쳐진 줄(exact 매치 아님)은 그대로 통과.
+prune_expand_manifest() {
+  local p f g
+  while IFS= read -r p; do
+    [ -n "$p" ] || continue
+    case "$p" in
+      .claude/skills|.claude/commands|.claude/agents|.claude/hooks)
+        if [ -d "$HERE/$p" ]; then
+          for f in "$HERE/$p"/*; do [ -e "$f" ] && printf '%s\n' "$p/${f##*/}"; done
+        else printf '%s\n' "$p"; fi ;;
+      .claude/rules)
+        if [ -d "$HERE/$p" ]; then
+          for f in "$HERE/$p"/*; do
+            [ -e "$f" ] || continue
+            if [ "${f##*/}" = "code-convention" ] && [ -d "$f" ]; then
+              for g in "$f"/*; do [ -e "$g" ] && printf '%s\n' "$p/code-convention/${g##*/}"; done
+            else printf '%s\n' "$p/${f##*/}"; fi
+          done
+        else printf '%s\n' "$p"; fi ;;
+      *) printf '%s\n' "$p" ;;
+    esac
+  done < "$MANIFEST"
+}
+
+# COMPFILE 재계산 — 살아남은 manifest 항목의 구성만 남긴다(완전 프루닝된 구성은 탈락 →
+# 이후 update가 comp_in 게이트로 SKIP, 부활 방지).
+prune_update_compfile() {
+  local p c
+  { while IFS= read -r p; do
+      [ -n "$p" ] || continue
+      c=$(comp_of "$p"); [ "$c" = "core" ] && continue
+      printf '%s\n' "$c"
+    done < "$MANIFEST"; } | sort -u > "$COMPFILE"
+}
+
+# $1=keepfile $2=removefile $3=keepmode(1/0) $4=dry(1/0)
+prune_run() {
+  local keepf="$1" removef="$2" keepmode="$3" dry="$4"
+  if [ "$keepmode" = 1 ] && [ ! -s "$keepf" ]; then
+    fail "빈 keep-list — 전체 제거 방지. 최소 1개 --keep-file/--keep-list 필요"
+  fi
+  # PROTECTED 코어 — keep/remove 로직 이전에 무조건 유지(하네스 3기둥·크로스에이전트 진입·스크립트).
+  local prot='^(CLAUDE\.md|AGENTS\.md|RULES\.md|\.cursorrules|codex\.md|\.claude/CLAUDE\.md|\.claude/settings\.json|\.claude/hooks(/|$)|\.claude/rules/safety\.md|\.claude/rules/common(/|$)|\.claude/rules/testing\.md|vendor(/|$)|\.githooks(/|$)|VERSION|install\.sh|uninstall\.sh)'
+  local OLDV BAK tmp work removed=0 p remove
+  OLDV=$(cat "$VSTAMP" 2>/dev/null | tr -d '[:space:]'); OLDV="${OLDV:-unknown}"
+  BAK="$HERE/logs/harness-backup/v$OLDV"   # update와 동일 경로 → rollback이 그대로 복원
+  work=$(mktemp); prune_expand_manifest > "$work"   # 확장본(원본 불변) — dry-run 안전
+  tmp=$(mktemp)
+  while IFS= read -r p; do
+    [ -n "$p" ] || continue
+    # eval-java.sh는 Java 전용 스코어러 → 프루닝 허용(archunit과 묶여 제거, AUDIT-08 스킵).
+    # 나머지 훅은 언어 무관 코어라 protected.
+    if [ "$p" != ".claude/hooks/eval-java.sh" ] && printf '%s' "$p" | grep -Eq "$prot"; then
+      grep -qxF "$p" "$removef" 2>/dev/null && say "PROTECTED (제거 거부): $p"
+      printf '%s\n' "$p" >> "$tmp"; continue
+    fi
+    remove=0
+    grep -qxF "$p" "$removef" 2>/dev/null && remove=1
+    [ "$keepmode" = 1 ] && ! grep -qxF "$p" "$keepf" 2>/dev/null && remove=1
+    if [ "$remove" = 1 ]; then
+      if [ ! -e "$HERE/$p" ]; then say "SKIP: $p (이미 없음)"; continue; fi
+      if [ "$dry" = 1 ]; then say "WOULD REMOVE: $p"; printf '%s\n' "$p" >> "$tmp"; continue; fi
+      mkdir -p "$BAK/$(dirname "$p")"
+      cp -R "$HERE/$p" "$BAK/$p" 2>/dev/null
+      rm -rf "${HERE:?}/$p"
+      say "PRUNED: $p (백업: logs/harness-backup/v$OLDV/$p)"
+      removed=$((removed + 1))
+    else
+      printf '%s\n' "$p" >> "$tmp"
+    fi
+  done < "$work"
+  rm -f "$work"
+  if [ "$dry" = 1 ]; then rm -f "$tmp"; say "── dry-run: $removed 개 제거 예정 (변경 없음) ──"; return; fi
+  mv "$tmp" "$MANIFEST"
+  prune_update_compfile
+  say "── prune 완료: $removed 개 제거 · 백업 logs/harness-backup/v$OLDV/ (rollback 복원 가능) ──"
 }
 
 # ── [rollback] ───────────────────────────────────────────────────────────────
@@ -441,6 +548,31 @@ if [ "$MODE" = "rollback" ]; then
   rm -rf "$LATEST"
   say "OK: v${PREV#v} 복원 완료 — 백업 소비됨 (연속 rollback은 그 이전 백업으로)"
   say "NOTE: 업데이트로 새로 추가된 파일은 남는다(무해) — 필요 시 수동 삭제"
+fi
+
+# ── [prune] ──────────────────────────────────────────────────────────────────
+# 네트워크 불필요 — 처리 후 bootstrap로 fall-through(끝에서 harness-audit로 결과 검증).
+if [ "$MODE" = "prune" ]; then
+  [ -f "$MANIFEST" ] || fail "manifest 없음 — 설치된 하네스가 아님. install.sh(설치)를 먼저 실행"
+  shift 2>/dev/null || true   # 'prune' 제거
+  KEEPTMP=$(mktemp); REMOVETMP=$(mktemp); KEEPMODE=0; DRY=0
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --keep-list)  shift; [ -f "${1:-}" ] || fail "--keep-list 파일 없음: ${1:-}"
+                    grep -vE '^[[:space:]]*(#|$)' "$1" >> "$KEEPTMP"; KEEPMODE=1 ;;
+      --keep-file)  shift; [ -n "${1:-}" ] && printf '%s\n' "$1" >> "$KEEPTMP"; KEEPMODE=1 ;;
+      --remove-file) shift; [ -n "${1:-}" ] && printf '%s\n' "$1" >> "$REMOVETMP" ;;
+      --dry-run)    DRY=1 ;;
+      *) rm -f "$KEEPTMP" "$REMOVETMP"; fail "prune: 알 수 없는 인자 $1 (--keep-list|--keep-file|--remove-file|--dry-run)" ;;
+    esac
+    shift 2>/dev/null || break
+  done
+  if [ "$KEEPMODE" = 0 ] && [ ! -s "$REMOVETMP" ]; then
+    rm -f "$KEEPTMP" "$REMOVETMP"; fail "prune: --keep-list/--keep-file 또는 --remove-file 필요"
+  fi
+  prune_run "$KEEPTMP" "$REMOVETMP" "$KEEPMODE" "$DRY"
+  rm -f "$KEEPTMP" "$REMOVETMP"
+  [ "$DRY" = 1 ] && exit 0   # dry-run은 bootstrap/audit 생략
 fi
 
 # ── [fetch / update] ─────────────────────────────────────────────────────────
@@ -521,6 +653,7 @@ if [ "$NEED_FETCH" -eq 1 ]; then
     printf '%s\n' "$NEWV" > "$VSTAMP"
     say "OK: 버전 스탬프 v$NEWV"
   else
+    choose_setup_mode         # 최상단: 맞춤 구축(전체+정리) vs 수동 선택
     select_components
     mkdir -p "$HERE/.claude"   # 나머지 경로는 복사 루프가 생성 — 미리 만들면 SKIP 오탐
     touch "$MANIFEST"          # 재실행으로 구성 추가 시 기존 기록 보존
@@ -534,6 +667,25 @@ if [ "$NEED_FETCH" -eq 1 ]; then
         continue
       fi
       if [ -e "$HERE/$p" ] && [ "${HARNESS_FORCE:-0}" != "1" ]; then
+        # Hook dirs must never stay partial: a pre-existing .claude/hooks (foreign,
+        # emptied by uninstall, or an interrupted install) made this SKIP the whole
+        # dir, dropping lib-protected.sh — the pre-commit gate then sourced a missing
+        # file and fail-closed EVERY commit. Fill only MISSING children instead.
+        # ponytail: one-level heal — nested partial hook subdirs are not a real case.
+        case "$p" in
+          .claude/hooks | .githooks)
+            if [ -d "$SRC/$p" ] && [ -d "$HERE/$p" ]; then
+              healed=0
+              for hc in "$SRC/$p"/*; do
+                [ -e "$hc" ] || continue
+                hrel="$p/${hc##*/}"
+                [ -e "$HERE/$hrel" ] && continue
+                cp -R "$hc" "$HERE/$hrel" && { say "HEAL: $hrel (누락 복구)"; healed=1; }
+              done
+              [ "$healed" -eq 1 ] && { grep -qx "$p" "$MANIFEST" 2>/dev/null || printf '%s\n' "$p" >> "$MANIFEST"; }
+              continue
+            fi ;;
+        esac
         say "SKIP: $p 이미 존재 (덮어쓰려면 HARNESS_FORCE=1)"
         warn=1
         continue
@@ -549,6 +701,13 @@ if [ "$NEED_FETCH" -eq 1 ]; then
     printf '%s\n' $COMPONENTS > "$COMPFILE"
     [ -f "$SRC/VERSION" ] && tr -d '[:space:]' < "$SRC/VERSION" > "$VSTAMP"
 
+    # 맞춤 구축: 세션에서 /carve-harness-create가 읽고 지우는 마커 (jq 불요, 평문 3줄)
+    if [ "$AUTO_PROJECT" = 1 ]; then
+      { echo pending
+        printf 'version=%s\n' "$(tr -d '[:space:]' < "$SRC/VERSION" 2>/dev/null)"
+      } > "$HERE/.claude/harness-create-pending"
+    fi
+
     # .gitignore — 하네스 런타임 산출물 무시 블록 (마커로 관리, uninstall이 제거)
     if ! grep -q '>>> harness' "$HERE/.gitignore" 2>/dev/null; then
       {
@@ -558,6 +717,7 @@ if [ "$NEED_FETCH" -eq 1 ]; then
         echo '.claude/harness-manifest.txt'
         echo '.claude/harness-version'
         echo '.claude/harness-components'
+        echo '.claude/harness-create-pending'
         echo 'specs/HANDOFF.md'
         echo '# <<< harness <<<'
       } >> "$HERE/.gitignore"
@@ -666,7 +826,21 @@ elif CLAUDE_PROJECT_DIR="$HERE" bash "$HERE/.claude/hooks/harness-audit.sh"; the
   [ "$warn" -eq 0 ] && say "설치 완료 — 하네스 전 게이트 활성." \
                     || say "설치 완료(경고 있음) — 위 WARN/ACTION/SKIP 항목 확인."
   if [ "$MODE" = "install" ]; then
-    say "다음 단계: bash install.sh setup — 대화형 초기 설정 (git·PATH·LICENSE·보호경로·도메인 규칙·GSD)"
+    if [ "$AUTO_PROJECT" = 1 ]; then
+      say ""
+      say "┌─────────────────────────────────────────────────────────────┐"
+      say "│  맞춤 하네스 구축 예약됨 — 전체 설치 완료, 지금 바로 동작    │"
+      say "└─────────────────────────────────────────────────────────────┘"
+      say "프로젝트 스택에 맞지 않는 규칙·에이전트·스킬을 정리하려면"
+      say "Claude Code 세션에서 다음을 실행하세요:"
+      say ""
+      say "    /carve-harness-create"
+      say ""
+      say "프로젝트를 분석해 제거 대상을 제안하고, 1회 확인 후 정리합니다."
+      say "정리하지 않아도 하네스는 정상 동작합니다(전체 구성 유지)."
+    else
+      say "다음 단계: bash install.sh setup — 대화형 초기 설정 (git·PATH·LICENSE·보호경로·도메인 규칙·GSD)"
+    fi
   fi
 else
   say "---"

@@ -1,5 +1,11 @@
 logs/
 
+# macOS Finder cruft
+.DS_Store
+
+# external skill-manager lockfile (theme-factory is vendored directly, not lock-managed)
+skills-lock.json
+
 # secrets — never commit env files (HYG-02)
 /.env
 /.env.*

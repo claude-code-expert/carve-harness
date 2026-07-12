@@ -145,11 +145,11 @@ if jq -e '.hooks.SessionStart and .hooks.PreToolUse and .hooks.Stop' "$T3/.claud
 else
   no "settings.json merge (hooks unregistered = harness inert)"
 fi
-# LSP/ponytail plugin declarations must survive the merge into pre-existing settings.
-if jq -e '.enabledPlugins["vtsls@claude-code-lsps"] and .enabledPlugins["jdtls@claude-code-lsps"] and .enabledPlugins["ponytail@ponytail"]' \
+# LSP/ponytail/frontend-design plugin declarations must survive the merge into pre-existing settings.
+if jq -e '.enabledPlugins["vtsls@claude-code-lsps"] and .enabledPlugins["jdtls@claude-code-lsps"] and .enabledPlugins["ponytail@ponytail"] and .enabledPlugins["frontend-design@claude-code-plugins"]' \
      "$T3/.claude/settings.json" >/dev/null 2>&1 \
-   && jq -e '.extraKnownMarketplaces["claude-code-lsps"]' "$T3/.claude/settings.json" >/dev/null 2>&1; then
-  ok "merge carries LSP(vtsls/jdtls) + ponytail plugin declarations"
+   && jq -e '.extraKnownMarketplaces["claude-code-lsps"] and .extraKnownMarketplaces["claude-code-plugins"]' "$T3/.claude/settings.json" >/dev/null 2>&1; then
+  ok "merge carries LSP(vtsls/jdtls) + ponytail + frontend-design plugin declarations"
 else
   no "plugin declarations lost in settings merge"
 fi

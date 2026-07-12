@@ -21,9 +21,11 @@
 
 | 역할 | 모델 | effort | 비고 |
 | --- | --- | --- | --- |
-| 오케스트레이터(메인 세션) | opus | high | 작업 분해·결과 종합·판단 담당 |
+| 오케스트레이터(메인 세션) | Fable5 | xhigh | 작업 분해·결과 종합·판단 담당 |
+| 리서처  | Fable5 | xhigh | Context7 과 인터넷 자료 수집, 분석, 개발 계획, 요구사항정의 작성  담당 |
+| 개발 및 테스트, 디버깅 | sonnet-5 | xhigh | 코드 작성, 테스트 케이스 작성, 디버깅, 리팩토링 담당 |
 | **ultracode / workflow로 스폰되는 워커** | **sonnet-5** | **high** | 구현·마이그레이션·테스트 작성 |
-| 읽기 전용 리뷰어(@reviewer) | opus | high | lint·테스트·보안 스캔 도구만 허용 |
+| 읽기 전용 리뷰어(@reviewer) | sonnet-5 | high | lint·테스트·보안 스캔 도구만 허용 |
 | 포매팅·단순 변환 | haiku | low | 기계적 작업 |
 
 **에스컬레이션 규칙 (필수):**
@@ -122,9 +124,9 @@ skinparam shadowing false
 skinparam defaultFontName "Noto Sans CJK KR"
 
 actor 사용자 as User
-participant "오케스트레이터\n(opus high)" as Orch
+participant "오케스트레이터\n(Fable5 xhigh)" as Orch
 participant "워커 1..N\n(sonnet-5 high)" as Workers
-participant "@reviewer\n(opus, read-only)" as Rev
+participant "@reviewer\n(sonnet-5, read-only)" as Rev
 database "tasks.json /\n공유 계약 문서" as Files
 
 User -> Orch : 요구사항 + 수용 기준
