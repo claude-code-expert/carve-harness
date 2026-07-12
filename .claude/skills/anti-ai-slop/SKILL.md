@@ -1,37 +1,118 @@
 ---
 name: anti-ai-slop
-description: 이미지·HTML·SVG·슬라이드 등 시각 산출물을 생성·수정하기 전 반드시 발동한다. 그라데이션·글로우·장식 모션을 금지하고 정보 위계·여백·타이포로 품질을 만드는 게이트. AI 특유의 조악한(slop) 디자인을 차단한다.
+description: 이미지·HTML·SVG·슬라이드·PDF 등 시각 산출물과 문서·리포트·카피 글쓰기를 생성·수정하기 전 반드시 발동한다. 그라데이션·글로우·장식 모션 등 AI 특유의 조악한(slop) 디자인을 차단하고, 상투어·균질 구조·불릿 남발 등 AI 티가 나는 글쓰기 흔적을 제거한다. 정보 위계·여백·타이포·근거·절제로 시니어 실무자가 만든 수준의 고급 산출물을 만드는 품질 게이트. 무언가를 "예쁘게" 또는 "그럴듯하게" 만들려는 순간마다 이 게이트를 통과시킨다.
 ---
 
-# 이미지·HTML 생성 규칙 — Anti-AI-Slop
+# Anti-AI-Slop — 고급 산출물 품질 게이트
 
-> 모든 이미지·HTML·SVG·슬라이드 생성에 적용. 장식이 아니라 정보 위계·여백·정렬·타이포로 품질을 만든다.
+> 목표는 "AI가 만든 티를 숨기는 것"이 아니라, **판단을 담아 만드는 것**이다. Slop은 판단이 빠진 자리를 장식·상투어·균질 구조가 메꾼 결과다. 판단(무엇을 강조하고, 무엇을 버리고, 왜 이 선택인가)을 넣으면 티는 자연히 사라지고 결과는 시니어 실무자의 산출물과 구분되지 않는다.
 
-## MUST NOT (금지)
+## 핵심 원칙 (모든 범위 공통)
 
-- **그라데이션 일체 금지** — `linear-gradient` · `radial-gradient` · `conic-gradient`, 배경·채움·텍스트(`background-clip:text`) 전부. 특히 보라/핑크 계열.
+- **모든 요소는 "이게 무슨 정보를 전달하는가"에 답할 수 있어야 한다.** 답 못 하면 삭제한다. 장식·상투어·뱃지·불릿·형용사 전부에 적용된다.
+- **품질은 더함이 아니라 뺌으로 만든다.** 그라데이션·글로우·이모지·과장어를 빼고, 위계·여백·근거·구체 명사를 남긴다.
+- **균질함은 기계의 지문이다.** 모든 섹션이 같은 길이, 모든 리스트가 같은 항목 수, 모든 문단이 같은 리듬이면 사람이 쓴 게 아니다. 의도적으로 비대칭하게 만든다.
+
+이 게이트는 세 범위를 커버한다. 해당 작업이 시작되면 아래 요약 규칙을 지키고, 실제 산출물을 만들기 직전 관련 `references/` 파일을 읽어 세부 기준을 적용한다.
+
+| 범위 | 무엇을 막나 | 세부 기준 |
+|------|-------------|-----------|
+| 시각 (이미지·HTML·SVG) | 그라데이션·글로우·장식 모션·워터마크 | `references/visual-craft.md` |
+| 슬라이드·PDF | 벽지 텍스트·불릿 데크·템플릿 티 | `references/slides-pdf.md` |
+| 글쓰기 (문서·리포트·카피) | 상투어·균질 구조·불릿 남발·과장 | `references/writing-tells.md` |
+
+---
+
+## 1. 시각 산출물 — 즉시 적용 규칙
+
+이미지·HTML·SVG를 만들 땐 다음 하드 게이트를 먼저 통과시킨다. 세부 크래프트(타입 스케일, 8pt 그리드, 시각 위계 만드는 법)는 산출물 작성 직전 `references/visual-craft.md`를 읽어 적용한다.
+
+### MUST NOT (금지)
+
+- **그라데이션 일체 금지** — `linear-gradient` · `radial-gradient` · `conic-gradient`. 배경·채움·텍스트(`background-clip:text`) 전부. 특히 보라/핑크 계열.
 - **글로우·컬러 그림자 금지** — 색 들어간 `box-shadow`, 광택 inset 링, `blur ≥ 20px` 그림자, `backdrop-filter: blur`(글래스모피즘).
-- **장식 모션 금지** — hover 시 `transform: translate/scale`, 로드 시 fade/stagger, `pulse·shimmer·float·glow` 키프레임. `transition`은 색·투명도 등 기능적 상태에만 150ms 이하.
+- **장식 모션 금지** — hover 시 `transform: translate/scale`, 로드 시 fade/stagger, `pulse·shimmer·float·glow` 키프레임. `transition`은 색·투명도 등 기능적 상태 변화에만, 150ms 이하.
 - **배경 장식 금지** — 거대 반투명 워터마크, 닷·그리드 배경, 페이드 마스크, 광선.
 - **카드 상단 컬러 액센트 바 금지** (`border-top: Npx solid color`).
 - **이모지 불릿·장식 금지**, 뱃지/pill 남발 금지.
-- **마케팅 상투어 금지** — Seamlessly, Elevate, Unlock, Empower, Supercharge, ✨ 등.
+- **Blockquote 혹은 네모 박스에 라운드 형태의 테두리 금지**
 
-## MUST (강제)
+### MUST (강제)
 
 - **색**: 무채색(흰/회/검) 베이스 + 액센트 1색. 색은 의미(상태·위계)에만 쓴다.
 - **그림자**: 쓰더라도 중성 회색 1단계만 (`0 1px 2px rgba(0,0,0,.06)`). 없어도 좋다.
 - **구획**: 효과 대신 `1px solid border` + 여백으로 나눈다.
-- **모서리**: `border-radius`는 0~8px. 한쪽 테두리(`border-left` 등)엔 radius 0.
+- **모서리**: `border-radius` 0~8px. 한쪽 테두리(`border-left` 등)엔 radius 0.
 - **위계**: 크기·굵기·여백·정렬로 만든다. 색·효과로 만들지 않는다.
-- **폰트**: Inter/Roboto/Arial/system-ui로 기본 수렴 금지. 목적에 맞는 폰트를 의도적으로 고르고 이유를 한 줄 밝힌다.
-- **정당성**: 모든 시각 요소는 "이게 어떤 정보를 전달하는가"에 답할 수 있어야 한다. 답 못 하면 삭제한다.
+- **폰트**: Inter/Roboto/Arial/system-ui로 기본 수렴 금지. 목적에 맞는 폰트를 의도적으로 고르고 이유를 한 줄 밝힌다. (추천 목록은 `references/visual-craft.md`)
+- **접근성**: 본문 대비 4.5:1, 큰 텍스트 3:1 이상 (WCAG 2.1 AA). 색만으로 상태를 구분하지 않는다.
+
+---
+
+## 2. 슬라이드·PDF — 즉시 적용 규칙
+
+pptx/pdf 스킬과 함께 쓸 때, 데크·보고서에서 AI 티를 만드는 것은 대개 **불릿 벽**과 **균질한 템플릿 리듬**이다. 산출물 작성 직전 `references/slides-pdf.md`를 읽는다. 요약:
+
+- 슬라이드 1장 = 주장 1개. 제목은 "매출 현황"(주제)이 아니라 "3분기 매출 12% 감소, 이탈이 원인"(주장)으로 쓴다.
+- 불릿은 최후의 수단. 가능하면 도식·비교표·단일 숫자로 대체한다. 불릿을 쓰면 항목 수·길이를 일부러 다르게 한다.
+- 모든 슬라이드가 같은 레이아웃이면 지문이 된다. 정보 유형에 따라 레이아웃을 바꾼다.
+- 시각 규칙(색·그림자·폰트)은 1번 섹션과 동일하게 적용.
+
+---
+
+## 3. 글쓰기 — 즉시 적용 규칙
+
+문서·리포트·카피를 쓸 때, 아래는 AI 텍스트의 대표적 지문이다. **초안을 쓴 뒤 이 목록으로 훑어 제거**한다. 세부 목록과 교정 예시는 `references/writing-tells.md`.
+
+### 제거 대상 (AI 지문)
+
+- **상투 어휘**: delve, tapestry, realm, testament, showcase, underscore, pivotal, multifaceted, meticulous, seamless, robust, leverage(동사), navigate(비유), foster / (한글) ~을 통해, ~에 다름 아니다, 바야흐로, 화룡점정, 마침표를 찍다, 나침반이 되다.
+- **부풀린 삼단 구조 (rule of three)**: "빠르고, 정확하고, 강력한" 식으로 형용사 3개를 습관적으로 나열. 매 문단 삼단 구조면 기계다.
+- **부정 대구(negative parallelism)**: "단순한 X가 아니라, Y입니다" / "It's not just X — it's Y" 패턴. 남발 금지.
+- **"From X to Y" 나열**: "콘텐츠 제작부터 데이터 분석까지" 식 습관적 범위 나열.
+- **빈 메타 문장**: "이 글에서는 ~을 살펴보겠습니다", "결론적으로, 우리는 ~을 확인했습니다", "~은 아무리 강조해도 지나치지 않습니다".
+- **과잉 헷징**: 모든 문장이 "~일 수 있습니다 / 아마도 / ~하는 경향이 있습니다"로 균일하게 조심스러움.
+- **em dash 남발**: 사람은 500단어에 1번꼴, AI는 50~80단어마다. 한 단락에 두 번 이상 나오면 줄인다.
+- **형식 지문**: 굵게 남발, 이모지 불릿, 모든 섹션이 같은 소제목 수·같은 문단 길이.
+
+### 남길 것 (사람의 크래프트)
+
+- **구체 명사·숫자·고유명**: "상당한 개선" → "응답 P95가 820ms→210ms". 추상 형용사를 데이터로 바꾼다.
+- **비대칭 리듬**: 짧은 문장과 긴 문장을 섞는다. 한 문장짜리 문단을 두려워하지 않는다.
+- **판단과 근거**: 무엇을 권하고 왜 그런지, 반례는 무엇인지. 균형 잡힌 나열이 아니라 입장.
+- **불필요한 서론·결론 삭제**: 첫 문장부터 본론. "결론적으로" 없이 결론.
+
+---
 
 ## 출력 전 자가 점검 — 하나라도 YES면 제거 후 재작성
 
+**시각 (해당 시)**
 - [ ] gradient(any)가 있는가?
 - [ ] 색 들어간 그림자 또는 `blur ≥ 20px`가 있는가?
 - [ ] hover/load에 transform·fade·키프레임이 있는가?
 - [ ] 콘텐츠와 무관한 배경 장식(워터마크/그리드/광선)이 있는가?
-- [ ] 정보를 전달하지 않는 순수 장식 요소가 있는가?
 - [ ] 폰트가 기본값(Inter/Roboto/Arial/system)으로 수렴했는가?
+- [ ] 본문 대비가 4.5:1 미만인가?
+
+**글쓰기 (해당 시)**
+- [ ] 상투 어휘(delve/tapestry/~을 통해 등)가 있는가?
+- [ ] 형용사 삼단 나열이나 "단순한 X가 아니라 Y" 대구가 반복되는가?
+- [ ] "이 글에서는/결론적으로" 같은 빈 메타 문장이 있는가?
+- [ ] 모든 문단·섹션 길이가 균질한가?
+- [ ] 추상 형용사가 구체 숫자·명사로 바뀌지 않은 채 남았는가?
+- [ ] em dash가 한 단락에 두 번 이상인가?
+
+**공통**
+- [ ] 정보를 전달하지 않는 순수 장식/수사가 있는가?
+
+---
+
+## 출처
+
+이 스킬의 기준은 아래 공개 자료에서 검증·정리했다. 세부 근거는 각 `references/` 파일 하단의 출처 표기 참조.
+
+- Adam Wathan & Steve Schoger, *Refactoring UI* — https://refactoringui.com/
+- Matthew Butterick, *Practical Typography* (Summary of key rules) — https://practicaltypography.com/summary-of-key-rules.html
+- *Wikipedia:Signs of AI writing* — https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing
+- WCAG 2.1 AA §1.4.3 Contrast (Minimum) — https://www.w3.org/WAI/WCAG21/Understanding/contrast-minimum.html
+- U.S. Web Design System, Color tokens — https://designsystem.digital.gov/design-tokens/color/overview/
