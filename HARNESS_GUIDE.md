@@ -6,6 +6,8 @@
 
 **대상 독자**: Claude Code(또는 임의 코딩 에이전트)로 실무 개발을 하며, 에이전트의 사고(규칙 무시·미검증 완료 선언·컨텍스트 소실)를 구조적으로 막고 싶은 사람.
 
+> **먼저 데모로 감 잡기**: <a href="docs/html/harness-demo/index.html" target="_blank" rel="noopener noreferrer">하네스 적용 전/후 화면 비교 (새 창)</a> — 같은 프롬프트를 하네스 없이 / 하네스로 실행한 두 결과를 나란히 보고 "설득 vs 강제"의 차이를 눈으로 확인한다.
+
 ---
 
 ## 1장. 하네스 엔지니어링이란
@@ -201,6 +203,8 @@ AUDIT-07  게이트웨이 룰 ↔ Stop 게이트(GATE-04) 매핑 (게이트웨�
 ### 6단계. 패키징 — 드롭인·업데이트·롤백
 
 다른 프로젝트로 이식 가능해야 템플릿이다: `install.sh`(멱등, 오프라인, 기존 파일 불가침) → `update`(VERSION 비교, manifest 범위만, 자동 백업) → `rollback`(백업 복원) → `setup`(대화형 초기 설정). 버전 규율은 pre-commit이 강제: VERSION 변경 커밋에 CHANGELOG 항목 없으면 차단.
+
+**맞춤 절단(`prune`)** — 상시 로드되는 `rules/`는 세션 시작 토큰을 늘린다(제1불변식의 비용). 전체 설치 후 `/carve-harness-create` 스킬이 프로젝트 스택을 분석해 맞지 않는 규칙·에이전트·스킬을 `install.sh prune`으로 잘라낸다. 되돌림은 `update`와 같은 백업 경로를 재사용하므로 `rollback` 한 번. 핵심 안전장치: 코어(제약·피드백·상태 3기둥)는 제거 거부, 절단 후 `harness-audit`가 orphan 정책(예: eval-java↔archunit 불일치)을 기계 검출한다 — 하네스가 자신의 절단을 검증한다.
 
 ---
 

@@ -11,7 +11,7 @@ T=$(mktemp -d)
 git -C "$T" init -q
 
 # (1) fetch-mode install from local source: exit 0, core files land, manifest written.
-( cd "$T" && HARNESS_SRC_DIR="$REPO" bash "$REPO/install.sh" ) >/dev/null 2>&1
+( cd "$T" && HARNESS_COMPONENTS=all HARNESS_SRC_DIR="$REPO" bash "$REPO/install.sh" ) >/dev/null 2>&1
 code=$?
 if [ "$code" -eq 0 ] && [ -f "$T/.claude/hooks/pretool-guard.sh" ] \
    && [ -f "$T/AGENTS.md" ] && [ -x "$T/.githooks/pre-commit" ] \
@@ -33,7 +33,7 @@ fi
 # (3) existing file preserved (no clobber) and excluded from manifest.
 T2=$(mktemp -d); git -C "$T2" init -q
 echo "MY OWN RULES" > "$T2/CLAUDE.md"
-( cd "$T2" && HARNESS_SRC_DIR="$REPO" bash "$REPO/install.sh" ) >/dev/null 2>&1
+( cd "$T2" && HARNESS_COMPONENTS=all HARNESS_SRC_DIR="$REPO" bash "$REPO/install.sh" ) >/dev/null 2>&1
 if grep -q "MY OWN RULES" "$T2/CLAUDE.md" && ! grep -qx 'CLAUDE.md' "$T2/.claude/harness-manifest.txt"; then
   ok "existing CLAUDE.md preserved + not in manifest"
 else
@@ -137,7 +137,7 @@ fi
 T3=$(mktemp -d); git -C "$T3" init -q
 mkdir -p "$T3/.claude"
 printf '{"model":"opus","permissions":{"allow":["Bash(npm run test)"]}}\n' > "$T3/.claude/settings.json"
-( cd "$T3" && HARNESS_SRC_DIR="$REPO" bash "$REPO/install.sh" ) >/dev/null 2>&1
+( cd "$T3" && HARNESS_COMPONENTS=all HARNESS_SRC_DIR="$REPO" bash "$REPO/install.sh" ) >/dev/null 2>&1
 if jq -e '.hooks.SessionStart and .hooks.PreToolUse and .hooks.Stop' "$T3/.claude/settings.json" >/dev/null 2>&1 \
    && [ "$(jq -r '.model' "$T3/.claude/settings.json")" = "opus" ] \
    && jq -e '.permissions.allow | index("Bash(npm run test)")' "$T3/.claude/settings.json" >/dev/null 2>&1; then
@@ -145,17 +145,17 @@ if jq -e '.hooks.SessionStart and .hooks.PreToolUse and .hooks.Stop' "$T3/.claud
 else
   no "settings.json merge (hooks unregistered = harness inert)"
 fi
-# LSP/ponytail plugin declarations must survive the merge into pre-existing settings.
-if jq -e '.enabledPlugins["vtsls@claude-code-lsps"] and .enabledPlugins["jdtls@claude-code-lsps"] and .enabledPlugins["ponytail@ponytail"]' \
+# LSP/ponytail/frontend-design plugin declarations must survive the merge into pre-existing settings.
+if jq -e '.enabledPlugins["vtsls@claude-code-lsps"] and .enabledPlugins["jdtls@claude-code-lsps"] and .enabledPlugins["ponytail@ponytail"] and .enabledPlugins["frontend-design@claude-code-plugins"]' \
      "$T3/.claude/settings.json" >/dev/null 2>&1 \
-   && jq -e '.extraKnownMarketplaces["claude-code-lsps"]' "$T3/.claude/settings.json" >/dev/null 2>&1; then
-  ok "merge carries LSP(vtsls/jdtls) + ponytail plugin declarations"
+   && jq -e '.extraKnownMarketplaces["claude-code-lsps"] and .extraKnownMarketplaces["claude-code-plugins"]' "$T3/.claude/settings.json" >/dev/null 2>&1; then
+  ok "merge carries LSP(vtsls/jdtls) + ponytail + frontend-design plugin declarations"
 else
   no "plugin declarations lost in settings merge"
 fi
 # idempotency: second install must not duplicate hook groups.
 n1=$(jq '.hooks.SessionStart | length' "$T3/.claude/settings.json")
-( cd "$T3" && HARNESS_SRC_DIR="$REPO" bash "$REPO/install.sh" ) >/dev/null 2>&1
+( cd "$T3" && HARNESS_COMPONENTS=all HARNESS_SRC_DIR="$REPO" bash "$REPO/install.sh" ) >/dev/null 2>&1
 n2=$(jq '.hooks.SessionStart | length' "$T3/.claude/settings.json")
 [ "$n1" = "$n2" ] && ok "settings merge idempotent (no dup hooks on re-install)" || no "merge dup ($n1->$n2)"
 rm -rf "$T3"

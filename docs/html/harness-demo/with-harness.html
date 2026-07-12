@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ledgerly — 팀 지출 관리</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css">
+<style>
+  /* 하네스 적용 — anti-ai-slop 게이트 + 시각 규칙 통과.
+     폰트 이유: Pretendard(한/영/숫자 정합) 본문 + JetBrains Mono(가격·수치의 자릿수 정렬).
+     색: 무채색 베이스 + teal 1색, 색은 의미(주요 액션·추천)에만. 그라데이션·글로우·장식모션 없음. */
+  :root {
+    --ink:#0F172A; --ink-mute:#475569; --ink-faint:#94A3B8;
+    --bg:#FFFFFF; --surface:#F8FAFC; --border:#E2E8F0; --border-2:#CBD5E1;
+    --accent:#0F766E; --accent-bg:#F0FDFA;
+    --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+    --sans:"Pretendard Variable",Pretendard,-apple-system,"Apple SD Gothic Neo","Noto Sans KR",system-ui,sans-serif;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:var(--sans); color:var(--ink); background:var(--bg); line-height:1.65; -webkit-font-smoothing:antialiased; }
+  a { color:inherit; text-decoration:none; }
+  .wrap { max-width:1040px; margin:0 auto; padding:0 24px; }
+
+  /* Hero */
+  header.hero { border-bottom:1px solid var(--border); }
+  .hero-inner { max-width:1040px; margin:0 auto; padding:72px 24px 64px; }
+  .kicker { font-family:var(--mono); font-size:12px; letter-spacing:0.08em; text-transform:uppercase; color:var(--accent); margin-bottom:16px; }
+  .hero h1 { font-size:44px; line-height:1.2; font-weight:700; letter-spacing:-0.01em; max-width:640px; }
+  .hero p { font-size:18px; color:var(--ink-mute); margin:16px 0 32px; max-width:560px; }
+  .actions { display:flex; gap:12px; flex-wrap:wrap; }
+  .btn { display:inline-block; padding:12px 24px; font-size:15px; font-weight:600; border:1px solid var(--accent); }
+  .btn-primary { background:var(--accent); color:#fff; }
+  .btn-ghost { background:#fff; color:var(--accent); }
+
+  /* Features */
+  .features { display:grid; grid-template-columns:repeat(3,1fr); gap:20px; padding:56px 0; }
+  .feature { border:1px solid var(--border); padding:24px; }
+  .feature .n { font-family:var(--mono); font-size:12px; color:var(--ink-faint); }
+  .feature h3 { font-size:17px; font-weight:600; margin:10px 0 8px; }
+  .feature p { font-size:14px; color:var(--ink-mute); }
+
+  /* Pricing */
+  .pricing { padding:16px 0 64px; }
+  .pricing h2 { font-size:24px; font-weight:700; margin-bottom:8px; }
+  .pricing .sub { color:var(--ink-mute); font-size:15px; margin-bottom:28px; }
+  .plans { display:grid; grid-template-columns:repeat(3,1fr); gap:20px; }
+  .plan { border:1px solid var(--border); padding:28px 24px; display:flex; flex-direction:column; }
+  .plan.rec { border:1px solid var(--accent); }
+  .plan .rec-tag { font-family:var(--mono); font-size:11px; letter-spacing:0.06em; text-transform:uppercase; color:var(--accent); margin-bottom:10px; }
+  .plan h3 { font-size:16px; font-weight:600; }
+  .plan .price { font-family:var(--mono); font-size:34px; font-weight:600; margin:10px 0 2px; }
+  .plan .price small { font-family:var(--sans); font-size:14px; font-weight:400; color:var(--ink-faint); }
+  .plan ul { list-style:none; margin:18px 0 22px; }
+  .plan li { font-size:14px; color:var(--ink-mute); padding:8px 0; border-bottom:1px solid var(--border); }
+  .plan li:last-child { border-bottom:0; }
+  .plan .buy { margin-top:auto; text-align:center; padding:11px; font-size:14px; font-weight:600; border:1px solid var(--border-2); color:var(--ink); }
+  .plan.rec .buy { background:var(--accent); color:#fff; border-color:var(--accent); }
+
+  /* Footer CTA + search */
+  .foot { border-top:1px solid var(--border); background:var(--surface); }
+  .foot-inner { max-width:1040px; margin:0 auto; padding:56px 24px; }
+  .foot h2 { font-size:22px; font-weight:700; }
+  .foot p { color:var(--ink-mute); font-size:15px; margin:8px 0 24px; }
+  .search { display:flex; gap:8px; max-width:460px; }
+  .search input { flex:1; padding:11px 12px; font-size:14px; border:1px solid var(--border-2); font-family:var(--sans); }
+  .search input:focus { outline:2px solid var(--accent); outline-offset:-1px; }
+  .search button { padding:11px 20px; font-size:14px; font-weight:600; border:1px solid var(--accent); background:var(--accent); color:#fff; cursor:pointer; }
+  #result { margin-top:12px; font-size:14px; color:var(--ink-mute); min-height:20px; }
+</style>
+</head>
+<body>
+  <header class="hero">
+    <div class="hero-inner">
+      <p class="kicker">Ledgerly · 지출 관리</p>
+      <h1>팀 지출을 한 곳에서 관리합니다</h1>
+      <p>카드·계좌·영수증을 자동으로 분류하고, 예산을 초과하기 전에 알립니다. 수동 입력과 월말 정산을 줄입니다.</p>
+      <div class="actions">
+        <a class="btn btn-primary" href="#pricing">무료로 시작</a>
+        <a class="btn btn-ghost" href="#features">기능 보기</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="features" id="features" aria-label="기능">
+      <article class="feature">
+        <div class="n">01</div>
+        <h3>자동 분류</h3>
+        <p>연동한 카드·계좌·영수증 거래를 항목별로 분류합니다. 규칙은 직접 조정할 수 있습니다.</p>
+      </article>
+      <article class="feature">
+        <div class="n">02</div>
+        <h3>예산 알림</h3>
+        <p>항목·팀별 예산을 설정하면 한도의 80%·100% 도달 시 알림을 보냅니다.</p>
+      </article>
+      <article class="feature">
+        <div class="n">03</div>
+        <h3>지출 리포트</h3>
+        <p>주간·월간 지출을 팀 단위로 집계해 CSV로 내보낼 수 있습니다.</p>
+      </article>
+    </section>
+
+    <section class="pricing" id="pricing" aria-label="요금제">
+      <h2>요금제</h2>
+      <p class="sub">월 결제 기준. 언제든 해지할 수 있습니다.</p>
+      <div class="plans">
+        <div class="plan">
+          <h3>Free</h3>
+          <div class="price">₩0</div>
+          <ul>
+            <li>사용자 1명</li>
+            <li>월 50건 거래</li>
+            <li>기본 리포트</li>
+          </ul>
+          <a class="buy" href="#">시작하기</a>
+        </div>
+        <div class="plan rec">
+          <div class="rec-tag">소규모 팀 추천</div>
+          <h3>Team</h3>
+          <div class="price">₩12,000<small> / 월</small></div>
+          <ul>
+            <li>사용자 10명</li>
+            <li>무제한 거래</li>
+            <li>실시간 예산 알림</li>
+            <li>우선 지원</li>
+          </ul>
+          <a class="buy" href="#">Team 시작</a>
+        </div>
+        <div class="plan">
+          <h3>Business</h3>
+          <div class="price">₩29,000<small> / 월</small></div>
+          <ul>
+            <li>무제한 사용자</li>
+            <li>고급 분석</li>
+            <li>API 접근</li>
+          </ul>
+          <a class="buy" href="#">문의하기</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <div class="foot-inner">
+      <h2>지금 무료로 시작하세요</h2>
+      <p>카드 등록 없이 14일 사용해볼 수 있습니다.</p>
+      <div class="search">
+        <label for="q" class="visually-hidden" style="position:absolute;left:-9999px;">회사명 검색</label>
+        <input id="q" type="text" placeholder="회사명으로 검색" autocomplete="off">
+        <button type="button" id="go">검색</button>
+      </div>
+      <div id="result" role="status" aria-live="polite"></div>
+    </div>
+  </footer>
+
+  <script>
+    // 하네스 적용: 시크릿 하드코딩 금지(서버에서만) · 미검증 innerHTML 대신 textContent 사용.
+    document.getElementById('go').addEventListener('click', function () {
+      var q = document.getElementById('q').value.trim();
+      var out = document.getElementById('result');
+      out.textContent = q ? '“' + q + '” 검색 결과를 불러옵니다…' : '검색어를 입력하세요.';
+    });
+  </script>
+</body>
+</html>

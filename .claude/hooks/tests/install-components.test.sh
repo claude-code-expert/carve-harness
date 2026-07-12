@@ -56,9 +56,11 @@ else
   no "manifest scope"
 fi
 
-# (6) default (no env, no tty): full install, audit runs and passes.
+# (6) default choice (1 = auto/full) via stdin injection: full install, audit passes.
+#     HARNESS_SETUP_STDIN=1 reads the prompt from stdin (never /dev/tty), so this can't
+#     hang from an interactive terminal; '1' is the recommended/default setup mode.
 T3=$(mktemp -d)
-out=$( cd "$T3" && HARNESS_SRC_DIR="$REPO" bash "$REPO/install.sh" </dev/null 2>&1 )
+out=$( cd "$T3" && printf '1\n' | HARNESS_SETUP_STDIN=1 HARNESS_SRC_DIR="$REPO" bash "$REPO/install.sh" 2>&1 )
 code=$?
 if [ "$code" -eq 0 ] \
    && printf '%s' "$out" | grep -q "구성 선택: 전체" \
@@ -78,9 +80,10 @@ T4=$(mktemp -d)
 rm -rf "$T4"
 
 # (8) checkbox TUI: jump+space toggles hooks/skills/commands OFF -> md+orchestrator only.
-#     Keys: '2'=jump hooks, SP=section off, '3' skills off, '4' commands off, EOF=confirm.
+#     '2\n' answers the setup-mode prompt (2=manual). Then menu keys:
+#     '2'=jump hooks, SP=section off, '3' skills off, '4' commands off, EOF=confirm.
 T5=$(mktemp -d)
-printf '2 3 4 ' \
+printf '2\n2 3 4 ' \
   | ( cd "$T5" && HARNESS_SETUP_STDIN=1 HARNESS_SRC_DIR="$REPO" bash "$REPO/install.sh" ) >/dev/null 2>&1
 code=$?
 if [ "$code" -eq 0 ] && [ -d "$T5/.claude/agents" ] && [ -f "$T5/CLAUDE.md" ] \
@@ -91,14 +94,14 @@ else
   no "TUI section toggle (exit $code)"
 fi
 
-# (9) hooks-unselected NOTE shown when hooks section toggled off.
-out=$(printf '2 ' | ( cd "$(mktemp -d)" && HARNESS_SETUP_STDIN=1 HARNESS_SRC_DIR="$REPO" bash "$REPO/install.sh" ) 2>&1)
+# (9) hooks-unselected NOTE shown when hooks section toggled off. '2\n'=manual mode.
+out=$(printf '2\n2 ' | ( cd "$(mktemp -d)" && HARNESS_SETUP_STDIN=1 HARNESS_SRC_DIR="$REPO" bash "$REPO/install.sh" ) 2>&1)
 printf '%s' "$out" | grep -q "NOTE: 훅 미선택" \
   && ok "TUI: hooks-unselected NOTE shown" || no "hooks NOTE"
 
-# (10) unknown key ignored; enter installs the default (all selected).
+# (10) unknown key ignored; enter installs the default (all selected). '2\n'=manual mode.
 T6=$(mktemp -d)
-out=$(printf '9\n' | ( cd "$T6" && HARNESS_SETUP_STDIN=1 HARNESS_SRC_DIR="$REPO" bash "$REPO/install.sh" ) 2>&1)
+out=$(printf '2\n9\n' | ( cd "$T6" && HARNESS_SETUP_STDIN=1 HARNESS_SRC_DIR="$REPO" bash "$REPO/install.sh" ) 2>&1)
 code=$?
 if [ "$code" -eq 0 ] \
    && printf '%s' "$out" | grep -q "구성 선택: 전체" \
@@ -110,9 +113,10 @@ fi
 rm -rf "$T6"
 
 # (10b) fine-grained pick: all off ('a'), jump skills ('3'), down ('j'), space = first skill only.
+#       '2\n'=manual mode prompt first.
 T7=$(mktemp -d)
 FIRST_SKILL=$(ls "$REPO/.claude/skills" | sort | head -1)
-out=$(printf 'a3j \n' | ( cd "$T7" && HARNESS_SETUP_STDIN=1 HARNESS_SRC_DIR="$REPO" bash "$REPO/install.sh" ) 2>&1)
+out=$(printf '2\na3j \n' | ( cd "$T7" && HARNESS_SETUP_STDIN=1 HARNESS_SRC_DIR="$REPO" bash "$REPO/install.sh" ) 2>&1)
 code=$?
 if [ "$code" -eq 0 ] \
    && [ -e "$T7/.claude/skills/$FIRST_SKILL" ] \
@@ -184,6 +188,31 @@ else
   no "uninstall partial"
 fi
 
-rm -rf "$T1" "$T2" "$T3" "$T5"
+# (14) reinstall over a pre-existing/partial .claude/hooks restores current hooks
+#      instead of a whole-dir SKIP. Regression for the fail-closed-every-commit bug:
+#      a foreign or emptied hook dir made install SKIP lib-protected.sh, so the
+#      pre-commit gate sourced a missing file and blocked every commit.
+T8=$(mktemp -d)
+( cd "$T8" && HARNESS_COMPONENTS=all HARNESS_SRC_DIR="$REPO" bash "$REPO/install.sh" ) >/dev/null 2>&1
+rm -f "$T8/.claude/hooks/lib-protected.sh"                        # simulate desync
+printf '#stale\n' > "$T8/.claude/hooks/carve-protect-secrets.sh" # foreign leftover keeps dir present
+( cd "$T8" && HARNESS_COMPONENTS=all HARNESS_SRC_DIR="$REPO" bash "$REPO/install.sh" ) >/dev/null 2>&1
+if [ -f "$T8/.claude/hooks/lib-protected.sh" ] && [ -f "$T8/.claude/hooks/pretool-guard.sh" ]; then
+  ok "reinstall self-heals missing lib-protected.sh in existing hook dir"
+else
+  no "reinstall self-heal over existing hook dir (coarse-SKIP regression)"
+fi
+
+# (15) dev-only skill (carve-guide) is never distributed: a full install strips it
+#      while other skills land. Guards the DEV_SKILLS exclusion (build_items + coarse strip).
+T9=$(mktemp -d)
+( cd "$T9" && HARNESS_COMPONENTS=all HARNESS_SRC_DIR="$REPO" bash "$REPO/install.sh" ) >/dev/null 2>&1
+if [ ! -e "$T9/.claude/skills/carve-guide" ] && [ -d "$T9/.claude/skills/anti-ai-slop" ]; then
+  ok "dev-only skill carve-guide excluded from install (other skills present)"
+else
+  no "carve-guide not stripped from install ($([ -e "$T9/.claude/skills/carve-guide" ] && echo present || echo other-skill-missing))"
+fi
+
+rm -rf "$T1" "$T2" "$T3" "$T5" "$T8" "$T9"
 printf -- '---\n%s passed, %s failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]
