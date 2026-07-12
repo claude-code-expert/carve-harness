@@ -1,15 +1,18 @@
 name: release
 
-# main에 VERSION이 바뀐 채로 머지되면 자동으로 태그 + GitHub Release 생성.
-# paths 필터로 VERSION이 안 바뀐 main push(문서 등)에는 돌지 않고,
-# 태그 존재 검사로 같은 버전을 두 번 릴리스하지 않는다(멱등).
+# main에 머지되면 Conventional Commit 이력으로 SemVer를 자동 증가시키고
+# VERSION·CHANGELOG·README를 갱신한 뒤 태그 + GitHub Release를 만든다.
+#   feat → minor · fix/perf/refactor → patch · type!/BREAKING CHANGE → major
+#   docs/chore/ci/style/test/build만 있으면 릴리스하지 않는다(none → 종료).
+# 되커밋은 GITHUB_TOKEN + "[skip ci]"라 워크플로를 재트리거하지 않는다(루프 방지).
 on:
   push:
     branches: [main]
-    paths: ['VERSION']
 
 permissions:
-  contents: write   # 태그·릴리스 생성 권한
+  contents: write   # 되커밋·태그·릴리스 생성 권한
+
+concurrency: release   # 동시 실행 직렬화
 
 jobs:
   release:
@@ -17,36 +20,36 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0   # 태그·히스토리 필요
+          fetch-depth: 0      # 태그·전체 히스토리 필요
+          fetch-tags: true
 
-      - name: Resolve version
+      - name: Skip self / bot commits
+        id: guard
+        run: |
+          msg=$(git log -1 --format='%s')
+          case "$msg" in
+            *"[skip ci]"*|chore\(release\):*) echo "skip=true"  >> "$GITHUB_OUTPUT" ;;
+            *)                                echo "skip=false" >> "$GITHUB_OUTPUT" ;;
+          esac
+
+      - name: Derive next version
+        if: steps.guard.outputs.skip == 'false'
         id: v
-        run: echo "version=$(tr -d '[:space:]' < VERSION)" >> "$GITHUB_OUTPUT"
-
-      - name: Skip if tag already exists
-        id: tag
         run: |
-          if git rev-parse "v${{ steps.v.outputs.version }}" >/dev/null 2>&1; then
-            echo "new=false" >> "$GITHUB_OUTPUT"
-            echo "tag v${{ steps.v.outputs.version }} 이미 존재 — 릴리스 스킵"
-          else
-            echo "new=true" >> "$GITHUB_OUTPUT"
+          last=$(git describe --tags --abbrev=0 2>/dev/null || echo v0.0.0)
+          range="$last..HEAD"; [ "$last" = v0.0.0 ] && range=HEAD
+          subs=$(git log --format='%s' "$range")
+          if git log --format='%B' "$range" | grep -qE 'BREAKING[ -]CHANGE'; then
+            subs="BREAKING CHANGE"$'\n'"$subs"
           fi
+          read -r level ver < <(printf '%s\n' "$subs" | bash .github/release-bump.sh "$last")
+          echo "level=$level"   >> "$GITHUB_OUTPUT"
+          echo "version=$ver"   >> "$GITHUB_OUTPUT"
+          echo "range=$range"   >> "$GITHUB_OUTPUT"
+          echo "derived: $last -> v$ver ($level)"
 
-      - name: Extract CHANGELOG notes
-        if: steps.tag.outputs.new == 'true'
-        run: |
-          v="${{ steps.v.outputs.version }}"
-          awk -v tag="## [$v]" 'index($0,tag)==1{f=1;next} f&&/^## \[/{exit} f{print}' CHANGELOG.md > notes.md
-          [ -s notes.md ] || echo "Release v$v" > notes.md
-
-      - name: Create release
-        if: steps.tag.outputs.new == 'true'
+      - name: Apply release
+        if: steps.guard.outputs.skip == 'false' && steps.v.outputs.level != 'none'
         env:
           GH_TOKEN: ${{ github.token }}
-        run: >
-          gh release create "v${{ steps.v.outputs.version }}"
-          --target "${{ github.sha }}"
-          --title "v${{ steps.v.outputs.version }}"
-          --latest
-          --notes-file notes.md
+        run: bash .github/release.sh "${{ steps.v.outputs.version }}" "${{ steps.v.outputs.range }}"
