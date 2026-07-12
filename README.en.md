@@ -112,34 +112,36 @@ For customization (protected paths, formatters, verify commands, new stacks) and
 
 ### Skills (26)
 
-| Skill | Group | Purpose |
-|------|------|------|
-| `anti-ai-slop` | core | Anti-slop gate before any visual output (blocks gradients/glow/decoration) |
-| `carve-guide` | core | Author harness HTML output — design system · anti-slop · 1000px embed-safe (§release-refresh mode is repo-only) |
-| `handoff` | core | Hand off progress to `specs/HANDOFF.md` before session end/compaction |
-| `changelog` | core | Record irreversible decisions + rationale in `specs/DECISIONS.md` |
-| `version-changelog` | core | Sync VERSION · CHANGELOG · README version history on release |
-| `carve-harness-create` | core | Detect stack, prune components that don't fit → tailored harness |
-| `codebase-design` | design | Shared vocabulary for deep-module design |
-| `design-an-interface` | design | Generate several interface designs via parallel sub-agents |
-| `domain-modeling` | design | Build/sharpen the domain model & ubiquitous language |
-| `improve-codebase-architecture` | design | Scan for deepening opportunities → HTML report → apply |
-| `prototype` | design | Throwaway prototype to answer a design question |
-| `implement` | build | Implement from a PRD or set of issues |
-| `qa` | build | Conversational QA → file GitHub issues |
-| `request-refactor-plan` | build | Tiny-commit refactor plan filed as an issue |
-| `migrate-to-shoehorn` | build | Migrate test `as` assertions → `@total-typescript/shoehorn` |
-| `resolving-merge-conflicts` | build | Resolve an in-progress merge/rebase conflict |
-| `setup-pre-commit` | build | Set up Husky + lint-staged pre-commit hooks |
-| `teach` | docs/learn | Teach a new concept or skill |
-| `edit-article` | docs/learn | Edit articles for structure & clarity |
-| `scaffold-exercises` | docs/learn | Scaffold exercise directory structures |
-| `to-prd` | docs/learn | Turn the conversation into a PRD on the issue tracker |
-| `to-issues` | docs/learn | Break a plan/PRD into independently-grabbable issues |
-| `loop-me` | docs/learn | Interrogate specs for workflows you want to build |
-| `ask-matt` | docs/learn | Router — which skill/flow fits your situation |
-| `setup-matt-pocock-skills` | setup | Set up engineering skills for this repo (tracker, labels) |
-| `theme-factory` | vendor | Apply color/font themes to artifacts — anti-slop gate still applies |
+> **Triggers when** = the situation that auto-fires the skill (description match) or the point at which you invoke it manually via `/skill-name`. Core gates (anti-ai-slop · carve-guide) fire automatically when their condition holds; the rest usually fire on the corresponding task signal.
+
+| Skill | Group | Triggers when | Purpose |
+|------|------|------|------|
+| `anti-ai-slop` | core | **Auto**, right before creating/editing any visual, doc, or copy output | Anti-slop gate before any visual output (blocks gradients/glow/decoration) |
+| `carve-guide` | core | When authoring/updating HTML output (the "make it look good" moment) | Author harness HTML output — design system · anti-slop · 1000px embed-safe (§release-refresh mode is repo-only) |
+| `handoff` | core | Just before session end/compaction (or `/handoff`) | Hand off progress to `specs/HANDOFF.md` before session end/compaction |
+| `changelog` | core | On irreversible arch / dependency / API-contract decisions | Record irreversible decisions + rationale in `specs/DECISIONS.md` |
+| `version-changelog` | core | When prepping a release version bump | Sync VERSION · CHANGELOG · README version history on release |
+| `carve-harness-create` | core | After a full install, to trim to your stack (`/carve-harness-create`) | Detect stack, prune components that don't fit → tailored harness |
+| `codebase-design` | design | When designing/improving a module interface or placing a seam | Shared vocabulary for deep-module design |
+| `design-an-interface` | design | When designing an API or comparing options ("design it twice") | Generate several interface designs via parallel sub-agents |
+| `domain-modeling` | design | When pinning domain terms / recording an ADR | Build/sharpen the domain model & ubiquitous language |
+| `improve-codebase-architecture` | design | When you ask to scan for deep-module opportunities | Scan for deepening opportunities → HTML report → apply |
+| `prototype` | design | When a throwaway prototype answers a design question | Throwaway prototype to answer a design question |
+| `implement` | build | When starting implementation from a PRD/issues | Implement from a PRD or set of issues |
+| `qa` | build | During a conversational bug-report / issue-filing ("QA session") | Conversational QA → file GitHub issues |
+| `request-refactor-plan` | build | When splitting a refactor into tiny-commit issues | Tiny-commit refactor plan filed as an issue |
+| `migrate-to-shoehorn` | build | When migrating test `as` assertions to shoehorn | Migrate test `as` assertions → `@total-typescript/shoehorn` |
+| `resolving-merge-conflicts` | build | During an in-progress merge/rebase conflict | Resolve an in-progress merge/rebase conflict |
+| `setup-pre-commit` | build | When setting up Husky/lint-staged pre-commit hooks | Set up Husky + lint-staged pre-commit hooks |
+| `teach` | docs/learn | When teaching a new concept or skill | Teach a new concept or skill |
+| `edit-article` | docs/learn | When editing/revising an article draft | Edit articles for structure & clarity |
+| `scaffold-exercises` | docs/learn | When scaffolding exercise directories | Scaffold exercise directory structures |
+| `to-prd` | docs/learn | When publishing the conversation as a PRD | Turn the conversation into a PRD on the issue tracker |
+| `to-issues` | docs/learn | When breaking a plan/PRD into issues | Break a plan/PRD into independently-grabbable issues |
+| `loop-me` | docs/learn | When interrogating a workflow spec you want to build | Interrogate specs for workflows you want to build |
+| `ask-matt` | docs/learn | When unsure which skill/flow to use | Router — which skill/flow fits your situation |
+| `setup-matt-pocock-skills` | setup | One-time, before first use of the engineering skills | Set up engineering skills for this repo (tracker, labels) |
+| `theme-factory` | vendor | When applying a color/font theme to an artifact | Apply color/font themes to artifacts — anti-slop gate still applies |
 
 > The vendored skill (`theme-factory`) is SKILL.md-only, sourced from `composiohq/awesome-claude-plugins`. Plugins `frontend-design` (design direction) and `ponytail` (simplification) ship as settings.json declarations, not skills.
 
@@ -165,17 +167,17 @@ For customization (protected paths, formatters, verify commands, new stacks) and
 
 ### Hooks (9 — 4 event gates · 2 shared helpers · 3 manual CLI)
 
-| Hook | Trigger | Role |
+| Hook | Trigger (when it fires) | Role |
 |------|------|------|
-| `pretool-guard` | PreToolUse | Block writes to protected paths, secrets, dangerous git (exit 2); fail-closed |
-| `posttool-format` | PostToolUse | Detect language by extension and format (post-process, exit 0) |
-| `stop-verify` | Stop | Build/type/test gate for changed stacks (exit 2 on failure) |
-| `session-handoff` | SessionStart · PreCompact · SessionEnd | Restore/save handoff + config banner |
-| `log-event` | subprocess call | JSONL observability append — single source for schema & PII masking |
-| `lib-protected` | sourced | Single definition of the protected-path regex (pure data) |
-| `harness-audit` | manual `/harness-audit` | 42 read-only checks PASS/FAIL |
-| `logs-report` | manual CLI | JSONL verdict summary + N-day rotation |
-| `eval-java` | manual scorer | Deterministic Java/Spring quality probability `P∈[0,1]`, no LLM |
+| `pretool-guard` | PreToolUse — **before every** Write · Edit · Bash | Block writes to protected paths, secrets, dangerous git (exit 2); fail-closed |
+| `posttool-format` | PostToolUse — **right after** a file write/edit succeeds | Detect language by extension and format (post-process, exit 0) |
+| `stop-verify` | Stop — **just before** a response ends (the "done" claim) | Build/type/test gate for changed stacks (exit 2 on failure) |
+| `session-handoff` | At session **start · compaction · end** (SessionStart · PreCompact · SessionEnd) | Restore/save handoff + config banner |
+| `log-event` | When another hook records a verdict (internal subprocess call) | JSONL observability append — single source for schema & PII masking |
+| `lib-protected` | Referenced via `source` when a hook loads (never runs directly) | Single definition of the protected-path regex (pure data) |
+| `harness-audit` | When `/harness-audit` runs (manual) | 42 read-only checks PASS/FAIL |
+| `logs-report` | When `logs-report.sh` runs (manual CLI) | JSONL verdict summary + N-day rotation |
+| `eval-java` | When a Java/Spring quality score is needed (manual scorer) | Deterministic Java/Spring quality probability `P∈[0,1]`, no LLM |
 
 ## Layout
 
