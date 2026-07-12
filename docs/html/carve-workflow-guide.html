@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>carve-harness — 사용 가이드</title>
-  <meta name="description" content="carve-harness v0.0.12 전체 개요 — 3기둥(제약·피드백·상태) 하네스, 훅 9·커맨드 14·에이전트 20·스킬 24·규칙 18·워크플로 1, 설치·프루닝·오케스트레이션·크로스 에이전트.">
+  <meta name="description" content="carve-harness v0.0.12 전체 개요 — 3기둥(제약·피드백·상태) 하네스, 훅 9·커맨드 14·에이전트 20·스킬 25·규칙 18·워크플로 1, 설치·프루닝·오케스트레이션·크로스 에이전트.">
   <link rel="preconnect" href="https://cdn.jsdelivr.net">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css">
   <style>
@@ -323,6 +323,8 @@
       <li><a href="#p5"><span class="part-no">05</span>오케스트레이션(fable 팀)</a></li>
       <li><a href="#p6"><span class="part-no">06</span>크로스 에이전트</a></li>
       <li><a href="#p7"><span class="part-no">07</span>언제 무엇을 쓰나</a></li>
+      <li><a href="#p8"><span class="part-no">08</span>전체 목록 (스킬·커맨드)</a></li>
+      <li><a href="#p9"><span class="part-no">09</span>업데이트 로그</a></li>
     </ol>
   </nav>
 
@@ -349,7 +351,7 @@
       </thead>
       <tbody>
         <tr><td><strong>제약</strong></td><td>보호 경로(<code>.env</code>·prod·마이그레이션)·하드코딩 시크릿·위험 git 쓰기를 PreToolUse 훅이 차단. jq 부재·JSON 파손 시 <em>fail-closed</em>.</td></tr>
-        <tr><td><strong>피드백</strong></td><td>PostToolUse가 포맷·린트 후처리, Stop 훅이 빌드·타입·테스트 실패 시 완료 선언 차단 — <em>변경된 스택만 증분 검증</em>.</td></tr>
+        <tr><td><strong>피드백</strong></td><td>PostToolUse가 포맷·린트 후처리, Stop 훅이 빌드·타입·린트·테스트 실패 시 완료 선언 차단 — <em>변경된 스택만 증분 검증</em>.</td></tr>
         <tr><td><strong>상태</strong></td><td>세션 종료·압축 시 핸드오프 자동 저장(실제 TODO·결정 수집), 시작 시 복원.</td></tr>
         <tr><td><strong>관측</strong></td><td>모든 훅 판정을 <code>logs/*.jsonl</code>에 기록(PII 마스킹), 리포트·회전. 세션 시작 배너가 로드된 전 구성을 표시, 훅 메시지는 <code>[carve-harness:&lt;hook&gt;]</code> 프리픽스로 통일.</td></tr>
         <tr><td><strong>자가감사</strong></td><td><code>/harness-audit</code> — 42개 기계 체크로 하네스 오구성을 PASS/FAIL 판정.</td></tr>
@@ -360,7 +362,7 @@
       <span class="label">이 문서의 위상</span>
       <p style="margin-bottom:0;">
         이 가이드는 <strong>carve-harness v0.0.12 전체 개요</strong>입니다. 3기둥 모델부터 구성 인벤토리(훅 9 · 커맨드 14 ·
-        에이전트 20 · 스킬 24 · 규칙 18 · 워크플로 1) · 설치/프루닝 · 오케스트레이션 · 크로스 에이전트까지, <em>실제 리포에 존재하는 자산만</em> 근거로 다룹니다.
+        에이전트 20 · 스킬 25 · 규칙 18 · 워크플로 1) · 설치/프루닝 · 오케스트레이션 · 크로스 에이전트까지, <em>실제 리포에 존재하는 자산만</em> 근거로 다룹니다.
         단일 출처는 <code>README.md</code> · <code>CHANGELOG.md</code> · <code>docs/md/orchestration.md</code>입니다.
       </p>
     </div>
@@ -387,7 +389,7 @@
         </tr>
         <tr>
           <td><strong>피드백</strong></td>
-          <td>포맷·린트 자동 후처리 + 빌드·타입·테스트 실패 시 완료 차단</td>
+          <td>포맷·린트 자동 후처리 + 빌드·타입·린트·테스트 실패 시 완료 차단</td>
           <td><code>posttool-format.sh</code> (PostToolUse) + <code>stop-verify.sh</code> (Stop, exit 2, 증분)</td>
         </tr>
         <tr>
@@ -431,7 +433,7 @@
         <tr><td><strong>훅</strong></td><td class="num">9</td><td><code>pretool-guard</code> · <code>stop-verify</code> · <code>session-handoff</code> · <code>harness-audit</code></td><td><code>.claude/hooks/</code></td></tr>
         <tr><td><strong>슬래시 커맨드</strong></td><td class="num">14</td><td><code>commit</code> · <code>plan</code> · <code>review</code> · <code>verify</code> · <code>harness-audit</code> · <code>squad-*</code></td><td><code>.claude/commands/</code></td></tr>
         <tr><td><strong>에이전트</strong></td><td class="num">20</td><td><code>evaluator</code> · <code>code-reviewer</code> · <code>security-reviewer</code> · <code>fable-*</code> · <code>squad-*</code></td><td><code>.claude/agents/</code></td></tr>
-        <tr><td><strong>스킬</strong></td><td class="num">24</td><td><code>anti-ai-slop</code> · <code>handoff</code> · <code>changelog</code> · <code>implement</code> · <code>version-changelog</code></td><td><code>.claude/skills/</code></td></tr>
+        <tr><td><strong>스킬</strong></td><td class="num">25</td><td><code>anti-ai-slop</code> · <code>handoff</code> · <code>changelog</code> · <code>implement</code> · <code>theme-factory</code></td><td><code>.claude/skills/</code></td></tr>
         <tr><td><strong>규칙(.md)</strong></td><td class="num">18</td><td><code>safety</code> · <code>common/*</code> · <code>code-convention/dev-stack-*</code></td><td><code>.claude/rules/</code></td></tr>
         <tr><td><strong>워크플로</strong></td><td class="num">1</td><td><code>fable-team-pipeline.js</code></td><td><code>.claude/workflows/</code></td></tr>
         <tr><td><strong>git 훅</strong></td><td class="num">2</td><td><code>commit-msg</code> · <code>pre-commit</code></td><td><code>.githooks/</code></td></tr>
@@ -442,11 +444,12 @@
 
     <div class="callout accent">
       <span class="label">v0.0.12 신규</span>
-      <p style="margin-bottom:0;">
-        <strong>프로젝트 맞춤 구축</strong> — 설치 시 <code>/carve-harness-create</code> 스킬이 스택(Java/Spring · TS/React/Next · Python/FastAPI · ORM)을 분석해
-        맞지 않는 규칙·에이전트·스킬을 KEEP/PRUNE 표로 제안하고, <code>install.sh prune</code>으로 상시 로드 토큰 표면을 줄입니다.
-        코어(훅·settings·크로스에이전트 진입·<code>safety</code>/<code>common</code> 규칙)는 절대 잘리지 않습니다.
-      </p>
+      <ul style="margin:0;">
+        <li><strong>프로젝트 맞춤 구축</strong> — <code>/carve-harness-create</code>가 스택(Java/Spring · TS/React/Next · Python/FastAPI · ORM)을 분석해 맞지 않는 구성을 <code>install.sh prune</code>으로 정리(코어는 불가침).</li>
+        <li><strong>로컬 lint 게이트(shift-left)</strong> — <code>stop-verify</code>가 Node의 <code>lint</code> 스크립트를 Stop에서 실행, CI <code>npm run lint</code>를 로컬로 앞당김.</li>
+        <li><strong>훅 디렉토리 self-heal</strong> — 부분 설치가 <code>lib-protected.sh</code>를 누락해 커밋이 전면 차단되던 버그 수정.</li>
+        <li><strong>플러그인·스킬</strong> — <code>frontend-design</code> 플러그인 선언 + <code>theme-factory</code> 스킬 벤더링.</li>
+      </ul>
     </div>
   </section>
 
@@ -467,7 +470,7 @@
       <tbody>
         <tr><td><code>pretool-guard</code></td><td>PreToolUse</td><td>보호 경로·시크릿·위험 git 쓰기 <strong>차단(exit 2)</strong>. jq/JSON 이상 시 fail-closed.</td></tr>
         <tr><td><code>posttool-format</code></td><td>PostToolUse</td><td>확장자로 언어 감지 후 포맷(후처리 전용, exit 0). 매 실행 1건 결과를 JSONL 기록.</td></tr>
-        <tr><td><code>stop-verify</code></td><td>Stop</td><td>변경 스택 감지 후 빌드·타입·테스트 게이트. <strong>실패 시 exit 2</strong>로 완료 선언 차단.</td></tr>
+        <tr><td><code>stop-verify</code></td><td>Stop</td><td>변경 스택 감지 후 빌드·타입·린트·테스트 게이트. <strong>실패 시 exit 2</strong>로 완료 선언 차단.</td></tr>
         <tr><td><code>session-handoff</code></td><td>SessionStart · PreCompact · SessionEnd</td><td><code>start</code>=핸드오프 복원 + 구성 배너, <code>save</code>=진행상황 저장.</td></tr>
         <tr><td><code>log-event</code></td><td>서브프로세스 호출</td><td>JSONL append 헬퍼 — 스키마·타임스탬프·PII 마스킹 정규식의 <em>단일 출처</em>(D-04).</td></tr>
         <tr><td><code>lib-protected</code></td><td>source 참조</td><td>보호 경로 정규식의 유일한 정의(순수 데이터, 부수효과 없음). guard·log-event가 공유.</td></tr>
@@ -616,6 +619,82 @@ bash install.sh prune --keep-list &lt;파일&gt;   # KEEP 밖 비보호 파일 �
         <em>제약은 막고, 피드백은 검증하고, 상태는 잇는다. 관측이 그것을 기록하고, 자가감사가 그것을 증명한다.</em>
       </p>
     </div>
+  </section>
+
+  <!-- Part 8 -->
+  <section id="p8">
+    <h2><span class="part">PART 8</span>전체 목록 (스킬 · 커맨드)</h2>
+    <p>배포되는 전체 스킬 25종과 슬래시 커맨드 14종입니다(훅 9종은 <a href="#p3">PART 3</a>). 유지보수용 <code>carve-guide</code>는 배포에서 제외돼 이 목록에 없습니다.</p>
+
+    <h3>스킬 (25종)</h3>
+    <table>
+      <thead><tr><th style="width:210px;">스킬</th><th style="width:88px;">구분</th><th>용도</th></tr></thead>
+      <tbody>
+        <tr><td><code>anti-ai-slop</code></td><td>코어</td><td>시각 산출물 생성 전 슬롭(그라데이션·글로우·이모지) 차단 게이트</td></tr>
+        <tr><td><code>handoff</code></td><td>코어</td><td>세션 종료·압축 전 진행상황을 <code>specs/HANDOFF.md</code>로 인계</td></tr>
+        <tr><td><code>changelog</code></td><td>코어</td><td>되돌릴 수 없는 결정·근거를 <code>specs/DECISIONS.md</code>에 기록</td></tr>
+        <tr><td><code>version-changelog</code></td><td>코어</td><td>릴리스 시 VERSION·CHANGELOG·README 버전 이력 동기 갱신</td></tr>
+        <tr><td><code>carve-harness-create</code></td><td>코어</td><td>스택 감지 후 불필요 구성 prune → 맞춤 하네스</td></tr>
+        <tr><td><code>codebase-design</code></td><td>설계</td><td>깊은 모듈 설계 공용 어휘·심화 기회</td></tr>
+        <tr><td><code>design-an-interface</code></td><td>설계</td><td>병렬 서브에이전트로 인터페이스 안 여러 개 생성·비교</td></tr>
+        <tr><td><code>domain-modeling</code></td><td>설계</td><td>도메인 모델·유비쿼터스 언어 정립</td></tr>
+        <tr><td><code>improve-codebase-architecture</code></td><td>설계</td><td>딥모듈 기회 스캔 → HTML 리포트 → 반영</td></tr>
+        <tr><td><code>prototype</code></td><td>설계</td><td>설계 질문에 답하는 버리는(throwaway) 프로토타입</td></tr>
+        <tr><td><code>implement</code></td><td>구현</td><td>PRD·이슈 기반 구현</td></tr>
+        <tr><td><code>qa</code></td><td>구현</td><td>대화형 QA → GitHub 이슈 등록</td></tr>
+        <tr><td><code>request-refactor-plan</code></td><td>구현</td><td>작은 커밋 단위 리팩터 계획을 이슈로</td></tr>
+        <tr><td><code>migrate-to-shoehorn</code></td><td>구현</td><td>테스트 <code>as</code> 단언 → <code>@total-typescript/shoehorn</code> 이관</td></tr>
+        <tr><td><code>resolving-merge-conflicts</code></td><td>구현</td><td>진행 중 머지/리베이스 충돌 해결</td></tr>
+        <tr><td><code>setup-pre-commit</code></td><td>구현</td><td>Husky + lint-staged pre-commit 훅 셋업</td></tr>
+        <tr><td><code>teach</code></td><td>문서·교육</td><td>새 개념·스킬 교육</td></tr>
+        <tr><td><code>edit-article</code></td><td>문서·교육</td><td>글 구조·명확성 개선 편집</td></tr>
+        <tr><td><code>scaffold-exercises</code></td><td>문서·교육</td><td>연습문제 디렉토리 구조 생성</td></tr>
+        <tr><td><code>to-prd</code></td><td>문서·교육</td><td>대화를 PRD로 만들어 이슈 트래커에 발행</td></tr>
+        <tr><td><code>to-issues</code></td><td>문서·교육</td><td>계획·PRD를 독립 이슈로 분해</td></tr>
+        <tr><td><code>loop-me</code></td><td>문서·교육</td><td>만들 워크플로 스펙을 대화로 파고들기</td></tr>
+        <tr><td><code>ask-matt</code></td><td>문서·교육</td><td>상황에 맞는 스킬·플로우 안내 라우터</td></tr>
+        <tr><td><code>setup-matt-pocock-skills</code></td><td>셋업</td><td>이 리포에 엔지니어링 스킬 셋업(이슈 트래커·라벨)</td></tr>
+        <tr><td><code>theme-factory</code></td><td>외부(벤더)</td><td>산출물에 테마(색·폰트) 적용 — anti-slop 게이트 여전히 적용</td></tr>
+      </tbody>
+    </table>
+
+    <h3>슬래시 커맨드 (14종)</h3>
+    <table>
+      <thead><tr><th style="width:210px;">커맨드</th><th>용도</th></tr></thead>
+      <tbody>
+        <tr><td><code>/harness-audit</code></td><td>하네스 구성 42체크 PASS/FAIL</td></tr>
+        <tr><td><code>/plan</code></td><td>작업을 완료 기준(SC) 단위로 분해 → <code>specs/</code></td></tr>
+        <tr><td><code>/verify</code></td><td>현재 변경을 SC·빌드·타입·테스트로 검증</td></tr>
+        <tr><td><code>/review</code></td><td>변경분을 타입·보안·예외·상태관리 관점 검토</td></tr>
+        <tr><td><code>/commit</code></td><td>commitlint 준수 메시지로 커밋 준비</td></tr>
+        <tr><td><code>/squad</code></td><td>Squad 에이전트 호출 — <code>/squad &lt;멤버&gt; [작업]</code></td></tr>
+        <tr><td><code>/squad-plan</code></td><td>기능 기획</td></tr>
+        <tr><td><code>/squad-review</code></td><td>코드 리뷰</td></tr>
+        <tr><td><code>/squad-qa</code></td><td>QA 테스트 실행</td></tr>
+        <tr><td><code>/squad-refactor</code></td><td>코드 리팩터</td></tr>
+        <tr><td><code>/squad-debug</code></td><td>이슈 디버깅</td></tr>
+        <tr><td><code>/squad-audit</code></td><td>보안 감사</td></tr>
+        <tr><td><code>/squad-docs</code></td><td>문서 생성</td></tr>
+        <tr><td><code>/squad-gitops</code></td><td>Git 워크플로(커밋·PR·체인지로그)</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- Part 9 -->
+  <section id="p9">
+    <h2><span class="part">PART 9</span>업데이트 로그</h2>
+    <p>버전별 핵심 변경. 전체 내역은 리포의 <code>CHANGELOG.md</code>를 참조하세요.</p>
+    <table>
+      <thead><tr><th style="width:96px;">버전</th><th style="width:110px;">날짜</th><th>요약</th></tr></thead>
+      <tbody>
+        <tr><td><strong>v0.0.12</strong></td><td>2026-07-11</td><td>프로젝트 맞춤 구축(prune) · 로컬 lint 게이트 · 훅 디렉토리 self-heal 수정 · <code>theme-factory</code>·<code>frontend-design</code> · 스킬 25 · 테스트 172</td></tr>
+        <tr><td>v0.0.11</td><td>2026-07-10</td><td>체크박스 TUI 구성 선택 · 세션 배너 인벤토리 + <code>[carve-harness:&lt;hook&gt;]</code> 프리픽스 · LSP·ponytail 플러그인 선언 · 공개 레포 전환</td></tr>
+        <tr><td>v0.0.10</td><td>2026-07-10</td><td>설치 구성 선택 · fable 오케스트레이터 팀 + <code>fable-team-pipeline</code> · npm test 러너 · macOS 이식성</td></tr>
+        <tr><td>v0.0.9</td><td>2026-07-09</td><td>Java/Spring 결정적 출력검증 <code>eval-java</code>(LLM 없는 재현 가능 P) · ArchUnit 규칙 승격 · AUDIT-08</td></tr>
+        <tr><td>v0.0.8</td><td>2026-07-09</td><td>게이트웨이 검증 계층 · commit-msg 규율 게이트 · anti-ai-slop 스킬</td></tr>
+      </tbody>
+    </table>
+    <p style="font-size:13px;color:var(--ink-mute);">이 가이드는 <code>carve-guide</code> 스킬로 기능 출시마다 실측(파일시스템·<code>npm test</code>) 갱신됩니다. 소스: <a href="https://github.com/claude-code-expert/carve-harness">github.com/claude-code-expert/carve-harness</a></p>
   </section>
 
   <footer class="doc-foot">

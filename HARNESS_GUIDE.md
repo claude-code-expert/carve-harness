@@ -6,7 +6,7 @@
 
 **대상 독자**: Claude Code(또는 임의 코딩 에이전트)로 실무 개발을 하며, 에이전트의 사고(규칙 무시·미검증 완료 선언·컨텍스트 소실)를 구조적으로 막고 싶은 사람.
 
-> **먼저 데모로 감 잡기**: <a href="docs/html/harness-demo/index.html" target="_blank" rel="noopener noreferrer">하네스 적용 전/후 화면 비교 (새 창)</a> — 같은 프롬프트를 하네스 없이 / 하네스로 실행한 두 결과를 나란히 보고 "설득 vs 강제"의 차이를 눈으로 확인한다.
+> **먼저 데모로 감 잡기**: <a href="https://claude-code-expert.github.io/carve-harness/docs/html/harness-demo/index.html" target="_blank" rel="noopener noreferrer">하네스 적용 전/후 화면 비교 (새 창)</a> — 같은 프롬프트를 하네스 없이 / 하네스로 실행한 두 결과를 나란히 보고 "설득 vs 강제"의 차이를 눈으로 확인한다.
 
 ---
 
