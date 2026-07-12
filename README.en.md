@@ -43,13 +43,13 @@ curl -fsSL https://raw.githubusercontent.com/claude-code-expert/carve-harness/ma
 ┌─────────────────────────────────────────────────────────────┐
 │  맞춤 하네스 구축 예약됨 — 전체 설치 완료, 지금 바로 동작    │
 └─────────────────────────────────────────────────────────────┘
-프로젝트 스택에 맞지 않는 규칙·에이전트·스킬을 정리하려면
+프로젝트를 분석해 이 스택에 맞는 하네스로 최적화하려면
 Claude Code 세션에서 다음을 실행하세요:
 
     /carve-harness-create
 
-프로젝트를 분석해 제거 대상을 제안하고, 1회 확인 후 정리합니다.
-정리하지 않아도 하네스는 정상 동작합니다(전체 구성 유지).
+스택을 감지해 맞지 않는 구성을 제안하고, 1회 확인 후 덜어내 최적화합니다.
+최적화하지 않아도 하네스는 정상 동작합니다(전체 구성 유지).
 ```
 
 With `[2]` (manual selection) this banner is replaced by a `bash install.sh setup` (interactive initial setup) hint instead.
