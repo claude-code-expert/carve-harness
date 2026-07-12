@@ -11,7 +11,7 @@ no() { printf 'FAIL: %s\n' "$1"; fail=$((fail + 1)); }
 
 # One full install; copy it per destructive case (cp is cheap vs re-install).
 BASE=$(mktemp -d)
-( cd "$BASE" && HARNESS_SRC_DIR="$REPO" bash "$REPO/install.sh" ) >/dev/null 2>&1
+( cd "$BASE" && HARNESS_COMPONENTS=all HARNESS_SRC_DIR="$REPO" bash "$REPO/install.sh" ) >/dev/null 2>&1
 if [ -f "$BASE/.claude/harness-manifest.txt" ] && [ -d "$BASE/.claude/rules/java-spring" ]; then
   ok "baseline full install lands (manifest + java-spring present)"
 else
@@ -97,14 +97,19 @@ printf '%s' "$aout" | grep -q "0 failed" && ok "harness-audit passes post-prune"
 [ -e "$TA/.claude/rules/java-spring" ] && [ -e "$TA/.claude/hooks/eval-java.sh" ] \
   && ok "rollback restores pruned components" || no "rollback did not restore"
 
-# ── dry-run must not mutate ──────────────────────────────────────────────────
+# ── dry-run must not mutate, and must report the would-remove COUNT ───────────
+#    (regression: the `continue` in the dry branch skipped `removed++` → the summary
+#     always said "0 개 제거 예정" even when files were detected.)
 TC=$(mktemp -d); cp -R "$BASE/." "$TC/"
-( cd "$TC" && bash install.sh prune --remove-file .claude/rules/java-spring --dry-run ) >/dev/null 2>&1
+dout=$( cd "$TC" && bash install.sh prune --remove-file .claude/rules/java-spring --dry-run 2>&1 )
 if [ -e "$TC/.claude/rules/java-spring" ] && grep -qx '.claude/rules' "$TC/.claude/harness-manifest.txt"; then
   ok "dry-run mutates nothing (files + coarse manifest intact)"
 else
   no "dry-run mutated state"
 fi
+printf '%s' "$dout" | grep -qE 'dry-run: [1-9][0-9]* 개 제거 예정' \
+  && ok "dry-run reports would-remove count (>0)" \
+  || no "dry-run count 0/absent: $(printf '%s' "$dout" | grep -o 'dry-run:.*예정')"
 
 # ── empty keep-list guard (prevent full wipe) ────────────────────────────────
 TD=$(mktemp -d); cp -R "$BASE/." "$TD/"

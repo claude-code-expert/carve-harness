@@ -18,9 +18,11 @@
 ### Fixed
 - **부분 훅 디렉토리 자가복구(치명)**: 기존/외래 `.claude/hooks`가 남아 있으면 install이 coarse 경로를 통째 SKIP해 `lib-protected.sh`가 미복구 → `pre-commit`이 fail-closed로 **모든 커밋을 차단**하던 버그. 통째 SKIP 대신 누락된 자식 파일만 채우도록 수정(`.claude/hooks`·`.githooks` 스코프, self-heal). `install-components.test.sh` 회귀 케이스 추가.
 - **`stop-verify.sh` tsc 이식성**: 타입체크가 `pnpm exec` 하드코딩이라 npm 전용 프로젝트에서 false fail → 단일 PM 감지(pnpm→npm 폴백)로 tsc·lint·test가 공유.
+- **prune `--dry-run` 카운트**: dry 분기의 `continue`가 `removed++`를 건너뛰어 요약이 항상 "0 개 제거 예정"으로 오표시되던 버그 → 제거 예정 파일 수를 정확히 카운트. 회귀 테스트(출력 캡처 후 카운트 검증) 추가.
+- **테스트 tty hang 방지**: `choose_setup_mode`가 인터랙티브 터미널에선 `/dev/tty` 입력을 대기 → 설치 fixture 테스트를 `HARNESS_COMPONENTS=all`/`HARNESS_SETUP_STDIN` 주입으로 비대화형 고정(개발자 터미널에서 테스트 hang 방지). 제품 동작 무변경.
 
 ### Changed
-- 인벤토리: 스킬 23→**25**종, 테스트 13→14 스위트·152→**170**건(prune 15케이스 + hook self-heal 회귀 1 + lint 게이트 2 + frontend-design assertion 강화).
+- 인벤토리: 스킬 23→**25**종, 테스트 13→14 스위트·152→**171**건(prune 15+dry-run 카운트 1케이스 + hook self-heal 회귀 1 + lint 게이트 2 + frontend-design assertion 강화).
 - `eval-java.sh`는 Java 전용 스코어러라 prune의 PROTECTED에서 carve-out(Java 미감지 시 archunit과 묶여 제거, AUDIT-08 green 유지). 나머지 8개 훅은 언어 무관 코어로 계속 보호.
 
 ## [0.0.11] - 2026-07-10

@@ -56,9 +56,11 @@ else
   no "manifest scope"
 fi
 
-# (6) default (no env, no tty): full install, audit runs and passes.
+# (6) default choice (1 = auto/full) via stdin injection: full install, audit passes.
+#     HARNESS_SETUP_STDIN=1 reads the prompt from stdin (never /dev/tty), so this can't
+#     hang from an interactive terminal; '1' is the recommended/default setup mode.
 T3=$(mktemp -d)
-out=$( cd "$T3" && HARNESS_SRC_DIR="$REPO" bash "$REPO/install.sh" </dev/null 2>&1 )
+out=$( cd "$T3" && printf '1\n' | HARNESS_SETUP_STDIN=1 HARNESS_SRC_DIR="$REPO" bash "$REPO/install.sh" 2>&1 )
 code=$?
 if [ "$code" -eq 0 ] \
    && printf '%s' "$out" | grep -q "구성 선택: 전체" \

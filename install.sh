@@ -511,7 +511,7 @@ prune_run() {
     [ "$keepmode" = 1 ] && ! grep -qxF "$p" "$keepf" 2>/dev/null && remove=1
     if [ "$remove" = 1 ]; then
       if [ ! -e "$HERE/$p" ]; then say "SKIP: $p (이미 없음)"; continue; fi
-      if [ "$dry" = 1 ]; then say "WOULD REMOVE: $p"; printf '%s\n' "$p" >> "$tmp"; continue; fi
+      if [ "$dry" = 1 ]; then say "WOULD REMOVE: $p"; printf '%s\n' "$p" >> "$tmp"; removed=$((removed + 1)); continue; fi
       mkdir -p "$BAK/$(dirname "$p")"
       cp -R "$HERE/$p" "$BAK/$p" 2>/dev/null
       rm -rf "${HERE:?}/$p"
