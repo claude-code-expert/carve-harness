@@ -338,6 +338,14 @@
       <strong>결정적(deterministic)</strong>으로 막습니다. 별도 런타임·빌드가 필요 없고, <code>.claude/</code> 자산과 Bash 훅만으로 동작합니다.
     </p>
 
+    <div class="callout accent">
+      <span class="label">라이브 데모</span>
+      <p style="margin-bottom:0;">
+        <a class="ext" href="https://claude-code-expert.github.io/carve-harness/docs/html/harness-demo/index.html">하네스 적용 전/후 화면 비교 열기 (새 창)</a>
+        — 같은 프롬프트를 하네스 없이 / 하네스로 실행한 두 결과를 나란히 보고 "설득 vs 강제"의 차이를 눈으로 확인합니다.
+      </p>
+    </div>
+
     <h3>핵심 동작 한 줄</h3>
     <div class="mono-panel">
       curl 설치 → 스택 탐지 → (구성요소 선택) → <strong>.claude/</strong>에 자산 생성<br>
@@ -703,5 +711,25 @@ bash install.sh prune --keep-list &lt;파일&gt;   # KEEP 밖 비보호 파일 �
   </footer>
 
 </div>
+<script>
+  // 내부 앵커(TOC·본문 #링크)는 URL 해시를 바꾸지 않고 스크롤만 한다.
+  // run-ai.kr 같은 SPA에 임베드되면 해시 변경이 호스트 라우터를 트리거해
+  // API fetch(CORS 차단)·리액트 크래시를 유발하므로 preventDefault로 차단한다.
+  document.querySelectorAll('a[href^="#"]').forEach(function (a) {
+    a.addEventListener('click', function (e) {
+      var id = this.getAttribute('href').slice(1);
+      var el = id && document.getElementById(id);
+      if (el) { e.preventDefault(); el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+    });
+  });
+  // 외부 링크(a.ext)는 window.open으로 새 탭을 강제한다 — 호스트가 target="_blank"를
+  // sanitize로 제거하거나 SPA가 클릭을 가로채도 확실히 새 창에서 열리게 한다.
+  document.querySelectorAll('a.ext').forEach(function (a) {
+    a.addEventListener('click', function (e) {
+      e.preventDefault();
+      window.open(a.href, '_blank', 'noopener');
+    });
+  });
+</script>
 </body>
 </html>

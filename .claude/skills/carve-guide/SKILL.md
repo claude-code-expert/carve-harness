@@ -39,6 +39,24 @@ bash .claude/hooks/tests/run-all.sh 2>&1 | grep -oE '[0-9]+ passed' | awk '{s+=$
 ### 5. 시각 게이트 (필수)
 시각 산출물이므로 **먼저 `anti-ai-slop` 스킬을 발동**한다. 기존 `carve-workflow-guide.html` 디자인 시스템 유지: Pretendard + JetBrains Mono, teal 액센트 1색, 무채색 베이스, 1px border. 그라데이션·글로우·이모지·장식 모션 0.
 
+**SPA 임베드 안전 (필수)**: 이 가이드는 run-ai.kr/learn에 임베드된다. TOC·본문 내부 앵커(`href="#..."`)가 URL 해시를 바꾸면 호스트 SPA(React) 라우터가 route 변경으로 오인해 API fetch(CORS 차단)·크래시를 유발한다. `<body>` 끝에 내부 앵커 클릭을 가로채 `e.preventDefault()` + `scrollIntoView`만 하는 스크립트를 **반드시 포함**한다(해시 미변경):
+```html
+<script>
+  document.querySelectorAll('a[href^="#"]').forEach(function (a) {   // 내부 앵커: 해시 미변경 스크롤
+    a.addEventListener('click', function (e) {
+      var id = this.getAttribute('href').slice(1);
+      var el = id && document.getElementById(id);
+      if (el) { e.preventDefault(); el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+    });
+  });
+  document.querySelectorAll('a.ext').forEach(function (a) {          // 외부 링크: 새 탭 강제(target strip·SPA 우회)
+    a.addEventListener('click', function (e) { e.preventDefault(); window.open(a.href, '_blank', 'noopener'); });
+  });
+</script>
+```
+
+**라이브 데모 링크(필수)**: 데모(<code>docs/html/harness-demo/</code>)는 GitHub Pages 절대 URL로 링크하고 `class="ext"`를 붙인다 — 마크다운은 `target="_blank"`를 sanitize로 제거하므로 위 `window.open` 스크립트로만 새 창이 보장된다. 예: `<a class="ext" href="https://claude-code-expert.github.io/carve-harness/docs/html/harness-demo/index.html">…</a>`.
+
 ### 6. 검증 (완료 선언 전 필수)
 - 헤드리스 크롬으로 렌더 → PNG를 **열어 육안 확인**.
 - slop 스캔 0 (gradient·blur·keyframes·colored-shadow·emoji).
@@ -53,4 +71,5 @@ bash .claude/hooks/tests/run-all.sh 2>&1 | grep -oE '[0-9]+ passed' | awk '{s+=$
 ## 불변 규칙
 - 수치는 **실측**(파일시스템·`npm test`). 프로즈 복붙 금지.
 - 배포 제외 스킬(`carve-guide` 자신)은 배포 스킬 카운트·목록에서 뺀다.
+- 내부 앵커는 `preventDefault`+`scrollIntoView` 스크립트로 처리(URL 해시 변경 금지) — run-ai.kr SPA 임베드 호환.
 - anti-slop 통과 + PNG 육안 확인이 완료 기준. 확인 전 완료 선언 금지.
