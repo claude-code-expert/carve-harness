@@ -21,7 +21,7 @@
 
 **오프라인 완결**: jq·shellcheck 정적 바이너리 내장(`vendor/bin`, SHA256 검증) — 인터넷 없이 설치 가능.
 
-> **데모**: <a href="docs/html/harness-demo/index.html" target="_blank" rel="noopener noreferrer">하네스 적용 전/후 화면 비교 (새 창)</a> — 같은 프롬프트로 만든 미적용(slop) vs 적용(클린) HTML을 나란히 놓고, 어떤 규칙이 무엇을 바꿨는지 표로 정리.
+> **데모**: <a href="https://claude-code-expert.github.io/carve-harness/docs/html/harness-demo/index.html" target="_blank" rel="noopener noreferrer">하네스 적용 전/후 화면 비교 (새 창)</a> — 같은 프롬프트로 만든 미적용(slop) vs 적용(클린) HTML을 나란히 놓고, 어떤 규칙이 무엇을 바꿨는지 표로 정리.
 
 ## 설치
 
