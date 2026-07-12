@@ -836,7 +836,10 @@ elif CLAUDE_PROJECT_DIR="$HERE" bash "$HERE/.claude/hooks/harness-audit.sh"; the
   [ "$warn" -eq 0 ] && say "설치 완료 — 하네스 전 게이트 활성." \
                     || say "설치 완료(경고 있음) — 위 WARN/ACTION/SKIP 항목 확인."
   if [ "$MODE" = "install" ]; then
-    if [ "$AUTO_PROJECT" = 1 ]; then
+    # 배너는 carve-harness-create 스킬이 설치됐는지로 판단한다(AUTO_PROJECT 아님):
+    # curl|bash 비대화형은 tty가 없어 choose_setup_mode가 스킵되지만 전체 설치라
+    # 스킬이 깔린다 — 그 경우에도 /carve-harness-create 안내가 나와야 한다.
+    if [ -f "$HERE/.claude/skills/carve-harness-create/SKILL.md" ]; then
       say ""
       say "┌─────────────────────────────────────────────────────────────┐"
       say "│  맞춤 하네스 구축 예약됨 — 전체 설치 완료, 지금 바로 동작    │"

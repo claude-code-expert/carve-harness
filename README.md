@@ -37,7 +37,7 @@ curl -fsSL https://raw.githubusercontent.com/claude-code-expert/carve-harness/ma
 - **LSP·플러그인 자동 선언**: settings.json이 `vtsls`(TypeScript·React·JavaScript LSP)·`jdtls`(Java LSP)·`ponytail`·`frontend-design`(디자인 방향 스킬) 플러그인과 각 마켓플레이스(`claude-code-lsps`·`ponytail`·`claude-code-plugins`)를 선언한다 — 세션 시작 시 Claude Code가 신뢰 승인 후 자동 설치. 서버 실행 파일은 별도: vtsls는 `bash install.sh setup`에서 npm 전역 설치 제안, jdtls는 `brew install jdtls`(JDK 필요). 미설치면 install 끝에 NOTE로 안내된다.
 - 설치 끝에 `/harness-audit` 자동 실행 — 42 PASS면 전 게이트 활성.
 
-**`[1]` 맞춤 구축을 고르면** 설치 끝에 아래 배너가 출력된다 — 세션에서 `/carve-harness-create` 실행을 안내한다(자연어 요청이 아니라 **슬래시 커맨드로만** 발동):
+**전체 설치면**(맞춤 구축 `[1]` · `curl | bash`·env 비대화형 · 수동에서 전부 선택) 설치 끝에 아래 배너가 출력된다 — 세션에서 `/carve-harness-create` 실행을 안내한다(자연어 요청이 아니라 **슬래시 커맨드로만** 발동):
 
 ```text
 ┌─────────────────────────────────────────────────────────────┐
@@ -52,7 +52,7 @@ Claude Code 세션에서 다음을 실행하세요:
 최적화하지 않아도 하네스는 정상 동작합니다(전체 구성 유지).
 ```
 
-`[2]` 수동 선택으로 설치하면 이 배너 대신 `bash install.sh setup`(대화형 초기 설정) 안내가 출력된다.
+`carve-harness-create` 스킬을 뺀 부분 설치면 이 배너 대신 `bash install.sh setup`(대화형 초기 설정) 안내가 출력된다.
 
 ### 오프라인 / 로컬 클론 설치
 
