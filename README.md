@@ -1,6 +1,6 @@
 # Claude 하네스 (언어 무관 드롭인)
 
-[English](README.en.md) · 현재 버전 **v0.1.0** · 변경 내역 [CHANGELOG.md](CHANGELOG.md) · 강좌 [HARNESS_GUIDE.md](HARNESS_GUIDE.md)
+[English](README.en.md) · 현재 버전 **v0.1.1** · 변경 내역 [CHANGELOG.md](CHANGELOG.md) · 강좌 [HARNESS_GUIDE.md](HARNESS_GUIDE.md)
 
 코딩 에이전트의 규칙 위반을 "설득"이 아니라 **훅 exit 2로 차단**하는 가드레일 템플릿.
 프로젝트 루트에 드롭인하면 즉시 동작한다.
@@ -232,6 +232,7 @@ bash uninstall.sh --yes    # 실제 제거 (manifest 범위만, 원래 있던 �
 
 | 버전 | 날짜 | 요약 |
 |------|------|------|
+| v0.1.1 | 2026-07-12 | show create banner on non-interactive install |
 | v0.1.0 | 2026-07-12 | auto-version release on merge to main |
 | v0.0.13 | 2026-07-12 | `carve-guide` 범용 HTML 작성 스킬 + **배포 포함**(스킬 25→26종) · 임베드 안정화(1000px `!important` 폭 · SPA 목차 크래시 수정 · 데모 새 창) |
 | v0.0.12 | 2026-07-11 | 프로젝트 맞춤 구축(맞춤/수동 선택 · `carve-harness-create` prune) · **훅 디렉토리 self-heal 수정**(부분설치→커밋 전면차단 버그) · **로컬 lint 게이트**(shift-left) · `theme-factory` 벤더링 + `frontend-design` 선언 · 구성 표·데모 · 스킬 25종·테스트 14 스위트(172건) |
