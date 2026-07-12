@@ -1,0 +1,52 @@
+name: release
+
+# main에 VERSION이 바뀐 채로 머지되면 자동으로 태그 + GitHub Release 생성.
+# paths 필터로 VERSION이 안 바뀐 main push(문서 등)에는 돌지 않고,
+# 태그 존재 검사로 같은 버전을 두 번 릴리스하지 않는다(멱등).
+on:
+  push:
+    branches: [main]
+    paths: ['VERSION']
+
+permissions:
+  contents: write   # 태그·릴리스 생성 권한
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # 태그·히스토리 필요
+
+      - name: Resolve version
+        id: v
+        run: echo "version=$(tr -d '[:space:]' < VERSION)" >> "$GITHUB_OUTPUT"
+
+      - name: Skip if tag already exists
+        id: tag
+        run: |
+          if git rev-parse "v${{ steps.v.outputs.version }}" >/dev/null 2>&1; then
+            echo "new=false" >> "$GITHUB_OUTPUT"
+            echo "tag v${{ steps.v.outputs.version }} 이미 존재 — 릴리스 스킵"
+          else
+            echo "new=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Extract CHANGELOG notes
+        if: steps.tag.outputs.new == 'true'
+        run: |
+          v="${{ steps.v.outputs.version }}"
+          awk -v tag="## [$v]" 'index($0,tag)==1{f=1;next} f&&/^## \[/{exit} f{print}' CHANGELOG.md > notes.md
+          [ -s notes.md ] || echo "Release v$v" > notes.md
+
+      - name: Create release
+        if: steps.tag.outputs.new == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >
+          gh release create "v${{ steps.v.outputs.version }}"
+          --target "${{ github.sha }}"
+          --title "v${{ steps.v.outputs.version }}"
+          --latest
+          --notes-file notes.md

@@ -20,14 +20,14 @@
    ```
 5. **커밋** — `chore(release): vX.Y.Z` (Conventional Commits).
    `.githooks/pre-commit`이 VERSION↔CHANGELOG 정합을 검사한다 — CHANGELOG 항목 없이 VERSION만 올리면 차단.
-6. **태그 + 푸시 + PR**:
+6. **푸시 + PR**:
    ```bash
-   git tag vX.Y.Z
-   git push origin <branch> --tags
+   git push origin <branch>
    gh pr create --base main
    ```
-   main 머지는 사용자(리뷰어)가 한다 — main 직접 푸시 금지.
-7. **머지 후 확인** — 대상 프로젝트에서 수신 테스트:
+   main 머지는 사용자(리뷰어)가 한다 — main 직접 푸시 금지. **태그·GitHub Release는 수동 생성하지 않는다** — 머지 후 자동화가 처리(7).
+7. **머지 → 자동 릴리스**: main에 VERSION 변경이 머지되면 `.github/workflows/release.yml`이 VERSION을 읽어 **태그 `vX.Y.Z` + GitHub Release(Latest)를 자동 생성**한다(CHANGELOG 해당 `[X.Y.Z]` 절을 릴리스 노트로). `paths: [VERSION]` 트리거라 문서-only 머지엔 안 돌고, 태그 존재 검사로 같은 버전 재릴리스를 막는다(멱등).
+8. **수신 확인** — 대상 프로젝트에서:
    ```bash
    curl -fsSL https://raw.githubusercontent.com/claude-code-expert/carve-harness/main/install.sh | bash -s -- update
    ```
