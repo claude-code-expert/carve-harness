@@ -1,12 +1,12 @@
 ---
 name: carve-guide
-description: 하네스의 모든 HTML 산출물(문서·가이드·랜딩·리포트·데모 등)을 일관된 디자인 시스템으로 작성·갱신하는 범용 스킬. anti-ai-slop 하드 게이트 + theme-factory(색·폰트)·frontend-design(레이아웃 방향) 디자인 검토 + 1000px 반응형 + run-ai.kr 임베드 안전 + 실측 검증을 기본 탑재. 릴리스 시 carve-workflow-guide.html 실측 갱신도 이 스킬로. 이 repo 유지보수 전용(배포 제외).
+description: 하네스의 모든 HTML 산출물(문서·가이드·랜딩·리포트·데모 등)을 일관된 디자인 시스템으로 작성·갱신하는 범용 스킬. anti-ai-slop 하드 게이트 + theme-factory(색·폰트)·frontend-design(레이아웃 방향) 디자인 검토 + 1000px 반응형 + 임베드(SPA) 안전 + 실측 검증을 기본 탑재. HTML을 "예쁘게/그럴듯하게" 만들 때 발동. 릴리스 시 carve-workflow-guide.html 갱신은 §7 특수 모드(이 리포 전용).
 disable-model-invocation: true
 ---
 
 # carve-guide — 하네스 HTML 산출물 작성 스킬
 
-harness의 **모든 HTML 산출물**을 검증된 디자인 시스템 + 제약으로 만든다. run-ai.kr 게시(임베드)·GitHub Pages 호스팅을 전제로 한다. **이 repo 유지보수 전용** — `install.sh`의 `DEV_SKILLS`에 등록돼 소비자 설치엔 미포함.
+harness의 **모든 HTML 산출물**을 검증된 디자인 시스템 + 제약으로 만든다. run-ai.kr 게시(임베드)·GitHub Pages 호스팅을 전제로 한다. **v0.0.13부터 하네스 번들에 포함** — 소비자도 §0~6(범용 HTML 작성)을 쓴다. §7(릴리스 인벤토리 갱신)만 이 리포 전용이다.
 
 ## 0. 언제 쓰나
 - 새 HTML 문서/페이지/리포트/랜딩/데모 작성
@@ -97,12 +97,12 @@ run-ai.kr는 이 HTML을 `<iframe srcdoc="…">`로 감싸고 `<head>` 최상단
    ls .claude/hooks/*.sh | wc -l                      # 훅
    ls .claude/commands/*.md | wc -l                   # 커맨드
    ls .claude/agents/*.md | wc -l                     # 에이전트
-   ls .claude/skills | grep -vx carve-guide | wc -l   # 스킬 (DEV_SKILLS 제외 = 배포 수)
+   ls .claude/skills | wc -l                          # 스킬 (carve-guide 포함 — v0.0.13부터 배포)
    find .claude/rules -name '*.md' | wc -l            # 규칙
    ls .claude/workflows | wc -l                       # 워크플로
    bash .claude/hooks/tests/run-all.sh 2>&1 | grep -oE '[0-9]+ passed' | awk '{s+=$1}END{print s}'  # 테스트
    ```
-   각 카테고리 **이름 목록**도 수집(전체 표용). `carve-guide`는 배포 인벤토리·목록에서 제외.
+   각 카테고리 **이름 목록**도 수집(전체 표용) — `carve-guide` 포함.
 2. **업데이트 로그**: `CHANGELOG.md` 최신 5~8 버전을 표로. 헤더 버전 = `VERSION` 값.
 3. **소스 리포**: 헤더 메타에 `https://github.com/claude-code-expert/carve-harness` 고정.
 4. **전체 목록 + 사용 예시**: 스킬·커맨드·훅 전체 표(카운트는 1번과 일치) + 슬래시·발화·오케스트레이션 예시.
@@ -118,5 +118,5 @@ run-ai.kr는 이 HTML을 `<iframe srcdoc="…">`로 감싸고 `<head>` 최상단
 - `.wrap` 폭은 `!important`로 고정(임베드 호스트 주입을 이김), `@media print`는 `none !important`.
 - 내부 앵커는 `preventDefault`+`scrollIntoView`(해시 미변경), 외부 링크는 `a.ext`+`window.open` — SPA 임베드 호환.
 - CSS는 인라인(외부 링크 CSP 차단 대비).
-- 수치는 **실측**. 프로즈 복붙 금지. 배포 제외 스킬(`carve-guide`)은 배포 카운트에서 뺀다.
+- 수치는 **실측**. 프로즈 복붙 금지.
 - **PNG 육안 확인 전 완료 선언 금지.**

@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>carve-harness — 사용 가이드</title>
-  <meta name="description" content="carve-harness v0.0.12 전체 개요 — 3기둥(제약·피드백·상태) 하네스, 훅 9·커맨드 14·에이전트 20·스킬 25·규칙 18·워크플로 1, 설치·프루닝·오케스트레이션·크로스 에이전트.">
+  <meta name="description" content="carve-harness v0.0.13 전체 개요 — 3기둥(제약·피드백·상태) 하네스, 훅 9·커맨드 14·에이전트 20·스킬 26·규칙 18·워크플로 1, 설치·프루닝·오케스트레이션·크로스 에이전트.">
   <link rel="preconnect" href="https://cdn.jsdelivr.net">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css">
   <style>
@@ -306,7 +306,7 @@
       </div>
       <div>
         <dt>버전</dt>
-        <dd><code>v0.0.12</code> · 2026-07-11</dd>
+        <dd><code>v0.0.13</code> · 2026-07-12</dd>
       </div>
       <div>
         <dt>성격</dt>
@@ -372,8 +372,8 @@
     <div class="callout accent">
       <span class="label">이 문서의 위상</span>
       <p style="margin-bottom:0;">
-        이 가이드는 <strong>carve-harness v0.0.12 전체 개요</strong>입니다. 3기둥 모델부터 구성 인벤토리(훅 9 · 커맨드 14 ·
-        에이전트 20 · 스킬 25 · 규칙 18 · 워크플로 1) · 설치/프루닝 · 오케스트레이션 · 크로스 에이전트까지, <em>실제 리포에 존재하는 자산만</em> 근거로 다룹니다.
+        이 가이드는 <strong>carve-harness v0.0.13 전체 개요</strong>입니다. 3기둥 모델부터 구성 인벤토리(훅 9 · 커맨드 14 ·
+        에이전트 20 · 스킬 26 · 규칙 18 · 워크플로 1) · 설치/프루닝 · 오케스트레이션 · 크로스 에이전트까지, <em>실제 리포에 존재하는 자산만</em> 근거로 다룹니다.
         단일 출처는 <code>README.md</code> · <code>CHANGELOG.md</code> · <code>docs/md/orchestration.md</code>입니다.
       </p>
     </div>
@@ -444,7 +444,7 @@
         <tr><td><strong>훅</strong></td><td class="num">9</td><td><code>pretool-guard</code> · <code>stop-verify</code> · <code>session-handoff</code> · <code>harness-audit</code></td><td><code>.claude/hooks/</code></td></tr>
         <tr><td><strong>슬래시 커맨드</strong></td><td class="num">14</td><td><code>commit</code> · <code>plan</code> · <code>review</code> · <code>verify</code> · <code>harness-audit</code> · <code>squad-*</code></td><td><code>.claude/commands/</code></td></tr>
         <tr><td><strong>에이전트</strong></td><td class="num">20</td><td><code>evaluator</code> · <code>code-reviewer</code> · <code>security-reviewer</code> · <code>fable-*</code> · <code>squad-*</code></td><td><code>.claude/agents/</code></td></tr>
-        <tr><td><strong>스킬</strong></td><td class="num">25</td><td><code>anti-ai-slop</code> · <code>handoff</code> · <code>changelog</code> · <code>implement</code> · <code>theme-factory</code></td><td><code>.claude/skills/</code></td></tr>
+        <tr><td><strong>스킬</strong></td><td class="num">26</td><td><code>anti-ai-slop</code> · <code>carve-guide</code> · <code>handoff</code> · <code>implement</code> · <code>theme-factory</code></td><td><code>.claude/skills/</code></td></tr>
         <tr><td><strong>규칙(.md)</strong></td><td class="num">18</td><td><code>safety</code> · <code>common/*</code> · <code>code-convention/dev-stack-*</code></td><td><code>.claude/rules/</code></td></tr>
         <tr><td><strong>워크플로</strong></td><td class="num">1</td><td><code>fable-team-pipeline.js</code></td><td><code>.claude/workflows/</code></td></tr>
         <tr><td><strong>git 훅</strong></td><td class="num">2</td><td><code>commit-msg</code> · <code>pre-commit</code></td><td><code>.githooks/</code></td></tr>
@@ -635,13 +635,14 @@ bash install.sh prune --keep-list &lt;파일&gt;   # KEEP 밖 비보호 파일 �
   <!-- Part 8 -->
   <section id="p8">
     <h2><span class="part">PART 8</span>전체 목록 (스킬 · 커맨드)</h2>
-    <p>배포되는 전체 스킬 25종과 슬래시 커맨드 14종입니다(훅 9종은 <a href="#p3">PART 3</a>). 유지보수용 <code>carve-guide</code>는 배포에서 제외돼 이 목록에 없습니다.</p>
+    <p>배포되는 전체 스킬 26종과 슬래시 커맨드 14종입니다(훅 9종은 <a href="#p3">PART 3</a>).</p>
 
-    <h3>스킬 (25종)</h3>
+    <h3>스킬 (26종)</h3>
     <table>
       <thead><tr><th style="width:210px;">스킬</th><th style="width:88px;">구분</th><th>용도</th></tr></thead>
       <tbody>
         <tr><td><code>anti-ai-slop</code></td><td>코어</td><td>시각 산출물 생성 전 슬롭(그라데이션·글로우·이모지) 차단 게이트</td></tr>
+        <tr><td><code>carve-guide</code></td><td>코어</td><td>하네스 HTML 산출물 작성 — 디자인 시스템·anti-slop·1000px 임베드 안전(§릴리스 갱신은 리포 전용)</td></tr>
         <tr><td><code>handoff</code></td><td>코어</td><td>세션 종료·압축 전 진행상황을 <code>specs/HANDOFF.md</code>로 인계</td></tr>
         <tr><td><code>changelog</code></td><td>코어</td><td>되돌릴 수 없는 결정·근거를 <code>specs/DECISIONS.md</code>에 기록</td></tr>
         <tr><td><code>version-changelog</code></td><td>코어</td><td>릴리스 시 VERSION·CHANGELOG·README 버전 이력 동기 갱신</td></tr>
@@ -698,7 +699,8 @@ bash install.sh prune --keep-list &lt;파일&gt;   # KEEP 밖 비보호 파일 �
     <table>
       <thead><tr><th style="width:96px;">버전</th><th style="width:110px;">날짜</th><th>요약</th></tr></thead>
       <tbody>
-        <tr><td><strong>v0.0.12</strong></td><td>2026-07-11</td><td>프로젝트 맞춤 구축(prune) · 로컬 lint 게이트 · 훅 디렉토리 self-heal 수정 · <code>theme-factory</code>·<code>frontend-design</code> · 스킬 25 · 테스트 172</td></tr>
+        <tr><td><strong>v0.0.13</strong></td><td>2026-07-12</td><td><code>carve-guide</code> 범용 HTML 작성 스킬 + 배포 포함(스킬 25→26) · 임베드 안정화(1000px <code>!important</code> 폭 · SPA 목차 크래시 수정 · 데모 새 창)</td></tr>
+        <tr><td>v0.0.12</td><td>2026-07-11</td><td>프로젝트 맞춤 구축(prune) · 로컬 lint 게이트 · 훅 디렉토리 self-heal 수정 · <code>theme-factory</code>·<code>frontend-design</code> · 스킬 25 · 테스트 172</td></tr>
         <tr><td>v0.0.11</td><td>2026-07-10</td><td>체크박스 TUI 구성 선택 · 세션 배너 인벤토리 + <code>[carve-harness:&lt;hook&gt;]</code> 프리픽스 · LSP·ponytail 플러그인 선언 · 공개 레포 전환</td></tr>
         <tr><td>v0.0.10</td><td>2026-07-10</td><td>설치 구성 선택 · fable 오케스트레이터 팀 + <code>fable-team-pipeline</code> · npm test 러너 · macOS 이식성</td></tr>
         <tr><td>v0.0.9</td><td>2026-07-09</td><td>Java/Spring 결정적 출력검증 <code>eval-java</code>(LLM 없는 재현 가능 P) · ArchUnit 규칙 승격 · AUDIT-08</td></tr>
@@ -709,7 +711,7 @@ bash install.sh prune --keep-list &lt;파일&gt;   # KEEP 밖 비보호 파일 �
   </section>
 
   <footer class="doc-foot">
-    docs/html/carve-workflow-guide.html · carve-harness v0.0.12<br>
+    docs/html/carve-workflow-guide.html · carve-harness v0.0.13<br>
     단일 출처: README.md · CHANGELOG.md · docs/md/orchestration.md · docs/md/fable-team-guide.md
   </footer>
 

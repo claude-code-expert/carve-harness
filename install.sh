@@ -218,7 +218,7 @@ run_setup() {
 MD_PATHS=( CLAUDE.md AGENTS.md RULES.md .cursorrules codex.md .claude/CLAUDE.md .claude/rules specs/README.md )
 HOOK_PATHS=( .claude/settings.json .claude/hooks .githooks )
 SKILL_PATHS=( .claude/skills )
-DEV_SKILLS="carve-guide"   # 배포 제외: 이 repo 유지보수용 스킬 — 소비자 설치본에서 제거(TUI·복사 모두)
+DEV_SKILLS=""   # 배포 제외 스킬 목록(공백 구분). 현재 없음 — carve-guide는 v0.0.13부터 배포 포함. 훅과 build_items·strip이 이 목록을 참조
 CMD_PATHS=( .claude/commands )
 ORCH_PATHS=( .claude/agents .claude/workflows docs/md/orchestration.md docs/md/fable-team-guide.md )
 CORE_PATHS=( VERSION install.sh uninstall.sh vendor )

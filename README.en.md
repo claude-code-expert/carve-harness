@@ -15,7 +15,7 @@ Drop it into your project root and it works immediately.
 | **Observability** | Every hook verdict logged to `logs/*.jsonl` (PII masked), with report/rotation. The session-start banner lists every loaded component, and all hook messages carry a unified `[carve-harness:<hook>]` prefix |
 | **Self-audit** | `/harness-audit` — 42 mechanical checks PASS/FAIL the harness configuration itself |
 
-**Inventory**: 9 hooks (6 events + 3 manual CLI) · 14 slash commands · 20 agents · 25 skills · 18 rule files · 1 workflow · 14 test suites (172 cases) — full lists in the [component tables](#full-component-list-skills--commands--hooks) below
+**Inventory**: 9 hooks (6 events + 3 manual CLI) · 14 slash commands · 20 agents · 26 skills · 18 rule files · 1 workflow · 14 test suites (172 cases) — full lists in the [component tables](#full-component-list-skills--commands--hooks) below
 
 **Cross-agent**: hook blocking is Claude Code-only. Cursor/Codex/etc. follow `AGENTS.md` as the canonical rules, with `.githooks/pre-commit` as the final gate at commit time.
 
@@ -110,11 +110,12 @@ For customization (protected paths, formatters, verify commands, new stacks) and
 
 ## Full component list (skills · commands · hooks)
 
-### Skills (25)
+### Skills (26)
 
 | Skill | Group | Purpose |
 |------|------|------|
 | `anti-ai-slop` | core | Anti-slop gate before any visual output (blocks gradients/glow/decoration) |
+| `carve-guide` | core | Author harness HTML output — design system · anti-slop · 1000px embed-safe (§release-refresh mode is repo-only) |
 | `handoff` | core | Hand off progress to `specs/HANDOFF.md` before session end/compaction |
 | `changelog` | core | Record irreversible decisions + rationale in `specs/DECISIONS.md` |
 | `version-changelog` | core | Sync VERSION · CHANGELOG · README version history on release |
@@ -188,7 +189,7 @@ For customization (protected paths, formatters, verify commands, new stacks) and
     ├── settings.json        # 6 hook events registered
     ├── hooks/  (9 + 14 test suites)
     ├── workflows/ (fable-team-pipeline)
-    ├── commands/ (14) · agents/ (20) · skills/ (25) · rules/ (18)
+    ├── commands/ (14) · agents/ (20) · skills/ (26) · rules/ (18)
 ```
 
 ## Limitations
@@ -211,6 +212,7 @@ For customization (protected paths, formatters, verify commands, new stacks) and
 
 | Version | Date | Summary |
 |---------|------|---------|
+| v0.0.13 | 2026-07-12 | `carve-guide` generalized HTML-authoring skill + **bundled** (25→26 skills) · embed hardening (1000px `!important` width · SPA TOC crash fix · new-window demo) |
 | v0.0.12 | 2026-07-11 | project-aware build (tailored/manual choice · `carve-harness-create` prune) · **hook-dir self-heal fix** (partial install → all-commits-blocked bug) · **local lint gate** (shift-left) · `theme-factory` vendored + `frontend-design` declared · component tables & demo · 25 skills · 14 test suites (172 cases) |
 | v0.0.11 | 2026-07-10 | checkbox TUI component selection · session banner inventory + unified `[carve-harness:<hook>]` prefix · LSP (vtsls/jdtls) + ponytail plugin declarations · public source repo (no token needed) |
 | v0.0.10 | 2026-07-10 | installer component selection (5-group CLI + `HARNESS_COMPONENTS`) · fable orchestrator team (4 workers + workflow + guides) · npm test runner · macOS portability fixes |

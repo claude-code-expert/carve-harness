@@ -15,7 +15,7 @@
 | **관측** | 모든 훅 판정을 `logs/*.jsonl`에 기록 (PII 마스킹), 리포트·회전 지원. 세션 시작 배너가 로드된 전 구성을 표시하고, 훅 메시지는 `[carve-harness:<hook>]` 프리픽스로 통일 |
 | **자가감사** | `/harness-audit` — 42개 기계 체크로 하네스 오구성 PASS/FAIL |
 
-**구성 요소**: 훅 9종(6 이벤트 + 수동 CLI 3) · 슬래시 커맨드 14종 · 에이전트 20종 · 스킬 25종 · 규칙 18종 · 워크플로 1종 · 테스트 14 스위트(172건) — 전체 목록은 [전체 구성](#전체-구성-스킬커맨드훅) 표 참고
+**구성 요소**: 훅 9종(6 이벤트 + 수동 CLI 3) · 슬래시 커맨드 14종 · 에이전트 20종 · 스킬 26종 · 규칙 18종 · 워크플로 1종 · 테스트 14 스위트(172건) — 전체 목록은 [전체 구성](#전체-구성-스킬커맨드훅) 표 참고
 
 **크로스 에이전트**: 훅 차단은 Claude Code 전용. Cursor/Codex 등은 `AGENTS.md` 정본 + `.githooks/pre-commit`이 커밋 시점에 최종 차단.
 
@@ -110,11 +110,12 @@ bash uninstall.sh --yes    # 실제 제거 (manifest 범위만, 원래 있던 �
 
 ## 전체 구성 (스킬·커맨드·훅)
 
-### 스킬 (25종)
+### 스킬 (26종)
 
 | 스킬 | 구분 | 용도 |
 |------|------|------|
 | `anti-ai-slop` | 코어 | 시각 산출물 생성 전 슬롭(그라데이션·글로우·장식) 차단 게이트 |
+| `carve-guide` | 코어 | 하네스 HTML 산출물 작성 — 디자인 시스템·anti-slop·1000px 임베드 안전(§릴리스 갱신은 리포 전용) |
 | `handoff` | 코어 | 세션 종료·압축 전 진행상황을 `specs/HANDOFF.md`로 인계 |
 | `changelog` | 코어 | 되돌릴 수 없는 결정·근거를 `specs/DECISIONS.md`에 기록 |
 | `version-changelog` | 코어 | 릴리스 시 VERSION·CHANGELOG·README 버전 이력 동기 갱신 |
@@ -188,7 +189,7 @@ bash uninstall.sh --yes    # 실제 제거 (manifest 범위만, 원래 있던 �
     ├── settings.json        # 훅 6이벤트 등록
     ├── hooks/  (9종 + tests 14 스위트)
     ├── workflows/ (fable-team-pipeline)
-    ├── commands/ (14종) · agents/ (20종) · skills/ (25종) · rules/ (18종)
+    ├── commands/ (14종) · agents/ (20종) · skills/ (26종) · rules/ (18종)
 ```
 
 ## 한계
@@ -211,6 +212,7 @@ bash uninstall.sh --yes    # 실제 제거 (manifest 범위만, 원래 있던 �
 
 | 버전 | 날짜 | 요약 |
 |------|------|------|
+| v0.0.13 | 2026-07-12 | `carve-guide` 범용 HTML 작성 스킬 + **배포 포함**(스킬 25→26종) · 임베드 안정화(1000px `!important` 폭 · SPA 목차 크래시 수정 · 데모 새 창) |
 | v0.0.12 | 2026-07-11 | 프로젝트 맞춤 구축(맞춤/수동 선택 · `carve-harness-create` prune) · **훅 디렉토리 self-heal 수정**(부분설치→커밋 전면차단 버그) · **로컬 lint 게이트**(shift-left) · `theme-factory` 벤더링 + `frontend-design` 선언 · 구성 표·데모 · 스킬 25종·테스트 14 스위트(172건) |
 | v0.0.11 | 2026-07-10 | 체크박스 TUI 구성 선택 · 세션 배너 인벤토리 + `[carve-harness:<hook>]` 프리픽스 통일 · LSP(vtsls·jdtls)·ponytail 플러그인 선언 배포 · 공개 레포 전환(토큰 불요) |
 | v0.0.10 | 2026-07-10 | 설치 구성 선택(5구성 CLI + `HARNESS_COMPONENTS`) · fable 오케스트레이터 팀(워커 4종+워크플로+가이드) · npm test 러너 · macOS 이식성 수정 |

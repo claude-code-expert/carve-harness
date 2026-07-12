@@ -182,7 +182,7 @@ harness/
 | `squad-docs.md` | sonnet | 문서. 키워드: "문서","README","docs","API 문서","JSDoc","아키텍처 문서","주석" |
 | `squad-gitops.md` | haiku | Git 워크플로. 키워드: "커밋 메시지","commit message","PR 작성","체인지로그","릴리즈 노트" |
 
-### 5.3 스킬 (`.claude/skills/`, 25종)
+### 5.3 스킬 (`.claude/skills/`, 26종)
 
 **하네스 코어 스킬** (자동발동):
 
@@ -192,6 +192,7 @@ harness/
 | `changelog/` | 자동/`/changelog` | 되돌릴 수 없는 결정·근거를 `specs/DECISIONS.md`에 시간순 기록(append-only) |
 | `version-changelog/` | 자동/`/version-changelog` | 릴리스 시 VERSION·CHANGELOG·README 버전이력 동시 갱신. **VERSION만 바꾸면 pre-commit 차단** |
 | `anti-ai-slop/` | 자동/`/anti-ai-slop` | 이미지·HTML·SVG 생성 전 발동 — 그라데이션·글로우·장식 모션 차단 게이트 |
+| `carve-guide/` | `/carve-guide` | 하네스 HTML 산출물 작성(디자인 시스템·anti-slop 게이트·theme-factory/frontend-design 검토·1000px 임베드 안전). §릴리스 인벤토리 갱신 모드는 리포 전용. v0.0.13부터 배포 |
 | `carve-harness-create/` | `/carve-harness-create` | 프로젝트 스택 분석 → 맞지 않는 규칙·에이전트·스킬을 KEEP/PRUNE 표로 제안, 1회 확인 후 `install.sh prune` 실행. 명시 호출 전용(`disable-model-invocation`). 의존성 간선(eval-java↔archunit·squad↔에이전트·fable↔워크플로) 미분리 |
 
 **mattpocock 파생 스킬 19종** (대부분 `/이름` 사용자 호출 전용 = `disable-model-invocation`):
