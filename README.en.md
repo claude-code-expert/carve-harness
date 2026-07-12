@@ -37,6 +37,23 @@ curl -fsSL https://raw.githubusercontent.com/claude-code-expert/carve-harness/ma
 - **LSP + plugins auto-declared**: settings.json declares the `vtsls` (TypeScript/React/JavaScript LSP), `jdtls` (Java LSP), `ponytail`, and `frontend-design` (design-direction skill) plugins along with their marketplaces (`claude-code-lsps` · `ponytail` · `claude-code-plugins`) — Claude Code installs them after a trust prompt at session start. Server binaries are separate: `bash install.sh setup` offers a global npm install of vtsls; jdtls needs `brew install jdtls` (JDK required). Missing binaries are reported as NOTE lines at the end of install.
 - The installer ends by running `/harness-audit` — 42 PASS means all gates are live.
 
+**With `[1]` (project-aware build)** the installer prints the banner below at the end, pointing you to run `/carve-harness-create` in a session (it fires **only via the slash command**, not a natural-language request). The installer output is in Korean:
+
+```text
+┌─────────────────────────────────────────────────────────────┐
+│  맞춤 하네스 구축 예약됨 — 전체 설치 완료, 지금 바로 동작    │
+└─────────────────────────────────────────────────────────────┘
+프로젝트 스택에 맞지 않는 규칙·에이전트·스킬을 정리하려면
+Claude Code 세션에서 다음을 실행하세요:
+
+    /carve-harness-create
+
+프로젝트를 분석해 제거 대상을 제안하고, 1회 확인 후 정리합니다.
+정리하지 않아도 하네스는 정상 동작합니다(전체 구성 유지).
+```
+
+With `[2]` (manual selection) this banner is replaced by a `bash install.sh setup` (interactive initial setup) hint instead.
+
 ### Offline / local clone install
 
 ```bash
