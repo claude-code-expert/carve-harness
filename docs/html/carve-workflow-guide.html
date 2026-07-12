@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>carve-harness — 사용 가이드</title>
-  <meta name="description" content="carve-harness v0.0.12 전체 개요 — 3기둥(제약·피드백·상태) 하네스, 훅 9·커맨드 14·에이전트 20·스킬 25·규칙 18·워크플로 1, 설치·프루닝·오케스트레이션·크로스 에이전트.">
+  <meta name="description" content="carve-harness v0.0.13 전체 개요 — 3기둥(제약·피드백·상태) 하네스, 훅 9·커맨드 14·에이전트 20·스킬 26·규칙 18·워크플로 1, 설치·프루닝·오케스트레이션·크로스 에이전트.">
   <link rel="preconnect" href="https://cdn.jsdelivr.net">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css">
   <style>
@@ -45,8 +45,11 @@
     }
 
     .wrap {
-      max-width: 880px;
-      margin: 0 auto;
+      /* !important: 임베드 호스트(run-ai.kr iframe)가 .wrap{max-width:80%!important}를 주입하므로,
+         소스 순서상 뒤인 이 규칙이 !important로 그 주입을 이겨 1000px를 강제한다. 좁은 뷰포트에선
+         max-width가 컨테이너보다 크므로 자연 축소(반응형) — !important가 반응성을 깨지 않는다. */
+      max-width: 1000px !important;
+      margin: 0 auto !important;
       padding: 64px 32px 96px;
     }
 
@@ -267,7 +270,7 @@
 
     @media print {
       body { font-size: 11pt; }
-      .wrap { padding: 0; max-width: none; }
+      .wrap { padding: 0; max-width: none !important; }
       pre, table, .callout, .mono-panel { break-inside: avoid; }
       h2 { break-after: avoid; }
       a { color: var(--ink); border-bottom: 0; }
@@ -303,7 +306,7 @@
       </div>
       <div>
         <dt>버전</dt>
-        <dd><code>v0.0.12</code> · 2026-07-11</dd>
+        <dd><code>v0.0.13</code> · 2026-07-12</dd>
       </div>
       <div>
         <dt>성격</dt>
@@ -338,6 +341,14 @@
       <strong>결정적(deterministic)</strong>으로 막습니다. 별도 런타임·빌드가 필요 없고, <code>.claude/</code> 자산과 Bash 훅만으로 동작합니다.
     </p>
 
+    <div class="callout accent">
+      <span class="label">라이브 데모</span>
+      <p style="margin-bottom:0;">
+        <a class="ext" href="https://claude-code-expert.github.io/carve-harness/docs/html/harness-demo/index.html">하네스 적용 전/후 화면 비교 열기 (새 창)</a>
+        — 같은 프롬프트를 하네스 없이 / 하네스로 실행한 두 결과를 나란히 보고 "설득 vs 강제"의 차이를 눈으로 확인합니다.
+      </p>
+    </div>
+
     <h3>핵심 동작 한 줄</h3>
     <div class="mono-panel">
       curl 설치 → 스택 탐지 → (구성요소 선택) → <strong>.claude/</strong>에 자산 생성<br>
@@ -361,8 +372,8 @@
     <div class="callout accent">
       <span class="label">이 문서의 위상</span>
       <p style="margin-bottom:0;">
-        이 가이드는 <strong>carve-harness v0.0.12 전체 개요</strong>입니다. 3기둥 모델부터 구성 인벤토리(훅 9 · 커맨드 14 ·
-        에이전트 20 · 스킬 25 · 규칙 18 · 워크플로 1) · 설치/프루닝 · 오케스트레이션 · 크로스 에이전트까지, <em>실제 리포에 존재하는 자산만</em> 근거로 다룹니다.
+        이 가이드는 <strong>carve-harness v0.0.13 전체 개요</strong>입니다. 3기둥 모델부터 구성 인벤토리(훅 9 · 커맨드 14 ·
+        에이전트 20 · 스킬 26 · 규칙 18 · 워크플로 1) · 설치/프루닝 · 오케스트레이션 · 크로스 에이전트까지, <em>실제 리포에 존재하는 자산만</em> 근거로 다룹니다.
         단일 출처는 <code>README.md</code> · <code>CHANGELOG.md</code> · <code>docs/md/orchestration.md</code>입니다.
       </p>
     </div>
@@ -431,14 +442,14 @@
       </thead>
       <tbody>
         <tr><td><strong>훅</strong></td><td class="num">9</td><td><code>pretool-guard</code> · <code>stop-verify</code> · <code>session-handoff</code> · <code>harness-audit</code></td><td><code>.claude/hooks/</code></td></tr>
-        <tr><td><strong>슬래시 커맨드</strong></td><td class="num">14</td><td><code>commit</code> · <code>plan</code> · <code>review</code> · <code>verify</code> · <code>harness-audit</code> · <code>squad-*</code></td><td><code>.claude/commands/</code></td></tr>
+        <tr><td><strong>슬래시 커맨드</strong></td><td class="num">15</td><td><code>commit</code> · <code>commit-branch</code> · <code>plan</code> · <code>verify</code> · <code>review</code> · <code>squad-*</code></td><td><code>.claude/commands/</code></td></tr>
         <tr><td><strong>에이전트</strong></td><td class="num">20</td><td><code>evaluator</code> · <code>code-reviewer</code> · <code>security-reviewer</code> · <code>fable-*</code> · <code>squad-*</code></td><td><code>.claude/agents/</code></td></tr>
-        <tr><td><strong>스킬</strong></td><td class="num">25</td><td><code>anti-ai-slop</code> · <code>handoff</code> · <code>changelog</code> · <code>implement</code> · <code>theme-factory</code></td><td><code>.claude/skills/</code></td></tr>
+        <tr><td><strong>스킬</strong></td><td class="num">26</td><td><code>anti-ai-slop</code> · <code>carve-guide</code> · <code>handoff</code> · <code>implement</code> · <code>theme-factory</code></td><td><code>.claude/skills/</code></td></tr>
         <tr><td><strong>규칙(.md)</strong></td><td class="num">18</td><td><code>safety</code> · <code>common/*</code> · <code>code-convention/dev-stack-*</code></td><td><code>.claude/rules/</code></td></tr>
         <tr><td><strong>워크플로</strong></td><td class="num">1</td><td><code>fable-team-pipeline.js</code></td><td><code>.claude/workflows/</code></td></tr>
         <tr><td><strong>git 훅</strong></td><td class="num">2</td><td><code>commit-msg</code> · <code>pre-commit</code></td><td><code>.githooks/</code></td></tr>
         <tr><td><strong>크로스에이전트 문서</strong></td><td class="num">7</td><td><code>CLAUDE.md</code> · <code>AGENTS.md</code> · <code>RULES.md</code> · <code>codex.md</code> · <code>.cursorrules</code></td><td>루트 · <code>.claude/</code></td></tr>
-        <tr><td><strong>테스트</strong></td><td class="num">167</td><td><code>npm test</code> — 14 스위트(<code>tests/run-all.sh</code> 집계)</td><td><code>tests/</code></td></tr>
+        <tr><td><strong>테스트</strong></td><td class="num">172</td><td><code>npm test</code> — 14 스위트(<code>tests/run-all.sh</code> 집계)</td><td><code>tests/</code></td></tr>
       </tbody>
     </table>
 
@@ -624,13 +635,14 @@ bash install.sh prune --keep-list &lt;파일&gt;   # KEEP 밖 비보호 파일 �
   <!-- Part 8 -->
   <section id="p8">
     <h2><span class="part">PART 8</span>전체 목록 (스킬 · 커맨드)</h2>
-    <p>배포되는 전체 스킬 25종과 슬래시 커맨드 14종입니다(훅 9종은 <a href="#p3">PART 3</a>). 유지보수용 <code>carve-guide</code>는 배포에서 제외돼 이 목록에 없습니다.</p>
+    <p>배포되는 전체 스킬 26종과 슬래시 커맨드 15종입니다(훅 9종은 <a href="#p3">PART 3</a>).</p>
 
-    <h3>스킬 (25종)</h3>
+    <h3>스킬 (26종)</h3>
     <table>
       <thead><tr><th style="width:210px;">스킬</th><th style="width:88px;">구분</th><th>용도</th></tr></thead>
       <tbody>
         <tr><td><code>anti-ai-slop</code></td><td>코어</td><td>시각 산출물 생성 전 슬롭(그라데이션·글로우·이모지) 차단 게이트</td></tr>
+        <tr><td><code>carve-guide</code></td><td>코어</td><td>하네스 HTML 산출물 작성 — 디자인 시스템·anti-slop·1000px 임베드 안전(§릴리스 갱신은 리포 전용)</td></tr>
         <tr><td><code>handoff</code></td><td>코어</td><td>세션 종료·압축 전 진행상황을 <code>specs/HANDOFF.md</code>로 인계</td></tr>
         <tr><td><code>changelog</code></td><td>코어</td><td>되돌릴 수 없는 결정·근거를 <code>specs/DECISIONS.md</code>에 기록</td></tr>
         <tr><td><code>version-changelog</code></td><td>코어</td><td>릴리스 시 VERSION·CHANGELOG·README 버전 이력 동기 갱신</td></tr>
@@ -658,11 +670,12 @@ bash install.sh prune --keep-list &lt;파일&gt;   # KEEP 밖 비보호 파일 �
       </tbody>
     </table>
 
-    <h3>슬래시 커맨드 (14종)</h3>
+    <h3>슬래시 커맨드 (15종)</h3>
     <table>
       <thead><tr><th style="width:210px;">커맨드</th><th>용도</th></tr></thead>
       <tbody>
         <tr><td><code>/harness-audit</code></td><td>하네스 구성 42체크 PASS/FAIL</td></tr>
+        <tr><td><code>/commit-branch</code></td><td>현재 브랜치에 Conventional Commits로 커밋 + 푸시(<code>main</code> 직접 금지)</td></tr>
         <tr><td><code>/plan</code></td><td>작업을 완료 기준(SC) 단위로 분해 → <code>specs/</code></td></tr>
         <tr><td><code>/verify</code></td><td>현재 변경을 SC·빌드·타입·테스트로 검증</td></tr>
         <tr><td><code>/review</code></td><td>변경분을 타입·보안·예외·상태관리 관점 검토</td></tr>
@@ -687,7 +700,8 @@ bash install.sh prune --keep-list &lt;파일&gt;   # KEEP 밖 비보호 파일 �
     <table>
       <thead><tr><th style="width:96px;">버전</th><th style="width:110px;">날짜</th><th>요약</th></tr></thead>
       <tbody>
-        <tr><td><strong>v0.0.12</strong></td><td>2026-07-11</td><td>프로젝트 맞춤 구축(prune) · 로컬 lint 게이트 · 훅 디렉토리 self-heal 수정 · <code>theme-factory</code>·<code>frontend-design</code> · 스킬 25 · 테스트 172</td></tr>
+        <tr><td><strong>v0.0.13</strong></td><td>2026-07-12</td><td><code>carve-guide</code> 범용 HTML 작성 스킬 + 배포 포함(스킬 25→26) · 임베드 안정화(1000px <code>!important</code> 폭 · SPA 목차 크래시 수정 · 데모 새 창)</td></tr>
+        <tr><td>v0.0.12</td><td>2026-07-11</td><td>프로젝트 맞춤 구축(prune) · 로컬 lint 게이트 · 훅 디렉토리 self-heal 수정 · <code>theme-factory</code>·<code>frontend-design</code> · 스킬 25 · 테스트 172</td></tr>
         <tr><td>v0.0.11</td><td>2026-07-10</td><td>체크박스 TUI 구성 선택 · 세션 배너 인벤토리 + <code>[carve-harness:&lt;hook&gt;]</code> 프리픽스 · LSP·ponytail 플러그인 선언 · 공개 레포 전환</td></tr>
         <tr><td>v0.0.10</td><td>2026-07-10</td><td>설치 구성 선택 · fable 오케스트레이터 팀 + <code>fable-team-pipeline</code> · npm test 러너 · macOS 이식성</td></tr>
         <tr><td>v0.0.9</td><td>2026-07-09</td><td>Java/Spring 결정적 출력검증 <code>eval-java</code>(LLM 없는 재현 가능 P) · ArchUnit 규칙 승격 · AUDIT-08</td></tr>
@@ -698,10 +712,31 @@ bash install.sh prune --keep-list &lt;파일&gt;   # KEEP 밖 비보호 파일 �
   </section>
 
   <footer class="doc-foot">
-    docs/html/carve-workflow-guide.html · carve-harness v0.0.12<br>
+    docs/html/carve-workflow-guide.html · carve-harness v0.0.13<br>
     단일 출처: README.md · CHANGELOG.md · docs/md/orchestration.md · docs/md/fable-team-guide.md
   </footer>
 
 </div>
+<script>
+  // 내부 앵커(TOC·본문 #링크)는 URL 해시를 바꾸지 않고 스크롤만 한다.
+  // run-ai.kr 같은 SPA에 임베드되면 해시 변경이 호스트 라우터를 트리거해
+  // API fetch(CORS 차단)·리액트 크래시를 유발하므로 preventDefault로 차단한다.
+  document.querySelectorAll('a[href^="#"]').forEach(function (a) {
+    a.addEventListener('click', function (e) {
+      e.preventDefault();   // 내부 앵커는 항상 — 빈("#")·미존재 ID라도 URL 해시 변경 차단(SPA 라우터 크래시 방지)
+      var id = this.getAttribute('href').slice(1);
+      var el = id && document.getElementById(id);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  });
+  // 외부 링크(a.ext)는 window.open으로 새 탭을 강제한다 — 호스트가 target="_blank"를
+  // sanitize로 제거하거나 SPA가 클릭을 가로채도 확실히 새 창에서 열리게 한다.
+  document.querySelectorAll('a.ext').forEach(function (a) {
+    a.addEventListener('click', function (e) {
+      e.preventDefault();
+      window.open(a.href, '_blank', 'noopener');
+    });
+  });
+</script>
 </body>
 </html>

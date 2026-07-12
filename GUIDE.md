@@ -124,7 +124,7 @@ harness/
 > 이 절은 하네스가 동작하는 **모든** 커맨드·에이전트·스킬·룰의 완전한 목록이다. 훅은 §4 참조.
 > 호출 방식: **커맨드** = 슬래시 `/이름` · **에이전트** = description 자동위임 또는 `"use the X agent"` (squad는 트리거 키워드) · **스킬** = `/이름`(사용자 호출) 또는 description 자동발동.
 
-### 5.1 커맨드 (`.claude/commands/`, 14종)
+### 5.1 커맨드 (`.claude/commands/`, 15종)
 
 | 파일 | 호출 | 용도 · 사용법 · 예시 |
 |------|------|----------------------|
@@ -132,6 +132,7 @@ harness/
 | `verify.md` | `/verify` | 현재 변경을 SC·빌드·타입·테스트로 검증. 예: `/verify` |
 | `review.md` | `/review` | 변경분을 타입·보안·예외·상태관리 관점 검토. 예: `/review` |
 | `commit.md` | `/commit` | commitlint 준수 커밋 메시지 준비. **자동호출 비활성**(`disable-model-invocation`) — 사용자만. 예: `/commit` |
+| `commit-branch.md` | `/commit-branch` | 현재 브랜치에 Conventional Commits로 커밋 + 푸시. `main` 직접·`--no-verify` 금지. 자동호출 비활성. 예: `/commit-branch` |
 | `harness-audit.md` | `/harness-audit` | 하네스 구성 42체크 PASS/FAIL(§7). 예: `/harness-audit` |
 | `squad.md` | `/squad <member> [task]` | Squad 에이전트 디스패처. 예: `/squad review 이 diff` |
 | `squad-plan.md` | `/squad-plan <feature>` | 기능 기획·유저스토리·와이어프레임. 예: `/squad-plan 결제 모듈` |
@@ -182,7 +183,7 @@ harness/
 | `squad-docs.md` | sonnet | 문서. 키워드: "문서","README","docs","API 문서","JSDoc","아키텍처 문서","주석" |
 | `squad-gitops.md` | haiku | Git 워크플로. 키워드: "커밋 메시지","commit message","PR 작성","체인지로그","릴리즈 노트" |
 
-### 5.3 스킬 (`.claude/skills/`, 25종)
+### 5.3 스킬 (`.claude/skills/`, 26종)
 
 **하네스 코어 스킬** (자동발동):
 
@@ -192,6 +193,7 @@ harness/
 | `changelog/` | 자동/`/changelog` | 되돌릴 수 없는 결정·근거를 `specs/DECISIONS.md`에 시간순 기록(append-only) |
 | `version-changelog/` | 자동/`/version-changelog` | 릴리스 시 VERSION·CHANGELOG·README 버전이력 동시 갱신. **VERSION만 바꾸면 pre-commit 차단** |
 | `anti-ai-slop/` | 자동/`/anti-ai-slop` | 이미지·HTML·SVG 생성 전 발동 — 그라데이션·글로우·장식 모션 차단 게이트 |
+| `carve-guide/` | `/carve-guide` | 하네스 HTML 산출물 작성(디자인 시스템·anti-slop 게이트·theme-factory/frontend-design 검토·1000px 임베드 안전). §릴리스 인벤토리 갱신 모드는 리포 전용. v0.0.13부터 배포 |
 | `carve-harness-create/` | `/carve-harness-create` | 프로젝트 스택 분석 → 맞지 않는 규칙·에이전트·스킬을 KEEP/PRUNE 표로 제안, 1회 확인 후 `install.sh prune` 실행. 명시 호출 전용(`disable-model-invocation`). 의존성 간선(eval-java↔archunit·squad↔에이전트·fable↔워크플로) 미분리 |
 
 **mattpocock 파생 스킬 19종** (대부분 `/이름` 사용자 호출 전용 = `disable-model-invocation`):

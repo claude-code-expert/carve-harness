@@ -4,6 +4,20 @@
 
 > **규칙**: `VERSION` 파일이 바뀌는 커밋에는 반드시 해당 버전 항목(`[X.Y.Z]`)이 이 파일에 함께 스테이징되어야 한다 — `.githooks/pre-commit`이 기계적으로 차단, 작성은 `/version-changelog` 스킬. 배포 절차는 `RELEASE.md`.
 
+## [0.0.13] - 2026-07-12
+
+### Added
+- **`carve-guide` 범용 HTML 작성 스킬 + 배포 포함**: 단일 문서 갱신기에서 하네스의 모든 HTML 산출물(문서·랜딩·리포트·데모)을 만드는 범용 스킬로 확장. 디자인 도구 오케스트레이션(하드 게이트 `anti-ai-slop` > `theme-factory`(색·폰트)·`frontend-design`(레이아웃 방향)) + 1000px 반응형 + SPA 임베드 안전 + 실측 검증을 기본 탑재. `install.sh`의 `DEV_SKILLS`에서 빼 **v0.0.13부터 배포 포함**(§7 릴리스 인벤토리 갱신 모드만 이 리포 전용). `DEV_SKILLS` 메커니즘(build_items 숨김 + coarse strip)은 공백 목록으로 유지.
+
+- **`/commit-branch` 커맨드**: 현재 브랜치에 Conventional Commits 규칙(commit-msg 게이트)으로 커밋하고 푸시한다. `main`/`master` 직접 푸시·`--no-verify` 우회 거부, 무관 파일·시크릿 스테이징 금지.
+
+### Fixed
+- **임베드 안정화(run-ai.kr)**: 호스트 iframe이 `.wrap{max-width:80%!important}`를 주입해 폭이 막히던 것을 파일 `.wrap`의 `!important`(소스 순서상 뒤라 승 — 실측 computed max-width=1000px)로 이겨 1000px 강제(print는 `none !important`). TOC·본문 내부 앵커가 URL 해시를 바꿔 호스트 SPA(React) 라우터를 크래시시키던 것을 `preventDefault`+`scrollIntoView`(해시 미변경)로 수정. 데모 링크는 GitHub Pages 절대 URL + `class="ext"`·`window.open`으로 새 탭 강제(마크다운 `target` sanitize·SPA 가로채기 우회).
+- 가이드 인벤토리 stale 테스트 카운트(167→172) 수정.
+
+### Changed
+- 인벤토리: 슬래시 커맨드 14→**15종**(`/commit-branch`) · 스킬 25→**26종**(`carve-guide` 배포 포함).
+
 ## [0.0.12] - 2026-07-11
 
 ### Added
