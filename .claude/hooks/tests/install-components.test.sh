@@ -203,6 +203,16 @@ else
   no "reinstall self-heal over existing hook dir (coarse-SKIP regression)"
 fi
 
-rm -rf "$T1" "$T2" "$T3" "$T5" "$T8"
+# (15) dev-only skill (carve-guide) is never distributed: a full install strips it
+#      while other skills land. Guards the DEV_SKILLS exclusion (build_items + coarse strip).
+T9=$(mktemp -d)
+( cd "$T9" && HARNESS_COMPONENTS=all HARNESS_SRC_DIR="$REPO" bash "$REPO/install.sh" ) >/dev/null 2>&1
+if [ ! -e "$T9/.claude/skills/carve-guide" ] && [ -d "$T9/.claude/skills/anti-ai-slop" ]; then
+  ok "dev-only skill carve-guide excluded from install (other skills present)"
+else
+  no "carve-guide not stripped from install ($([ -e "$T9/.claude/skills/carve-guide" ] && echo present || echo other-skill-missing))"
+fi
+
+rm -rf "$T1" "$T2" "$T3" "$T5" "$T8" "$T9"
 printf -- '---\n%s passed, %s failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]

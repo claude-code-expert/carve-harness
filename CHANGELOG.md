@@ -15,6 +15,8 @@
 - **`theme-factory` 스킬 벤더링 + `frontend-design` 플러그인 선언**: 시각 산출물용 `theme-factory`(SKILL.md, 출처 `composiohq/awesome-claude-plugins`)를 `.claude/skills/`에 벤더링 → 스킬 TUI가 자동 노출. `frontend-design`(디자인 방향) 플러그인을 `settings.json`에 선언(`claude-code-plugins` 마켓플레이스 = `anthropics/claude-code`, ponytail과 동일한 항상-선언 방식). `settings`·`remote-install` 테스트가 선언 존속을 가드.
 - **전체 구성 표 + 데모**: README 한/영에 스킬 25·커맨드 14·훅 9 전체 표 추가. `docs/html/harness-demo/`(적용 전/후 화면 비교 `index` + `without/with-harness`) + `docs/html/carve-workflow-guide.html`(개요) 추가, README·`HARNESS_GUIDE.md`에 새 창 데모 링크.
 
+- **유지보수 스킬 `carve-guide` + 배포 제외 메커니즘**: run-ai.kr 게시용 `docs/html/carve-workflow-guide.html`을 릴리스마다 실측(파일시스템·`npm test`)으로 갱신하는 스킬. `install.sh`의 `DEV_SKILLS`로 소비자 설치에서 제외 — TUI 목록에서 숨기고 coarse `cp -R` 후 strip. 배포 스킬 25종은 불변(이 스킬은 이 repo 전용).
+
 ### Fixed
 - **부분 훅 디렉토리 자가복구(치명)**: 기존/외래 `.claude/hooks`가 남아 있으면 install이 coarse 경로를 통째 SKIP해 `lib-protected.sh`가 미복구 → `pre-commit`이 fail-closed로 **모든 커밋을 차단**하던 버그. 통째 SKIP 대신 누락된 자식 파일만 채우도록 수정(`.claude/hooks`·`.githooks` 스코프, self-heal). `install-components.test.sh` 회귀 케이스 추가.
 - **`stop-verify.sh` tsc 이식성**: 타입체크가 `pnpm exec` 하드코딩이라 npm 전용 프로젝트에서 false fail → 단일 PM 감지(pnpm→npm 폴백)로 tsc·lint·test가 공유.
@@ -22,7 +24,7 @@
 - **테스트 tty hang 방지**: `choose_setup_mode`가 인터랙티브 터미널에선 `/dev/tty` 입력을 대기 → 설치 fixture 테스트를 `HARNESS_COMPONENTS=all`/`HARNESS_SETUP_STDIN` 주입으로 비대화형 고정(개발자 터미널에서 테스트 hang 방지). 제품 동작 무변경.
 
 ### Changed
-- 인벤토리: 스킬 23→**25**종, 테스트 13→14 스위트·152→**171**건(prune 15+dry-run 카운트 1케이스 + hook self-heal 회귀 1 + lint 게이트 2 + frontend-design assertion 강화).
+- 인벤토리: 스킬 23→**25**종(배포 기준 — 유지보수용 `carve-guide`는 제외), 테스트 13→14 스위트·152→**172**건(prune 15+dry-run 1 + hook self-heal 1 + lint 게이트 2 + dev-skill 제외 1 + frontend-design assertion 강화).
 - `eval-java.sh`는 Java 전용 스코어러라 prune의 PROTECTED에서 carve-out(Java 미감지 시 archunit과 묶여 제거, AUDIT-08 green 유지). 나머지 8개 훅은 언어 무관 코어로 계속 보호.
 
 ## [0.0.11] - 2026-07-10

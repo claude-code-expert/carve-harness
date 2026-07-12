@@ -15,7 +15,7 @@
 | **관측** | 모든 훅 판정을 `logs/*.jsonl`에 기록 (PII 마스킹), 리포트·회전 지원. 세션 시작 배너가 로드된 전 구성을 표시하고, 훅 메시지는 `[carve-harness:<hook>]` 프리픽스로 통일 |
 | **자가감사** | `/harness-audit` — 42개 기계 체크로 하네스 오구성 PASS/FAIL |
 
-**구성 요소**: 훅 9종(6 이벤트 + 수동 CLI 3) · 슬래시 커맨드 14종 · 에이전트 20종 · 스킬 25종 · 규칙 18종 · 워크플로 1종 · 테스트 14 스위트(171건) — 전체 목록은 [전체 구성](#전체-구성-스킬커맨드훅) 표 참고
+**구성 요소**: 훅 9종(6 이벤트 + 수동 CLI 3) · 슬래시 커맨드 14종 · 에이전트 20종 · 스킬 25종 · 규칙 18종 · 워크플로 1종 · 테스트 14 스위트(172건) — 전체 목록은 [전체 구성](#전체-구성-스킬커맨드훅) 표 참고
 
 **크로스 에이전트**: 훅 차단은 Claude Code 전용. Cursor/Codex 등은 `AGENTS.md` 정본 + `.githooks/pre-commit`이 커밋 시점에 최종 차단.
 
@@ -211,7 +211,7 @@ bash uninstall.sh --yes    # 실제 제거 (manifest 범위만, 원래 있던 �
 
 | 버전 | 날짜 | 요약 |
 |------|------|------|
-| v0.0.12 | 2026-07-11 | 프로젝트 맞춤 구축(맞춤/수동 선택 · `carve-harness-create` prune) · **훅 디렉토리 self-heal 수정**(부분설치→커밋 전면차단 버그) · **로컬 lint 게이트**(shift-left) · `theme-factory` 벤더링 + `frontend-design` 선언 · 구성 표·데모 · 스킬 25종·테스트 14 스위트(171건) |
+| v0.0.12 | 2026-07-11 | 프로젝트 맞춤 구축(맞춤/수동 선택 · `carve-harness-create` prune) · **훅 디렉토리 self-heal 수정**(부분설치→커밋 전면차단 버그) · **로컬 lint 게이트**(shift-left) · `theme-factory` 벤더링 + `frontend-design` 선언 · 구성 표·데모 · 스킬 25종·테스트 14 스위트(172건) |
 | v0.0.11 | 2026-07-10 | 체크박스 TUI 구성 선택 · 세션 배너 인벤토리 + `[carve-harness:<hook>]` 프리픽스 통일 · LSP(vtsls·jdtls)·ponytail 플러그인 선언 배포 · 공개 레포 전환(토큰 불요) |
 | v0.0.10 | 2026-07-10 | 설치 구성 선택(5구성 CLI + `HARNESS_COMPONENTS`) · fable 오케스트레이터 팀(워커 4종+워크플로+가이드) · npm test 러너 · macOS 이식성 수정 |
 | v0.0.9 | 2026-07-09 | Java/Spring 결정적 출력검증 evaluator(`eval-java.sh` — LLM 없이 재현 가능한 P) · ArchUnit 규칙 승격 · AUDIT-08 |

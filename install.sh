@@ -218,6 +218,7 @@ run_setup() {
 MD_PATHS=( CLAUDE.md AGENTS.md RULES.md .cursorrules codex.md .claude/CLAUDE.md .claude/rules specs/README.md )
 HOOK_PATHS=( .claude/settings.json .claude/hooks .githooks )
 SKILL_PATHS=( .claude/skills )
+DEV_SKILLS="carve-guide"   # 배포 제외: 이 repo 유지보수용 스킬 — 소비자 설치본에서 제거(TUI·복사 모두)
 CMD_PATHS=( .claude/commands )
 ORCH_PATHS=( .claude/agents .claude/workflows docs/md/orchestration.md docs/md/fable-team-guide.md )
 CORE_PATHS=( VERSION install.sh uninstall.sh vendor )
@@ -259,7 +260,11 @@ build_items() { # $SRC 기준으로 실재 항목만 나열
   add_hdr hooks "훅 (가드·게이트)"
   for p in "${HOOK_PATHS[@]}"; do [ -e "$SRC/$p" ] && add_it "$p" hooks "$p"; done
   add_hdr skills "스킬"
-  for f in "$SRC"/.claude/skills/*; do [ -e "$f" ] && add_it ".claude/skills/${f##*/}" skills "${f##*/}"; done
+  for f in "$SRC"/.claude/skills/*; do
+    [ -e "$f" ] || continue
+    case " $DEV_SKILLS " in *" ${f##*/} "*) continue ;; esac   # 배포 제외 스킬은 TUI 목록에서도 숨김
+    add_it ".claude/skills/${f##*/}" skills "${f##*/}"
+  done
   add_hdr commands "커맨드"
   for f in "$SRC"/.claude/commands/*; do [ -e "$f" ] && add_it ".claude/commands/${f##*/}" commands "${f##*/}"; done
   add_hdr orchestrator "오케스트레이터"
@@ -725,6 +730,11 @@ if [ "$NEED_FETCH" -eq 1 ]; then
     fi
   fi
 fi
+
+# 배포 제외 스킬(DEV_SKILLS): coarse cp -R가 함께 복사했더라도 소비자 설치본에서 제거한다.
+for _ds in $DEV_SKILLS; do
+  [ -e "$HERE/.claude/skills/$_ds" ] && rm -rf "${HERE:?}/.claude/skills/$_ds" && say "DEV-SKIP: .claude/skills/$_ds (배포 제외)"
+done
 
 # ── [bootstrap] ──────────────────────────────────────────────────────────────
 # manifest가 없으면(복사-붙여넣기 설치) 표준 목록으로 생성 — uninstall이 사용.
