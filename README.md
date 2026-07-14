@@ -1,6 +1,6 @@
 # Claude 하네스 (언어 무관 드롭인)
 
-[English](README.en.md) · 현재 버전 **v0.2.0** · 변경 내역 [CHANGELOG.md](CHANGELOG.md) · 강좌 [HARNESS_GUIDE.md](HARNESS_GUIDE.md)
+[English](README.en.md) · 현재 버전 **v0.3.0** · 변경 내역 [CHANGELOG.md](CHANGELOG.md) · 강좌 [HARNESS_GUIDE.md](HARNESS_GUIDE.md)
 
 코딩 에이전트의 규칙 위반을 "설득"이 아니라 **훅 exit 2로 차단**하는 가드레일 템플릿.
 프로젝트 루트에 드롭인하면 즉시 동작한다.
@@ -232,6 +232,7 @@ bash uninstall.sh --yes    # 실제 제거 (manifest 범위만, 원래 있던 �
 
 | 버전 | 날짜 | 요약 |
 |------|------|------|
+| v0.3.0 | 2026-07-14 | embed ponytail and caveman modes into harness |
 | v0.2.0 | 2026-07-12 | 커밋 커맨드 수정 |
 | v0.1.1 | 2026-07-12 | show create banner on non-interactive install |
 | v0.1.0 | 2026-07-12 | auto-version release on merge to main |
