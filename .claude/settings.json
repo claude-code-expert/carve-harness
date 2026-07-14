@@ -7,7 +7,17 @@
     "PreToolUse":  [ { "matcher": "Write|Edit|MultiEdit|NotebookEdit|Bash", "hooks": [ { "type": "command", "command": "bash ${CLAUDE_PROJECT_DIR}/.claude/hooks/pretool-guard.sh" } ] } ],
     "PostToolUse": [ { "matcher": "Write|Edit", "hooks": [ { "type": "command", "command": "bash ${CLAUDE_PROJECT_DIR}/.claude/hooks/posttool-format.sh" } ] } ],
     "Stop":        [ { "hooks": [ { "type": "command", "command": "bash ${CLAUDE_PROJECT_DIR}/.claude/hooks/stop-verify.sh", "timeout": 900 } ] } ],
-    "SessionStart":[ { "hooks": [ { "type": "command", "command": "bash ${CLAUDE_PROJECT_DIR}/.claude/hooks/session-handoff.sh start" } ] } ],
+    "SessionStart":[ { "hooks": [
+      { "type": "command", "command": "bash ${CLAUDE_PROJECT_DIR}/.claude/hooks/session-handoff.sh start" },
+      { "type": "command", "command": "command -v node >/dev/null 2>&1 && node ${CLAUDE_PROJECT_DIR}/vendor/ponytail/hooks/ponytail-activate.js || true", "timeout": 5 },
+      { "type": "command", "command": "bash ${CLAUDE_PROJECT_DIR}/.claude/hooks/caveman-activate.sh", "timeout": 5 }
+    ] } ],
+    "UserPromptSubmit":[ { "hooks": [
+      { "type": "command", "command": "command -v node >/dev/null 2>&1 && node ${CLAUDE_PROJECT_DIR}/vendor/ponytail/hooks/ponytail-mode-tracker.js || true", "timeout": 5 }
+    ] } ],
+    "SubagentStart":[ { "hooks": [
+      { "type": "command", "command": "command -v node >/dev/null 2>&1 && node ${CLAUDE_PROJECT_DIR}/vendor/ponytail/hooks/ponytail-subagent.js || true", "timeout": 5 }
+    ] } ],
     "PreCompact":  [ { "hooks": [ { "type": "command", "command": "bash ${CLAUDE_PROJECT_DIR}/.claude/hooks/session-handoff.sh save" } ] } ],
     "SessionEnd":  [ { "hooks": [ { "type": "command", "command": "bash ${CLAUDE_PROJECT_DIR}/.claude/hooks/session-handoff.sh save SessionEnd" } ] } ]
   }

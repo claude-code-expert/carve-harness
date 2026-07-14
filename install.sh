@@ -361,6 +361,11 @@ if CLAUDE_PROJECT_DIR="$HERE" bash "$HERE/.claude/hooks/harness-audit.sh"; then
   say "---"
   [ "$warn" -eq 0 ] && say "설치 완료 — 하네스 전 게이트 활성." \
                     || say "설치 완료(경고 있음) — 위 WARN/ACTION/SKIP 항목 확인."
+  if command -v node >/dev/null 2>&1; then
+    say "모드: ponytail(게으른 시니어)·caveman(출력 압축) 다음 세션부터 자동 활성 — 해제: 'normal mode'"
+  else
+    say "모드: caveman 자동 활성. ponytail은 node 미설치로 비활성 — node 설치 시 자동 활성"
+  fi
   if [ "$MODE" = "install" ]; then
     say "다음 단계: bash install.sh setup — 대화형 초기 설정 (git·PATH·LICENSE·보호경로·도메인 규칙·GSD)"
   fi
