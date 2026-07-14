@@ -835,6 +835,11 @@ elif CLAUDE_PROJECT_DIR="$HERE" bash "$HERE/.claude/hooks/harness-audit.sh"; the
   say "---"
   [ "$warn" -eq 0 ] && say "설치 완료 — 하네스 전 게이트 활성." \
                     || say "설치 완료(경고 있음) — 위 WARN/ACTION/SKIP 항목 확인."
+  if command -v node >/dev/null 2>&1; then
+    say "모드: ponytail(게으른 시니어)·caveman(출력 압축) 다음 세션부터 자동 활성 — 해제: 'normal mode'"
+  else
+    say "모드: caveman 자동 활성. ponytail은 node 미설치로 비활성 — node 설치 시 자동 활성"
+  fi
   if [ "$MODE" = "install" ]; then
     # 배너는 carve-harness-create 스킬이 설치됐는지로 판단한다(AUTO_PROJECT 아님):
     # curl|bash 비대화형은 tty가 없어 choose_setup_mode가 스킵되지만 전체 설치라

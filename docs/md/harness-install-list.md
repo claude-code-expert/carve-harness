@@ -49,29 +49,16 @@
 
 ---
 
-## 2. 전역 플러그인 (`~/.claude/plugins`)
+## 2. 내장 모드 (하네스 벤더링)
 
-세션 시작 시 자동 활성. marketplace 경유 설치.
+ponytail·caveman은 **하네스에 내장**되어 `install.sh` 설치 대상 레포마다 함께 복사된다.
+세션 시작 시 `.claude/settings.json`의 SessionStart 훅으로 자동 활성 (전역 `~/.claude/plugins` 아님).
+해제: `normal mode`.
 
-### 2-1. caveman — 출력 압축
-- **역할:** 응답을 telegraphic하게 압축, 토큰 ~75% 절감. 기술 정확도는 유지.
-- **소스:** marketplace `caveman` (installer 0.1.0)
-- **명령:**
-
-| 명령 | 용도 |
-|------|------|
-| `/caveman lite\|full\|ultra` | 압축 레벨 설정 (기본 full) |
-| `/caveman-commit` | 압축 커밋 메시지 생성 |
-| `/caveman-review` | 압축 코드리뷰 코멘트 |
-| `/caveman-compress <file>` | 메모리 파일 압축 |
-| `/caveman-stats` | 세션 토큰 절감 통계 |
-| `/caveman-help` | 명령 카드 |
-- 해제: "normal mode" 또는 "stop caveman"
-- 서브에이전트: `cavecrew-investigator`(코드 위치) · `cavecrew-builder`(1~2파일 편집) · `cavecrew-reviewer`(diff 리뷰)
-
-### 2-2. ponytail — 게으른 시니어 모드 (v4.8.4)
+### 2-1. ponytail — 게으른 시니어 모드 (v4.8.4)
 - **역할:** YAGNI·stdlib 우선·최소 코드 강제. 불필요한 추상화·의존성 차단.
-- **소스:** marketplace `ponytail`
+- **소스:** `vendor/ponytail/` (upstream DietrichGebert/ponytail 전체 벤더링, node 훅).
+- **활성:** SessionStart 페르소나 주입 + UserPromptSubmit 모드추적 + SubagentStart 주입. **node 필요**(미설치 시 자동 비활성).
 - **명령:**
 
 | 명령 | 용도 |
@@ -84,12 +71,23 @@
 | `/ponytail-help` | 명령 카드 |
 - 해제: "normal mode" 또는 "stop ponytail"
 
-### 2-3. claude-hud — 상태줄 HUD (v0.3.0)
+### 2-2. caveman — 출력 압축
+- **역할:** 응답을 telegraphic하게 압축, 토큰 ~75% 절감. 기술 정확도는 유지.
+- **소스:** `vendor/caveman/skills/caveman/SKILL.md` (ponytail 레포 벤치마크 arm의 SKILL 재사용). **스킬 단독 벤더링** — 별도 커밋/리뷰 명령·cavecrew 서브에이전트는 없음.
+- **활성:** `.claude/hooks/caveman-activate.sh` (bash, node 불필요) SessionStart 페르소나 주입.
+- **명령:**
+
+| 명령 | 용도 |
+|------|------|
+| `/caveman lite\|full\|ultra` | 압축 레벨 설정 (기본 full) |
+- 해제: "normal mode" 또는 "stop caveman"
+
+### 2-3. claude-hud — 상태줄 HUD (v0.3.0) · 전역 플러그인
 - **역할:** 실시간 상태줄 — 컨텍스트 잔량·툴 활동·에이전트·todo 진행.
-- **소스:** marketplace `claude-hud`
+- **소스:** marketplace `claude-hud` (`~/.claude/plugins`, 하네스 install.sh와 별개).
 - **명령:** `/claude-hud:setup` (상태줄 구성) · `/claude-hud:configure` (레이아웃·언어·표시 요소)
 
-**설치된 marketplace:** `caveman` · `ponytail` · `claude-hud` · `claude-plugins-official`
+**전역 marketplace:** `claude-hud` · `claude-plugins-official` (ponytail·caveman은 이제 하네스 내장, marketplace 아님).
 (참고: `superpowers`는 official marketplace에 있으나 **미설치**.)
 
 ---
