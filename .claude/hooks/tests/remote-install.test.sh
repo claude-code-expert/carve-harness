@@ -104,8 +104,11 @@ fi
 # (3f) setup wizard: LICENSE(MIT) + protected-extra + domain rule via injected answers.
 # Answer order in T (git repo + jq on PATH → q1/q2 skipped):
 #   LICENSE=1(MIT), extra regex, domain rule, empty(end rules), n(GSD if npx exists)
+# Stub vtsls on PATH so the LSP-install prompt self-skips regardless of the host —
+# without it the prompt fires only when vtsls is absent, shifting every injected answer.
+STUB=$(mktemp -d); printf '#!/bin/sh\n' > "$STUB/vtsls"; chmod +x "$STUB/vtsls"
 printf '1\nvault-keys/\n주문 금액 음수 불가\n\nn\n' \
-  | ( cd "$T" && HARNESS_SETUP_STDIN=1 bash install.sh setup ) >/dev/null 2>&1
+  | ( cd "$T" && PATH="$STUB:$PATH" HARNESS_SETUP_STDIN=1 bash install.sh setup ) >/dev/null 2>&1
 code=$?
 if [ "$code" -eq 0 ] \
    && grep -q "MIT License" "$T/LICENSE" 2>/dev/null \

@@ -9,7 +9,7 @@
 #               ↑↓/jk 이동 · 스페이스 토글(섹션 행=하위 일괄) · 1-5 섹션 점프 · a 전체 · 엔터 설치
 #               기본 전체 선택 — 엔터만 치면 전체 설치
 #               설치 시작 시 '맞춤 구축(권장)/수동 선택' 질문 — 맞춤은 전체 설치 후
-#               /carve-harness-create 스킬로 스택에 맞게 정리(prune)
+#               /carve-harness-create 스킬로 스택에 맞게 맞춤화(검증·보강·절단)
 #               비대화형은 HARNESS_COMPONENTS=md,hooks,skills,commands,orchestrator (또는 all)
 #               재실행하면 빠진 구성을 추가 설치할 수 있다 (기존 파일은 SKIP)
 #   [update]    설치된 하네스를 새 버전으로 패치 — manifest 범위만 갱신
@@ -835,6 +835,11 @@ elif CLAUDE_PROJECT_DIR="$HERE" bash "$HERE/.claude/hooks/harness-audit.sh"; the
   say "---"
   [ "$warn" -eq 0 ] && say "설치 완료 — 하네스 전 게이트 활성." \
                     || say "설치 완료(경고 있음) — 위 WARN/ACTION/SKIP 항목 확인."
+  if command -v node >/dev/null 2>&1; then
+    say "모드: ponytail(게으른 시니어)·caveman(출력 압축) 다음 세션부터 자동 활성 — 해제: 'normal mode'"
+  else
+    say "모드: caveman 자동 활성. ponytail은 node 미설치로 비활성 — node 설치 시 자동 활성"
+  fi
   if [ "$MODE" = "install" ]; then
     # 배너는 carve-harness-create 스킬이 설치됐는지로 판단한다(AUTO_PROJECT 아님):
     # curl|bash 비대화형은 tty가 없어 choose_setup_mode가 스킵되지만 전체 설치라
@@ -844,13 +849,14 @@ elif CLAUDE_PROJECT_DIR="$HERE" bash "$HERE/.claude/hooks/harness-audit.sh"; the
       say "┌─────────────────────────────────────────────────────────────┐"
       say "│  맞춤 하네스 구축 예약됨 — 전체 설치 완료, 지금 바로 동작    │"
       say "└─────────────────────────────────────────────────────────────┘"
-      say "프로젝트를 분석해 이 스택에 맞는 하네스로 최적화하려면"
+      say "프로젝트를 전수 분석해 이 스택에 맞게 맞춤화하려면"
       say "Claude Code 세션에서 다음을 실행하세요:"
       say ""
       say "    /carve-harness-create"
       say ""
-      say "스택을 감지해 맞지 않는 구성을 제안하고, 1회 확인 후 덜어내 최적화합니다."
-      say "최적화하지 않아도 하네스는 정상 동작합니다(전체 구성 유지)."
+      say "설정 검증(CLAUDE.md·AGENTS.md 오류 제안) · 보강(누락 규칙·도구 안내) ·"
+      say "절단(불필요 구성 제거)을 통합 제안하고, 1회 확인 후 적용 + evaluator 평가표."
+      say "맞춤화하지 않아도 하네스는 정상 동작합니다(전체 구성 유지)."
     else
       say "다음 단계: bash install.sh setup — 대화형 초기 설정 (git·PATH·LICENSE·보호경로·도메인 규칙·GSD)"
     fi

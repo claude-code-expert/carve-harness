@@ -74,6 +74,7 @@ case "${1:-}" in
    ── carve-harness 로드 구성 (전 항목) ──
 BANNER
     _ls '.claude/hooks/*.sh' .sh | _inv "훅"
+    { [ -d vendor/ponytail ] && echo 'ponytail'; [ -f .claude/hooks/caveman-activate.sh ] && echo 'caveman'; } | _inv "모드"
     _ls '.githooks/*' '' | _inv "git훅"
     _ls '.claude/skills/*' '' | _inv "스킬"
     _ls '.claude/commands/*.md' .md | _inv "커맨드"
