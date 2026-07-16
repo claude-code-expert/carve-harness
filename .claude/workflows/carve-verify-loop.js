@@ -94,7 +94,7 @@ const research = await agent(
 let decomposed = args?.tasks
 if (!decomposed) {
   const plan = await agent(
-    `목표: ${goal}\n리서치 요약:\n${research}\n\n목표를 3~7개의 독립 체크리스트 항목으로 분해하라. 각 항목:\n- claim: "구현했다"고 주장할 단위(구체 기능/엔드포인트/규칙 하나).\n- acceptance: 코드+테스트로 검증 가능한 완료 기준(SC).\n- owns: 담당 파일 glob. 항목끼리 겹치면 안 된다(파일 오너 1개).`,
+    `목표: ${goal}\n리서치 요약:\n${research}\n\n목표를 3~7개의 독립 체크리스트 항목으로 분해하라. 각 항목:\n- claim: "구현했다"고 주장할 단위(구체 기능/엔드포인트/규칙 하나).\n- acceptance: 코드+테스트로 검증 가능한 완료 기준(SC).\n- owns: 담당 파일 glob. 항목끼리 겹치면 안 된다(파일 오너 1개).\n\n**중요(격리 제약):** 각 항목은 격리된 worktree에서 빌드·채점되어 다른 항목의 파일을 볼 수 없다. 상호의존 파일(구현 + 그 테스트, 모듈 + 그 마이그레이션 등)은 반드시 같은 항목의 owns에 함께 둔다. 항목의 acceptance는 그 항목 owns 안의 파일만으로 검증 가능해야 한다. 구현과 테스트를 별개 항목으로 쪼개지 마라 — 테스트 항목이 구현 파일을 못 봐 영구 미달이 된다.`,
     { label: 'decompose', phase: 'Spec', schema: CHECKLIST_SCHEMA }
   )
   decomposed = plan.items

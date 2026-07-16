@@ -46,6 +46,8 @@ description: 개발이 스펙대로 됐는지 구현 주장 항목을 코드 대
 
 ```
 S1. Spec/분해   목표를 리서치 → 3~7개 항목으로 분해(claim·acceptance·owns 비중복).
+                상호의존 파일(구현 + 그 테스트, 모듈 + 그 마이그레이션)은 반드시 같은 항목 owns에 함께 둔다 —
+                항목은 격리 worktree에서 채점돼 다른 항목 파일을 못 보므로, 구현·테스트를 쪼개면 테스트 항목이 영구 미달.
                 specs/checklist.json 작성(전 항목 score:null). → Stop 게이트가 이때부터 완료를 막는다.
 S2. Build       미해결 항목(pass=false)마다 builder 1개. worktree 격리, 동시 3~5개 상한.
                 owns 밖 쓰기 금지. 재작업이면 아래 S4의 반성 프롬프트 + gaps를 입력으로 준다.
