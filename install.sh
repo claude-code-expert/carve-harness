@@ -220,7 +220,7 @@ HOOK_PATHS=( .claude/settings.json .claude/hooks .githooks )
 SKILL_PATHS=( .claude/skills )
 DEV_SKILLS=""   # 배포 제외 스킬 목록(공백 구분). 현재 없음 — carve-guide는 v0.0.13부터 배포 포함. 훅과 build_items·strip이 이 목록을 참조
 CMD_PATHS=( .claude/commands )
-ORCH_PATHS=( .claude/agents .claude/workflows docs/md/orchestration.md docs/md/fable-team-guide.md )
+ORCH_PATHS=( .claude/agents .claude/workflows docs/md/orchestration.md docs/md/fable-team-guide.md docs/md/verify-loop-guide.md )
 CORE_PATHS=( VERSION install.sh uninstall.sh vendor )
 HARNESS_PATHS=(
   "${MD_PATHS[@]}" "${HOOK_PATHS[@]}" "${SKILL_PATHS[@]}" "${CMD_PATHS[@]}"
