@@ -14,8 +14,9 @@
 | **상태** | 세션 종료·압축 시 핸드오프 자동 저장(실제 TODO·결정 수집), 시작 시 복원 |
 | **관측** | 모든 훅 판정을 `logs/*.jsonl`에 기록 (PII 마스킹), 리포트·회전 지원. 세션 시작 배너가 로드된 전 구성을 표시하고, 훅 메시지는 `[carve-harness:<hook>]` 프리픽스로 통일 |
 | **자가감사** | `/harness-audit` — 42개 기계 체크로 하네스 오구성 PASS/FAIL |
+| **검증 루프** | `/verify-loop` — 구현 주장을 항목별로 코드 대조 0~100 채점, 95점 미만은 gap 되먹여 재작업, 전 항목 95점까지 루프. 미달 잔존 시 Stop 훅이 완료 차단 → [검증 루프 가이드](docs/md/verify-loop-guide.md) |
 
-**구성 요소**: 훅 9종(6 이벤트 + 수동 CLI 3) · 슬래시 커맨드 15종 · 에이전트 20종 · 스킬 26종 · 규칙 18종 · 워크플로 1종 · 테스트 14 스위트(172건) — 전체 목록은 [전체 구성](#전체-구성-스킬커맨드훅) 표 참고
+**구성 요소**: 훅 10종(7 이벤트 + 수동 CLI 3) · 슬래시 커맨드 16종 · 에이전트 20종 · 스킬 27종 · 규칙 18종 · 워크플로 2종 · 테스트 16 스위트(187건) — 전체 목록은 [전체 구성](#전체-구성-스킬커맨드훅) 표 참고
 
 **크로스 에이전트**: 훅 차단은 Claude Code 전용. Cursor/Codex 등은 `AGENTS.md` 정본 + `.githooks/pre-commit`이 커밋 시점에 최종 차단.
 
@@ -121,13 +122,13 @@ bash uninstall.sh --yes    # 실제 제거 (manifest 범위만, 원래 있던 �
 | `/plan` `/verify` `/review` `/commit` | SC 분해 · SC 검증 · 코드 검토 · 인자 메시지로 commit→pull→push |
 | `/squad-*` (8종) | 기획→리뷰→QA→리팩토링→디버그→보안→문서→Git 파이프라인 |
 | `bash .claude/hooks/logs-report.sh [days]` | 훅 판정 로그 요약 (`--rotate N` 회전) |
-| `npm test` / `npm run test:install` | 전체 훅 테스트 14 스위트 / 설치 구성 선택 스위트 |
+| `npm test` / `npm run test:install` | 전체 훅 테스트 16 스위트 / 설치 구성 선택 스위트 |
 
 커스터마이징(보호 경로·포맷터·검증 명령·새 스택)·전체 레퍼런스는 **`GUIDE.md`** 참고.
 
 ## 전체 구성 (스킬·커맨드·훅)
 
-### 스킬 (26종)
+### 스킬 (27종)
 
 > **발동 시점** = 스킬이 자동 트리거되는 상황(설명 매칭) 또는 `/스킬명`으로 수동 호출하는 시점. 코어 게이트(anti-ai-slop·carve-guide)는 조건 충족 시 자동, 나머지는 대개 해당 작업 신호에서 발동한다.
 
@@ -158,11 +159,12 @@ bash uninstall.sh --yes    # 실제 제거 (manifest 범위만, 원래 있던 �
 | `loop-me` | 문서·교육 | 만들 워크플로 스펙을 대화로 파고들 때 | 만들 워크플로 스펙을 대화로 파고들기 |
 | `ask-matt` | 문서·교육 | 어떤 스킬·플로우를 쓸지 물을 때 | 상황에 맞는 스킬·플로우 안내 라우터 |
 | `setup-matt-pocock-skills` | 셋업 | 엔지니어링 스킬 최초 1회 셋업 시 | 이 리포에 엔지니어링 스킬 셋업(이슈 트래커·라벨) |
+| `checklist-loop` | 검증·오케스트레이션 | 구현 주장을 코드 대조 채점하는 루프를 손으로 돌릴 때(워크플로 없이) | 스펙→개발→체크리스트→95점 채점→재작업 루프 SOP + checklist.json 스키마 |
 | `theme-factory` | 외부(벤더) | 산출물에 색·폰트 테마를 적용할 때 | 산출물에 테마(색·폰트) 적용 — anti-slop 게이트 여전히 적용 |
 
 > 벤더 스킬(`theme-factory`)은 `composiohq/awesome-claude-plugins`에서 SKILL.md만 벤더링. 플러그인 `frontend-design`(디자인 방향)·`ponytail`(간결화)은 스킬이 아니라 settings.json 선언으로 배포된다.
 
-### 슬래시 커맨드 (15종)
+### 슬래시 커맨드 (16종)
 
 | 커맨드 | 용도 |
 |------|------|
@@ -170,6 +172,7 @@ bash uninstall.sh --yes    # 실제 제거 (manifest 범위만, 원래 있던 �
 | `/commit-branch` | 현재 브랜치에 Conventional Commits로 커밋 + 푸시(`main` 직접 금지) |
 | `/plan` | 작업을 완료 기준(SC) 단위로 분해 → `specs/` |
 | `/verify` | 현재 변경을 SC·빌드·타입·테스트로 검증 |
+| `/verify-loop` | 스펙→개발→체크리스트→채점 루프 — 전 항목 95점까지 재작업 반복 ([가이드](docs/md/verify-loop-guide.md)) |
 | `/review` | 변경분을 타입·보안·예외·상태관리 관점 검토 |
 | `/commit` | 인자를 메시지로 현재 브랜치에 commit→pull→push (문제 시 해결책 제시) |
 | `/squad` | Squad 에이전트 호출 — `/squad <멤버> [작업]` |
@@ -182,13 +185,14 @@ bash uninstall.sh --yes    # 실제 제거 (manifest 범위만, 원래 있던 �
 | `/squad-docs` | 문서 생성 |
 | `/squad-gitops` | Git 워크플로(커밋·PR·체인지로그) |
 
-### 훅 (9종 — 이벤트 게이트 4 · 공유 헬퍼 2 · 수동 CLI 3)
+### 훅 (10종 — 이벤트 게이트 5 · 공유 헬퍼 2 · 수동 CLI 3)
 
 | 훅 | 트리거 (언제 작동) | 역할 |
 |------|------|------|
 | `pretool-guard` | PreToolUse — Write·Edit·Bash 실행 **직전마다** | 보호 경로·시크릿·위험 git 쓰기 차단(exit 2), fail-closed |
 | `posttool-format` | PostToolUse — 파일 쓰기·수정 성공 **직후** | 확장자 언어 감지 후 포맷(후처리, exit 0) |
 | `stop-verify` | Stop — 응답 종료(완료 선언) **직전** | 변경 스택 빌드·타입·테스트 게이트(실패 exit 2) |
+| `checklist-gate` | Stop — 응답 종료 **직전**(`stop-verify` 뒤) | `specs/checklist.json` 미달(<95)·미채점 항목 남으면 완료 차단(exit 2). 파일 없으면 무동작 |
 | `session-handoff` | 세션 **시작·압축·종료** 시점(SessionStart·PreCompact·SessionEnd) | 핸드오프 복원·저장 + 구성 배너 |
 | `log-event` | 다른 훅이 판정을 기록할 때(내부 서브프로세스 호출) | JSONL 관측 append — 스키마·PII 마스킹 단일 출처 |
 | `lib-protected` | 훅 로드 시 `source`로 참조(직접 실행 안 함) | 보호 경로 정규식 단일 정의(순수 데이터) |
@@ -207,9 +211,9 @@ bash uninstall.sh --yes    # 실제 제거 (manifest 범위만, 원래 있던 �
 ├── specs/                   # 상태: 핸드오프·결정 기록
 └── .claude/
     ├── settings.json        # 훅 6이벤트 등록
-    ├── hooks/  (9종 + tests 14 스위트)
-    ├── workflows/ (fable-team-pipeline)
-    ├── commands/ (15종) · agents/ (20종) · skills/ (26종) · rules/ (18종)
+    ├── hooks/  (10종 + tests 16 스위트)
+    ├── workflows/ (fable-team-pipeline · carve-verify-loop)
+    ├── commands/ (16종) · agents/ (20종) · skills/ (27종) · rules/ (18종)
 ```
 
 ## 한계
