@@ -14,8 +14,9 @@ Drop it into your project root and it works immediately.
 | **State** | Handoff auto-saved at session end/compaction (real TODOs and decisions), restored at start |
 | **Observability** | Every hook verdict logged to `logs/*.jsonl` (PII masked), with report/rotation. The session-start banner lists every loaded component, and all hook messages carry a unified `[carve-harness:<hook>]` prefix |
 | **Self-audit** | `/harness-audit` — 42 mechanical checks PASS/FAIL the harness configuration itself |
+| **Verify loop** | `/verify-loop` — grades each claimed implementation 0–100 against real code, feeds gaps back to rework anything under 95, loops until every item passes. Stop hook blocks "done" while any item is unresolved → [verify-loop guide](docs/md/verify-loop-guide.md) |
 
-**Inventory**: 9 hooks (6 events + 3 manual CLI) · 15 slash commands · 20 agents · 26 skills · 18 rule files · 1 workflow · 14 test suites (172 cases) — full lists in the [component tables](#full-component-list-skills--commands--hooks) below
+**Inventory**: 10 hooks (7 events + 3 manual CLI) · 16 slash commands · 20 agents · 27 skills · 18 rule files · 2 workflows · 16 test suites (187 cases) — full lists in the [component tables](#full-component-list-skills--commands--hooks) below
 
 **Cross-agent**: hook blocking is Claude Code-only. Cursor/Codex/etc. follow `AGENTS.md` as the canonical rules, with `.githooks/pre-commit` as the final gate at commit time.
 
@@ -121,13 +122,13 @@ Once installed, the gates are automatic — protected-path writes are blocked, o
 | `/plan` `/verify` `/review` `/commit` | SC breakdown · SC verification · code review · commit→pull→push with your message |
 | `/squad-*` (8) | plan→review→QA→refactor→debug→security→docs→git pipeline |
 | `bash .claude/hooks/logs-report.sh [days]` | hook verdict log summary (`--rotate N` to rotate) |
-| `npm test` / `npm run test:install` | all 14 hook test suites / installer component-selection suite |
+| `npm test` / `npm run test:install` | all 16 hook test suites / installer component-selection suite |
 
 For customization (protected paths, formatters, verify commands, new stacks) and the full reference, see **`GUIDE.md`**.
 
 ## Full component list (skills · commands · hooks)
 
-### Skills (26)
+### Skills (27)
 
 > **Triggers when** = the situation that auto-fires the skill (description match) or the point at which you invoke it manually via `/skill-name`. Core gates (anti-ai-slop · carve-guide) fire automatically when their condition holds; the rest usually fire on the corresponding task signal.
 
@@ -158,11 +159,12 @@ For customization (protected paths, formatters, verify commands, new stacks) and
 | `loop-me` | docs/learn | When interrogating a workflow spec you want to build | Interrogate specs for workflows you want to build |
 | `ask-matt` | docs/learn | When unsure which skill/flow to use | Router — which skill/flow fits your situation |
 | `setup-matt-pocock-skills` | setup | One-time, before first use of the engineering skills | Set up engineering skills for this repo (tracker, labels) |
+| `checklist-loop` | verify · orchestration | Running the grade-against-code loop by hand (without the workflow) | Spec→build→checklist→95-point scoring→rework loop SOP + checklist.json schema |
 | `theme-factory` | vendor | When applying a color/font theme to an artifact | Apply color/font themes to artifacts — anti-slop gate still applies |
 
 > The vendored skill (`theme-factory`) is SKILL.md-only, sourced from `composiohq/awesome-claude-plugins`. Plugins `frontend-design` (design direction) and `ponytail` (simplification) ship as settings.json declarations, not skills.
 
-### Slash commands (15)
+### Slash commands (16)
 
 | Command | Purpose |
 |------|------|
@@ -170,6 +172,7 @@ For customization (protected paths, formatters, verify commands, new stacks) and
 | `/commit-branch` | Commit + push on the current branch, Conventional Commits (never `main` directly) |
 | `/plan` | Break work into success-criteria (SC) units → `specs/` |
 | `/verify` | Verify current changes against SC · build · types · tests |
+| `/verify-loop` | Spec→build→checklist→score loop — reworks every item until all pass 95 ([guide](docs/md/verify-loop-guide.md)) |
 | `/review` | Review a diff for types, security, exceptions, state |
 | `/commit` | Commit + push current branch with your message (syncs before push) |
 | `/squad` | Invoke a Squad agent — `/squad <member> [task]` |
@@ -182,13 +185,14 @@ For customization (protected paths, formatters, verify commands, new stacks) and
 | `/squad-docs` | Generate docs |
 | `/squad-gitops` | Git workflow (commit · PR · changelog) |
 
-### Hooks (9 — 4 event gates · 2 shared helpers · 3 manual CLI)
+### Hooks (10 — 5 event gates · 2 shared helpers · 3 manual CLI)
 
 | Hook | Trigger (when it fires) | Role |
 |------|------|------|
 | `pretool-guard` | PreToolUse — **before every** Write · Edit · Bash | Block writes to protected paths, secrets, dangerous git (exit 2); fail-closed |
 | `posttool-format` | PostToolUse — **right after** a file write/edit succeeds | Detect language by extension and format (post-process, exit 0) |
 | `stop-verify` | Stop — **just before** a response ends (the "done" claim) | Build/type/test gate for changed stacks (exit 2 on failure) |
+| `checklist-gate` | Stop — **just before** a response ends (after `stop-verify`) | Blocks "done" while `specs/checklist.json` has any item under 95 or unscored (exit 2). No-op when the file is absent |
 | `session-handoff` | At session **start · compaction · end** (SessionStart · PreCompact · SessionEnd) | Restore/save handoff + config banner |
 | `log-event` | When another hook records a verdict (internal subprocess call) | JSONL observability append — single source for schema & PII masking |
 | `lib-protected` | Referenced via `source` when a hook loads (never runs directly) | Single definition of the protected-path regex (pure data) |
@@ -207,9 +211,9 @@ For customization (protected paths, formatters, verify commands, new stacks) and
 ├── specs/                   # state: handoffs & decision log
 └── .claude/
     ├── settings.json        # 6 hook events registered
-    ├── hooks/  (9 + 14 test suites)
-    ├── workflows/ (fable-team-pipeline)
-    ├── commands/ (15) · agents/ (20) · skills/ (26) · rules/ (18)
+    ├── hooks/  (10 + 16 test suites)
+    ├── workflows/ (fable-team-pipeline · carve-verify-loop)
+    ├── commands/ (16) · agents/ (20) · skills/ (27) · rules/ (18)
 ```
 
 ## Limitations

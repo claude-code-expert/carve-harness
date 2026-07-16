@@ -17,7 +17,10 @@
   "hooks": {
     "PreToolUse":  [ { "matcher": "Write|Edit|MultiEdit|NotebookEdit|Bash", "hooks": [ { "type": "command", "command": "bash ${CLAUDE_PROJECT_DIR}/.claude/hooks/pretool-guard.sh" } ] } ],
     "PostToolUse": [ { "matcher": "Write|Edit", "hooks": [ { "type": "command", "command": "bash ${CLAUDE_PROJECT_DIR}/.claude/hooks/posttool-format.sh" } ] } ],
-    "Stop":        [ { "hooks": [ { "type": "command", "command": "bash ${CLAUDE_PROJECT_DIR}/.claude/hooks/stop-verify.sh", "timeout": 900 } ] } ],
+    "Stop":        [ { "hooks": [
+      { "type": "command", "command": "bash ${CLAUDE_PROJECT_DIR}/.claude/hooks/stop-verify.sh", "timeout": 900 },
+      { "type": "command", "command": "bash ${CLAUDE_PROJECT_DIR}/.claude/hooks/checklist-gate.sh", "timeout": 30 }
+    ] } ],
     "SessionStart":[ { "hooks": [
       { "type": "command", "command": "bash ${CLAUDE_PROJECT_DIR}/.claude/hooks/session-handoff.sh start" },
       { "type": "command", "command": "command -v node >/dev/null 2>&1 && node ${CLAUDE_PROJECT_DIR}/vendor/ponytail/hooks/ponytail-activate.js || true", "timeout": 5 },
