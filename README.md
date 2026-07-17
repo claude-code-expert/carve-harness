@@ -126,6 +126,76 @@ bash uninstall.sh --yes    # 실제 제거 (manifest 범위만, 원래 있던 �
 
 커스터마이징(보호 경로·포맷터·검증 명령·새 스택)·전체 레퍼런스는 **`GUIDE.md`** 참고.
 
+## 오케스트레이션 · 검증 루프
+
+단일 세션 가드 위에 두 상위 워크플로가 얹힌다. 여러 에이전트를 역할별로 나눠 굴리는 **Fable 팀**과, 스펙 요구가 실제로 구현됐는지 항목별로 채점하는 **검증 루프(Eval)**다. 둘 다 특정 모델에 묶이지 않는다 — Fable 5가 없어도 opus·sonnet 세션이나 Cursor·Codex에서 같은 절차(SOP)를 손으로 밟으면 동작한다. Fable 5는 이 절차를 기본 반사로 수행할 뿐이다.
+
+### Fable 팀 — 멀티 에이전트 오케스트레이션
+
+**무엇** — 메인 세션(오케스트레이터, Fable 5·xhigh 티어)이 작업을 태스크 3~5개로 쪼개 역할별 워커에게 맡기고 결과를 종합한다. 워커는 서로 겹치지 않는 파일 소유권(`owns` glob)을 갖고 격리 worktree에서 작업하므로 병렬로 돌려도 충돌하지 않는다. 생성(빌더)과 검증(evaluator)은 같은 에이전트가 절대 아니다.
+
+| 역할 | 에이전트 | 담당 |
+|------|----------|------|
+| 지휘·분해·종합 | 메인 세션 | Phase 설계, 승인 게이트, 결과 종합 |
+| 리서치 | `fable-researcher` | 공식 문서·근거 조사 → RESEARCH.md |
+| 개발 | `fable-builder` | 구현 + 테스트 (worktree 격리) |
+| 문서 | `fable-doc-writer` | README·가이드·API 문서 |
+| 이미지 | `fable-visualizer` | 다이어그램·목업 |
+| 검증 | `evaluator` | 완료기준(SC) 대비 통과/불통과 (read-only) |
+
+4단계 흐름 (`fable-team-pipeline` 워크플로가 자동 실행):
+
+```
+P1 Spec      리서치 → 태스크 3~5개 분해 (owns·acceptance 필수)
+P2 Build     태스크별 빌더(worktree) → 완료 즉시 evaluator 검증   [배리어 없는 파이프라인]
+P3 Document  doc-writer + visualizer 병렬
+P4 Verify    evaluator 최종 SC 판정
+```
+
+**어떻게 쓰나**
+
+| 목적 | 발화 |
+|------|------|
+| 단건 위임 | "fable-researcher로 Next.js 16 캐시 조사해줘" / "fable-builder한테 src/api 맡겨줘" |
+| 전체 파이프라인 | "fable-team-pipeline으로 '주문 취소 API + 문서 + 흐름도' 돌려줘" — 옵트인이라 `ultracode` 키워드나 워크플로 이름을 명시해야 실행 |
+| 깊이 조절 | "+300k 예산으로 fable-team-pipeline 실행" — 예산에 맞춰 fan-out 자동 조절 |
+| 워커 간 합의 | `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` + "팀 만들어서" — 빌더끼리 계약이 어긋나면 서로 지적 |
+
+**효과** — 병목은 코드 생성이 아니라 검증이다. 탐색·리뷰를 서브에이전트에 위임하면 메인 컨텍스트는 파일 덤프 대신 결론만 받아 오래 간다. 파일 소유권 분할 + worktree 격리로 빌더 3~5개가 서로 안 밟고 병렬 진행한다. 빌더가 끝나는 즉시 독립 evaluator가 판정하므로(P2가 파이프라인 구조) A를 검증하는 동안 B 빌드가 계속 돈다. 자세히: [Fable 팀 가이드](docs/md/fable-team-guide.md) · [오케스트레이션 규칙](docs/md/orchestration.md).
+
+### 검증 루프 — 스펙 정합성 채점 (Eval)
+
+**무엇** — "구현했다"는 주장(claim)을 하나씩 실제 코드와 대조해 0~100점으로 채점하고, 95점 미만 항목만 골라 gap을 되먹여 다시 고치는 루프. 전 항목이 95점을 넘을 때까지 돈다. `stop-verify` 훅이 빌드·타입·테스트 **통과 여부**만 보는 것과 달리, 이건 **스펙의 각 요구가 실제로 구현됐는지**를 항목 단위로 본다.
+
+채점은 **교차검증**이다. 코드를 짠 빌더가 아니라 독립 evaluator가 항목마다:
+
+1. **코드 대조** — claim이 acceptance를 문자 그대로 충족하는지 파일을 직접 Read/Grep으로 확인. 주장을 믿지 않는다.
+2. **테스트 실행** — Bash로 돌려 통과/실패/스킵/미수집을 구분. 명령 성공 ≠ 결과 정확.
+3. **감점·근거** — 미구현·부분구현·계약(스키마·시그니처) 위반·엣지 누락마다 감점하고, 파일:라인과 테스트 원문을 evidence로 남긴다.
+4. **gap** — 95 미만이면 빌더가 바로 고칠 수 있게 "무엇을 어떻게"를 구체로 적는다.
+
+생성자와 채점자를 분리해 Self-Eval Blindspot(자기 결과를 후하게 보는 편향)을 막는다.
+
+5단계 흐름 (`carve-verify-loop` 워크플로):
+
+```
+P1 Checklist  목표 → 체크리스트 항목 분해 (claim·acceptance·owns) → specs/checklist.json
+P2 Build      항목별 빌더(worktree 격리)
+P3 Score      항목별 evaluator → 코드 대조 + 테스트 실행 → 0~100 채점 + gap·evidence
+P4 Loop       score<95 항목만 gap 되먹여 P2로 (항목당 최대 3회, 외곽 8회)
+P5 Verify     전 항목 95↑ → 통합 최종 판정(계약 위반·회귀 점검)
+```
+
+**어떻게 쓰나**
+
+```
+/verify-loop 주문 취소 API 구현        # 커맨드 — 목표만 주면 항목 자동 분해(3~7개)
+```
+
+항목을 직접 지정하려면 워크플로로: 발화에 `carve-verify-loop 실행` 또는 `ultracode` + `{goal, threshold, tasks[]}` 인자.
+
+**효과** — 미달·미채점 항목이 남으면 `checklist-gate` Stop 훅이 완료 선언을 **차단(exit 2)**한다. 워크플로 없이 손으로 돌려도 강제력이 걸린다. 재작업은 실패 항목만 외과적으로 고치지, 전수 재실행이 아니다. `specs/checklist.json` 하나를 빌더·채점자·게이트가 함께 읽어(파일 기반 통신) 상태가 한 곳에 모인다. checklist.json이 없으면 게이트는 무동작이라 일반 작업은 방해받지 않는다. 자세히: [검증 루프 가이드](docs/md/verify-loop-guide.md).
+
 ## 전체 구성 (스킬·커맨드·훅)
 
 ### 스킬 (27종)
