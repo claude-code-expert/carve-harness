@@ -126,6 +126,76 @@ Once installed, the gates are automatic — protected-path writes are blocked, o
 
 For customization (protected paths, formatters, verify commands, new stacks) and the full reference, see **`GUIDE.md`**.
 
+## Orchestration & the verify loop
+
+Two higher-level workflows sit on top of the single-session guards: **Fable teams**, which split work across role-specific agents, and the **verify loop (Eval)**, which scores each spec requirement against the real implementation. Neither is tied to a specific model — without Fable 5, an opus/sonnet session or Cursor/Codex runs the same SOP by hand. Fable 5 just performs it as a default reflex.
+
+### Fable teams — multi-agent orchestration
+
+**What** — the main session (orchestrator, Fable 5 · xhigh tier) breaks work into 3–5 tasks, hands each to a role-specific worker, and synthesizes the results. Workers hold non-overlapping file ownership (`owns` globs) and run in isolated worktrees, so they parallelize without colliding. The builder and the evaluator are never the same agent.
+
+| Role | Agent | Owns |
+|------|-------|------|
+| Direct · split · synthesize | main session | phase design, approval gate, synthesis |
+| Research | `fable-researcher` | official-docs research → RESEARCH.md |
+| Build | `fable-builder` | implementation + tests (worktree-isolated) |
+| Docs | `fable-doc-writer` | README, guides, API docs |
+| Diagrams | `fable-visualizer` | diagrams, mockups |
+| Verify | `evaluator` | pass/fail against success criteria (read-only) |
+
+Four phases (run automatically by the `fable-team-pipeline` workflow):
+
+```
+P1 Spec      research → split into 3–5 tasks (owns + acceptance required)
+P2 Build     per-task builder (worktree) → evaluator verifies on completion   [barrier-free pipeline]
+P3 Document  doc-writer + visualizer in parallel
+P4 Verify    evaluator's final SC judgment
+```
+
+**How to use**
+
+| Goal | What to say |
+|------|-------------|
+| Single delegation | "have fable-researcher check Next.js 16 caching" / "give src/api to fable-builder" |
+| Full pipeline | "run fable-team-pipeline for 'order-cancel API + docs + flow diagram'" — opt-in, so include the `ultracode` keyword or name the workflow |
+| Depth control | "run fable-team-pipeline with a +300k budget" — fan-out scales to the budget |
+| Cross-worker consensus | `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` + "make a team" — builders flag each other when their contracts diverge |
+
+**Effect** — the bottleneck is verification, not code generation. Delegating exploration and review to subagents keeps the main context lean: it receives conclusions instead of file dumps, so it lasts longer. Split file ownership plus worktree isolation lets 3–5 builders run in parallel without stepping on each other. Because an independent evaluator judges each builder the moment it finishes (P2 is a pipeline), B keeps building while A is being verified. Details: [Fable team guide](docs/md/fable-team-guide.md) · [orchestration rules](docs/md/orchestration.md).
+
+### Verify loop — spec-conformance scoring (Eval)
+
+**What** — a loop that takes each "it's implemented" claim, checks it against the real code, scores it 0–100, and feeds the gap back to rebuild only the items under 95, repeating until every item clears 95. Where the `stop-verify` hook only checks whether build/type/tests **pass**, this checks whether **each spec requirement is actually implemented**, item by item.
+
+The scoring is a **cross-check**: not the builder that wrote the code but an independent evaluator, per item:
+
+1. **Code cross-check** — Read/Grep the actual files to confirm the claim meets its acceptance verbatim. Claims aren't trusted.
+2. **Test execution** — run them via Bash, distinguishing pass/fail/skip/uncollected. A command succeeding ≠ a correct result.
+3. **Deduction + evidence** — dock points for anything unimplemented, partial, contract-violating (schema/signature), or missing an edge case, and record file:line plus raw test output as evidence.
+4. **Gap** — for anything under 95, spell out "what to fix, how" so the builder can act immediately.
+
+Separating the generator from the scorer blocks the Self-Eval Blindspot (grading your own work generously).
+
+Five phases (`carve-verify-loop` workflow):
+
+```
+P1 Checklist  goal → checklist items (claim · acceptance · owns) → specs/checklist.json
+P2 Build      per-item builder (worktree-isolated)
+P3 Score      per-item evaluator → code cross-check + test run → 0–100 + gap · evidence
+P4 Loop       feed gaps of sub-95 items back to P2 (max 3 per item, 8 outer)
+P5 Verify     all items ≥95 → integrated final judgment (contract violations, regressions)
+```
+
+**How to use**
+
+```
+/verify-loop implement the order-cancel API    # command — give just a goal and it splits items (3–7)
+```
+
+To specify items yourself, use the workflow: include `carve-verify-loop` or `ultracode` in your message plus a `{goal, threshold, tasks[]}` argument.
+
+**Effect** — while any item is below threshold or unscored, the `checklist-gate` Stop hook **blocks (exit 2)** the "done" claim; the enforcement holds even when you run the loop by hand without the workflow. Rework is surgical: only failing items, not a full re-run. A single `specs/checklist.json` is read by the builder, the scorer, and the gate (file-based communication), so state lives in one place. With no checklist.json the gate is a no-op, so ordinary work isn't disturbed. Details: [verify-loop guide](docs/md/verify-loop-guide.md).
+
 ## Full component list (skills · commands · hooks)
 
 ### Skills (27)

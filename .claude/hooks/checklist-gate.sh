@@ -9,13 +9,10 @@ LOG_EVENT="$(dirname "${BASH_SOURCE[0]}")/log-event.sh"
 DIR="${CLAUDE_PROJECT_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}"
 CHECKLIST="$DIR/specs/checklist.json"
 
-# GATE-C1: read stdin once; on forced-continuation 2nd pass, yield to avoid a loop.
-input=$(cat)
-if command -v jq >/dev/null 2>&1 && [ "$(printf '%s' "$input" | jq -r '.stop_hook_active // false')" = "true" ]; then
-  echo "[carve-harness:checklist] 이미 재검증 continuation 상태 — 루프 방지 위해 종료 허용" >&2
-  bash "$LOG_EVENT" Stop checklist loop-yield ""
-  exit 0
-fi
+# GATE-C1: forced-continuation guard, single-sourced with stop-verify so the
+# wedge-prevention invariant cannot drift (lib-stop-guard.sh). Reads stdin once.
+source "$(dirname "${BASH_SOURCE[0]}")/lib-stop-guard.sh"
+stop_loop_yield checklist "$LOG_EVENT"
 
 # GATE-C2: no checklist -> no-op. This hook only has teeth during an active loop.
 [ -f "$CHECKLIST" ] || exit 0

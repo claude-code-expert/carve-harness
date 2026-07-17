@@ -4,6 +4,7 @@
 # jq-absence simulated via env -i PATH= + absolute bash — never uninstalls jq.
 
 HOOK="$(dirname "$0")/../stop-verify.sh"
+LIB="$(dirname "$0")/../lib-stop-guard.sh"
 BASH_BIN="$(command -v bash)"
 fail=0
 pass=0
@@ -53,8 +54,10 @@ printf '%s' '{"stop_hook_active":true}' | CLAUDE_PROJECT_DIR="$tmp" bash "$HOOK"
              || { echo "FAIL: unwritable logs exit 0"; fail=$((fail + 1)); }
 rm -rf "$tmp"
 
-# (6) source: pass/fail/loop-yield log calls present (jq-absent branch stays log-free).
-if grep -q 'Stop verify loop-yield' "$HOOK" \
+# (6) source: pass/fail log calls in the hook; loop-yield is single-sourced in
+# lib-stop-guard.sh and wired via `stop_loop_yield verify` (jq-absent branch stays log-free).
+if grep -q 'stop_loop_yield verify' "$HOOK" \
+   && grep -q 'loop-yield' "$LIB" \
    && grep -q 'Stop verify pass' "$HOOK" \
    && grep -q 'Stop verify fail' "$HOOK"; then
   echo "PASS: pass/fail/loop-yield log calls present"; pass=$((pass + 1))
