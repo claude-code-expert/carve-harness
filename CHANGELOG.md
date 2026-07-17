@@ -4,6 +4,14 @@
 
 > **규칙**: `VERSION` 파일이 바뀌는 커밋에는 반드시 해당 버전 항목(`[X.Y.Z]`)이 이 파일에 함께 스테이징되어야 한다 — `.githooks/pre-commit`이 기계적으로 차단, 작성은 `/version-changelog` 스킬. 배포 절차는 `RELEASE.md`.
 
+## [0.4.1] - 2026-07-17
+
+### Fixed
+- fix: mark caveman-activate.sh executable for AUDIT-01
+
+### Changed
+- refactor: dedupe Stop loop-guard into shared lib
+
 ## [0.4.0] - 2026-07-16
 
 ### Added
