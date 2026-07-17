@@ -15,7 +15,7 @@ Drop it into your project root and it works immediately.
 | **Observability** | Every hook verdict logged to `logs/*.jsonl` (PII masked), with report/rotation. The session-start banner lists every loaded component, and all hook messages carry a unified `[carve-harness:<hook>]` prefix |
 | **Self-audit** | `/harness-audit` — 42 mechanical checks PASS/FAIL the harness configuration itself |
 
-**Inventory**: 9 hooks (6 events + 3 manual CLI) · 15 slash commands · 20 agents · 26 skills · 18 rule files · 1 workflow · 14 test suites (172 cases) — full lists in the [component tables](#full-component-list-skills--commands--hooks) below
+**Inventory**: 11 hooks (5 events + 3 shared helpers + 3 manual CLI) · 16 slash commands · 21 agents · 27 skills · 19 rule files · 2 workflows · 15 test suites (183 cases) — full lists in the [component tables](#full-component-list-skills--commands--hooks) below
 
 **Cross-agent**: hook blocking is Claude Code-only. Cursor/Codex/etc. follow `AGENTS.md` as the canonical rules, with `.githooks/pre-commit` as the final gate at commit time.
 
@@ -121,13 +121,13 @@ Once installed, the gates are automatic — protected-path writes are blocked, o
 | `/plan` `/verify` `/review` `/commit` | SC breakdown · SC verification · code review · commit→pull→push with your message |
 | `/squad-*` (8) | plan→review→QA→refactor→debug→security→docs→git pipeline |
 | `bash .claude/hooks/logs-report.sh [days]` | hook verdict log summary (`--rotate N` to rotate) |
-| `npm test` / `npm run test:install` | all 14 hook test suites / installer component-selection suite |
+| `npm test` / `npm run test:install` | all 15 hook test suites / installer component-selection suite |
 
 For customization (protected paths, formatters, verify commands, new stacks) and the full reference, see **`GUIDE.md`**.
 
 ## Full component list (skills · commands · hooks)
 
-### Skills (26)
+### Skills (27)
 
 > **Triggers when** = the situation that auto-fires the skill (description match) or the point at which you invoke it manually via `/skill-name`. Core gates (anti-ai-slop · carve-guide) fire automatically when their condition holds; the rest usually fire on the corresponding task signal.
 
@@ -136,9 +136,10 @@ For customization (protected paths, formatters, verify commands, new stacks) and
 | `anti-ai-slop` | core | **Auto**, right before creating/editing any visual, doc, or copy output | Anti-slop gate before any visual output (blocks gradients/glow/decoration) |
 | `carve-guide` | core | When authoring/updating HTML output (the "make it look good" moment) | Author harness HTML output — design system · anti-slop · 1000px embed-safe (§release-refresh mode is repo-only) |
 | `handoff` | core | Just before session end/compaction (or `/handoff`) | Hand off progress to `specs/HANDOFF.md` before session end/compaction |
-| `changelog` | core | On irreversible arch / dependency / API-contract decisions | Record irreversible decisions + rationale in `specs/DECISIONS.md` |
+| `changelog` | core | On irreversible arch / dependency / API-contract decisions | Record irreversible decisions + rationale in `specs/DECISIONS.md` (decision log — release version history is `version-changelog`) |
 | `version-changelog` | core | When prepping a release version bump | Sync VERSION · CHANGELOG · README version history on release |
 | `carve-harness-create` | core | After a full install, to trim to your stack (`/carve-harness-create`) | Detect stack, prune components that don't fit → tailored harness |
+| `spec-checklist` | core | Prepping spec-conformance scoring (enumerate every implementation claim) | Cross spec (SC) × git diff to enumerate every claim → `specs/<slug>/CHECKLIST.json` (carve-eval input) |
 | `codebase-design` | design | When designing/improving a module interface or placing a seam | Shared vocabulary for deep-module design |
 | `design-an-interface` | design | When designing an API or comparing options ("design it twice") | Generate several interface designs via parallel sub-agents |
 | `domain-modeling` | design | When pinning domain terms / recording an ADR | Build/sharpen the domain model & ubiquitous language |
@@ -162,7 +163,7 @@ For customization (protected paths, formatters, verify commands, new stacks) and
 
 > The vendored skill (`theme-factory`) is SKILL.md-only, sourced from `composiohq/awesome-claude-plugins`. Plugins `frontend-design` (design direction) and `ponytail` (simplification) ship as settings.json declarations, not skills.
 
-### Slash commands (15)
+### Slash commands (16)
 
 | Command | Purpose |
 |------|------|
@@ -171,6 +172,7 @@ For customization (protected paths, formatters, verify commands, new stacks) and
 | `/plan` | Break work into success-criteria (SC) units → `specs/` |
 | `/verify` | Verify current changes against SC · build · types · tests |
 | `/review` | Review a diff for types, security, exceptions, state |
+| `/carve-eval` | Score implementation "claims" against code + tests via 2 lenses → develop↔verify loop until every item clears the 95 gate |
 | `/commit` | Commit + push current branch with your message (syncs before push) |
 | `/squad` | Invoke a Squad agent — `/squad <member> [task]` |
 | `/squad-plan` | Feature planning |
@@ -182,16 +184,18 @@ For customization (protected paths, formatters, verify commands, new stacks) and
 | `/squad-docs` | Generate docs |
 | `/squad-gitops` | Git workflow (commit · PR · changelog) |
 
-### Hooks (9 — 4 event gates · 2 shared helpers · 3 manual CLI)
+### Hooks (11 — 5 event gates · 3 shared helpers · 3 manual CLI)
 
 | Hook | Trigger (when it fires) | Role |
 |------|------|------|
 | `pretool-guard` | PreToolUse — **before every** Write · Edit · Bash | Block writes to protected paths, secrets, dangerous git (exit 2); fail-closed |
 | `posttool-format` | PostToolUse — **right after** a file write/edit succeeds | Detect language by extension and format (post-process, exit 0) |
 | `stop-verify` | Stop — **just before** a response ends (the "done" claim) | Build/type/test gate for changed stacks (exit 2 on failure) |
+| `conformance-gate` | Stop — **just before** the "done" claim (after stop-verify) | Blocks completion while any `specs/*/SCORE.json` active item is below threshold or malformed (exit 2, fail-closed) |
 | `session-handoff` | At session **start · compaction · end** (SessionStart · PreCompact · SessionEnd) | Restore/save handoff + config banner |
 | `log-event` | When another hook records a verdict (internal subprocess call) | JSONL observability append — single source for schema & PII masking |
 | `lib-protected` | Referenced via `source` when a hook loads (never runs directly) | Single definition of the protected-path regex (pure data) |
+| `lib-stop-guard` | Referenced via `source` when a Stop hook loads (never runs directly) | Single definition of the Stop loop guard (forced-rerun wedge prevention) — shared by stop-verify · conformance-gate |
 | `harness-audit` | When `/harness-audit` runs (manual) | 42 read-only checks PASS/FAIL |
 | `logs-report` | When `logs-report.sh` runs (manual CLI) | JSONL verdict summary + N-day rotation |
 | `eval-java` | When a Java/Spring quality score is needed (manual scorer) | Deterministic Java/Spring quality probability `P∈[0,1]`, no LLM |
@@ -207,9 +211,9 @@ For customization (protected paths, formatters, verify commands, new stacks) and
 ├── specs/                   # state: handoffs & decision log
 └── .claude/
     ├── settings.json        # 6 hook events registered
-    ├── hooks/  (9 + 14 test suites)
-    ├── workflows/ (fable-team-pipeline)
-    ├── commands/ (15) · agents/ (20) · skills/ (26) · rules/ (18)
+    ├── hooks/  (11 + 15 test suites)
+    ├── workflows/ (fable-team-pipeline · spec-conformance-loop)
+    ├── commands/ (16) · agents/ (21) · skills/ (27) · rules/ (19)
 ```
 
 ## Limitations

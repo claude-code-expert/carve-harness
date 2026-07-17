@@ -128,6 +128,7 @@ ponytail·caveman은 **하네스에 내장**되어 `install.sh` 설치 대상 �
 
 - **위치:** `.claude/agents/squad-*.md`(8) + `.claude/commands/squad-*.md`(9) — **2026-07-08 전역 → 로컬 이전**(git 추적). 소스 github.com/claude-code-expert/subagents v1.3.2
 - **훅:** 미설치 — 강제 라우터(`UserPromptSubmit → squad-router.sh`)·체이닝(`SubagentStart/Stop`) 안 깔음. 자동 위임 강제 없이 `/squad-*`로 직접 호출.
+- **네이티브 리뷰어와 중복(옵트인):** squad는 3기둥(제약·피드백·상태)에 **미배선된 부가 레이어**다. 기본 리뷰·검증 경로는 네이티브 `/review`(code-reviewer·security-reviewer·silent-failure-hunter·state-reviewer 위임)와 `/verify`이며, `/squad-review`·`/squad-audit`·`/squad-qa`는 이와 **기능이 겹친다**. 한 에이전트가 보안·성능·유지보수를 **한 번에** 보는 모놀리식 리뷰가 필요할 때만 squad를, 축별 원자 리뷰·Stop 게이트 연동은 네이티브를 쓴다. 불필요하면 `install.sh prune`으로 17파일 통째 제거 가능(3기둥 불변).
 
 | 멤버 | 명령 | 역할 | 파이프라인 위치 |
 |------|------|------|----------------|

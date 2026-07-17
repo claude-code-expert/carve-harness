@@ -237,8 +237,8 @@ harness/
 | `common/git-workflow.md` | 항상 | Conventional Commits, force push 금지 |
 | `safety.md` | 항상 | 위험동작(DB 파괴·git·프로덕션) 승인 게이트 |
 | `database.md` | 항상 | id/타임스탬프·soft delete·N+1·마이그레이션 |
-| `frontend.md` · `api-routes.md` · `testing.md` | 항상 | 프론트·API·테스트 공통 |
-| `code-convention/dev-stack-*.md` (8) | 항상 | java-spring·react·nextjs·typescript·javascript·python·fastapi·orm 스택 표준 |
+| `frontend.md` · `testing.md` | 항상 | 프론트·테스트 공통 |
+| `code-convention/dev-stack-*.md` (8) | 수동 참조 | java-spring·react·nextjs·typescript·javascript·python·fastapi·orm 스택 표준(상세본 — frontmatter 없음·glob 미로드, 필요 시 참조) |
 | `java-spring/patterns.md` | `**/*.java` | 계층 분리·생성자 주입·LAZY·트랜잭션 |
 | `java-spring/gateway-testing.md` | 게이트웨이 파일 | 5기능 검증 SC·테스트 피라미드·도구 스택 (GATE-04가 강제) |
 | `react-next/patterns.md` | `**/*.ts,tsx` | Hooks·key·서버상태 분리 |

@@ -15,7 +15,7 @@
 | **관측** | 모든 훅 판정을 `logs/*.jsonl`에 기록 (PII 마스킹), 리포트·회전 지원. 세션 시작 배너가 로드된 전 구성을 표시하고, 훅 메시지는 `[carve-harness:<hook>]` 프리픽스로 통일 |
 | **자가감사** | `/harness-audit` — 42개 기계 체크로 하네스 오구성 PASS/FAIL |
 
-**구성 요소**: 훅 9종(6 이벤트 + 수동 CLI 3) · 슬래시 커맨드 15종 · 에이전트 20종 · 스킬 26종 · 규칙 18종 · 워크플로 1종 · 테스트 14 스위트(172건) — 전체 목록은 [전체 구성](#전체-구성-스킬커맨드훅) 표 참고
+**구성 요소**: 훅 11종(5 이벤트 + 공유 헬퍼 3 + 수동 CLI 3) · 슬래시 커맨드 16종 · 에이전트 21종 · 스킬 27종 · 규칙 19종 · 워크플로 2종 · 테스트 15 스위트(183건) — 전체 목록은 [전체 구성](#전체-구성-스킬커맨드훅) 표 참고
 
 **크로스 에이전트**: 훅 차단은 Claude Code 전용. Cursor/Codex 등은 `AGENTS.md` 정본 + `.githooks/pre-commit`이 커밋 시점에 최종 차단.
 
@@ -121,13 +121,13 @@ bash uninstall.sh --yes    # 실제 제거 (manifest 범위만, 원래 있던 �
 | `/plan` `/verify` `/review` `/commit` | SC 분해 · SC 검증 · 코드 검토 · 인자 메시지로 commit→pull→push |
 | `/squad-*` (8종) | 기획→리뷰→QA→리팩토링→디버그→보안→문서→Git 파이프라인 |
 | `bash .claude/hooks/logs-report.sh [days]` | 훅 판정 로그 요약 (`--rotate N` 회전) |
-| `npm test` / `npm run test:install` | 전체 훅 테스트 14 스위트 / 설치 구성 선택 스위트 |
+| `npm test` / `npm run test:install` | 전체 훅 테스트 15 스위트 / 설치 구성 선택 스위트 |
 
 커스터마이징(보호 경로·포맷터·검증 명령·새 스택)·전체 레퍼런스는 **`GUIDE.md`** 참고.
 
 ## 전체 구성 (스킬·커맨드·훅)
 
-### 스킬 (26종)
+### 스킬 (27종)
 
 > **발동 시점** = 스킬이 자동 트리거되는 상황(설명 매칭) 또는 `/스킬명`으로 수동 호출하는 시점. 코어 게이트(anti-ai-slop·carve-guide)는 조건 충족 시 자동, 나머지는 대개 해당 작업 신호에서 발동한다.
 
@@ -136,9 +136,10 @@ bash uninstall.sh --yes    # 실제 제거 (manifest 범위만, 원래 있던 �
 | `anti-ai-slop` | 코어 | 시각물·문서·카피를 생성/수정하기 **직전 자동** | 시각 산출물 생성 전 슬롭(그라데이션·글로우·장식) 차단 게이트 |
 | `carve-guide` | 코어 | HTML 산출물을 작성·갱신할 때(“예쁘게/그럴듯하게” 순간) 자동 | 하네스 HTML 산출물 작성 — 디자인 시스템·anti-slop·1000px 임베드 안전(§릴리스 갱신은 리포 전용) |
 | `handoff` | 코어 | 세션 종료·컨텍스트 압축 직전(또는 `/handoff`) | 세션 종료·압축 전 진행상황을 `specs/HANDOFF.md`로 인계 |
-| `changelog` | 코어 | 아키텍처·의존성·API 계약 등 비가역 결정 시 | 되돌릴 수 없는 결정·근거를 `specs/DECISIONS.md`에 기록 |
+| `changelog` | 코어 | 아키텍처·의존성·API 계약 등 비가역 결정 시 | 되돌릴 수 없는 결정·근거를 `specs/DECISIONS.md`에 기록(결정 로그 — 릴리스 버전 이력은 `version-changelog`) |
 | `version-changelog` | 코어 | 릴리스 버전 변경(버전 업) 준비 시 | 릴리스 시 VERSION·CHANGELOG·README 버전 이력 동기 갱신 |
 | `carve-harness-create` | 코어 | 전체 설치 후 스택 맞춤 정리 시(`/carve-harness-create`) | 스택 감지 후 불필요 구성 prune → 맞춤 하네스 |
+| `spec-checklist` | 코어 | 스펙 정합성 채점 준비(구현 주장 전수 열거) 시 | 스펙(SC)×git diff 교차로 구현 주장 전수 열거 → `specs/<slug>/CHECKLIST.json`(carve-eval 입력) |
 | `codebase-design` | 설계 | 모듈 인터페이스 설계·개선·심(seam) 배치 논의 시 | 깊은 모듈 설계 공용 어휘·심화 기회 |
 | `design-an-interface` | 설계 | API 설계·인터페이스 대안 비교(“design it twice”) 시 | 병렬 서브에이전트로 인터페이스 안 여러 개 생성·비교 |
 | `domain-modeling` | 설계 | 도메인 용어·유비쿼터스 언어 정립·ADR 기록 시 | 도메인 모델·유비쿼터스 언어 정립 |
@@ -162,7 +163,7 @@ bash uninstall.sh --yes    # 실제 제거 (manifest 범위만, 원래 있던 �
 
 > 벤더 스킬(`theme-factory`)은 `composiohq/awesome-claude-plugins`에서 SKILL.md만 벤더링. 플러그인 `frontend-design`(디자인 방향)·`ponytail`(간결화)은 스킬이 아니라 settings.json 선언으로 배포된다.
 
-### 슬래시 커맨드 (15종)
+### 슬래시 커맨드 (16종)
 
 | 커맨드 | 용도 |
 |------|------|
@@ -171,6 +172,7 @@ bash uninstall.sh --yes    # 실제 제거 (manifest 범위만, 원래 있던 �
 | `/plan` | 작업을 완료 기준(SC) 단위로 분해 → `specs/` |
 | `/verify` | 현재 변경을 SC·빌드·타입·테스트로 검증 |
 | `/review` | 변경분을 타입·보안·예외·상태관리 관점 검토 |
+| `/carve-eval` | 구현 "주장"을 코드·테스트와 2렌즈로 대조해 항목별 채점 → 전 항목 95점 게이트까지 개발↔검증 루프 |
 | `/commit` | 인자를 메시지로 현재 브랜치에 commit→pull→push (문제 시 해결책 제시) |
 | `/squad` | Squad 에이전트 호출 — `/squad <멤버> [작업]` |
 | `/squad-plan` | 기능 기획 |
@@ -182,16 +184,18 @@ bash uninstall.sh --yes    # 실제 제거 (manifest 범위만, 원래 있던 �
 | `/squad-docs` | 문서 생성 |
 | `/squad-gitops` | Git 워크플로(커밋·PR·체인지로그) |
 
-### 훅 (9종 — 이벤트 게이트 4 · 공유 헬퍼 2 · 수동 CLI 3)
+### 훅 (11종 — 이벤트 게이트 5 · 공유 헬퍼 3 · 수동 CLI 3)
 
 | 훅 | 트리거 (언제 작동) | 역할 |
 |------|------|------|
 | `pretool-guard` | PreToolUse — Write·Edit·Bash 실행 **직전마다** | 보호 경로·시크릿·위험 git 쓰기 차단(exit 2), fail-closed |
 | `posttool-format` | PostToolUse — 파일 쓰기·수정 성공 **직후** | 확장자 언어 감지 후 포맷(후처리, exit 0) |
 | `stop-verify` | Stop — 응답 종료(완료 선언) **직전** | 변경 스택 빌드·타입·테스트 게이트(실패 exit 2) |
+| `conformance-gate` | Stop — 완료 선언 **직전**(stop-verify 다음) | `specs/*/SCORE.json` active 항목이 threshold 미달·malformed면 완료 차단(exit 2, fail-closed) |
 | `session-handoff` | 세션 **시작·압축·종료** 시점(SessionStart·PreCompact·SessionEnd) | 핸드오프 복원·저장 + 구성 배너 |
 | `log-event` | 다른 훅이 판정을 기록할 때(내부 서브프로세스 호출) | JSONL 관측 append — 스키마·PII 마스킹 단일 출처 |
 | `lib-protected` | 훅 로드 시 `source`로 참조(직접 실행 안 함) | 보호 경로 정규식 단일 정의(순수 데이터) |
+| `lib-stop-guard` | Stop 훅 로드 시 `source`로 참조(직접 실행 안 함) | Stop 루프가드(강제 재실행 wedge 방지) 단일 정의 — stop-verify·conformance-gate 공유 |
 | `harness-audit` | `/harness-audit` 실행 시(수동) | 42 체크 read-only PASS/FAIL |
 | `logs-report` | `logs-report.sh` 실행 시(수동 CLI) | JSONL 판정 요약 + N일 회전 |
 | `eval-java` | Java/Spring 품질 스코어가 필요할 때(수동 스코어러) | Java/Spring 결정적 품질 확률 `P∈[0,1]`, LLM 없음 |
@@ -207,9 +211,9 @@ bash uninstall.sh --yes    # 실제 제거 (manifest 범위만, 원래 있던 �
 ├── specs/                   # 상태: 핸드오프·결정 기록
 └── .claude/
     ├── settings.json        # 훅 6이벤트 등록
-    ├── hooks/  (9종 + tests 14 스위트)
-    ├── workflows/ (fable-team-pipeline)
-    ├── commands/ (15종) · agents/ (20종) · skills/ (26종) · rules/ (18종)
+    ├── hooks/  (11종 + tests 15 스위트)
+    ├── workflows/ (fable-team-pipeline · spec-conformance-loop)
+    ├── commands/ (16종) · agents/ (21종) · skills/ (27종) · rules/ (19종)
 ```
 
 ## 한계
