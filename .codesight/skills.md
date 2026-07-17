@@ -7,6 +7,7 @@ Project-local slash commands available to Claude Code agents:
 - `/plan` — 작업을 완료 기준(SC)이 있는 단위로 분해하고 specs/에 계획을 남긴다
 - `/review` — 변경분을 타입·보안·예외·상태관리 관점에서 검토한다
 - `/verify` — 현재 변경을 완료 기준(SC)·빌드·타입·테스트로 검증한다
+- `/carve-eval` — 스펙 정합성 채점 루프: 구현 주장을 코드·테스트와 2렌즈로 대조해 항목별 채점, 95점 게이트 통과까지 개발↔검증 반복 (발화: evaluator·평가지표·스펙 정합성·구현 내역 평가)
 - `/squad <member>` — Squad 에이전트 디스패처
 - `/squad-plan` — 기능 기획·유저스토리·와이어프레임
 - `/squad-review` — 코드 리뷰 (보안·성능·유지보수)

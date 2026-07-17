@@ -6,14 +6,10 @@ set -o pipefail
 
 LOG_EVENT="$(dirname "${BASH_SOURCE[0]}")/log-event.sh"
 
-# GATE-01: read stdin once, then short-circuit a forced-continuation loop.
-# On the second Stop pass (stop_hook_active=true) surface once and yield (exit 0).
-input=$(cat)
-if command -v jq >/dev/null 2>&1 && [ "$(printf '%s' "$input" | jq -r '.stop_hook_active // false')" = "true" ]; then
-  echo "[carve-harness:verify] 이미 재검증 continuation 상태 — 루프 방지 위해 종료 허용" >&2
-  bash "$LOG_EVENT" Stop verify loop-yield ""
-  exit 0
-fi
+# GATE-01: forced-continuation guard, single-sourced with conformance-gate so the
+# wedge-prevention invariant cannot drift (lib-stop-guard.sh). Reads stdin once.
+source "$(dirname "${BASH_SOURCE[0]}")/lib-stop-guard.sh"
+stop_loop_yield verify "$LOG_EVENT"
 # D-02: jq-absent is best-effort (non-blocking) here — asymmetric with the write guard,
 # which fails closed. Hard-failing verification on a jq-less box would block completion.
 if ! command -v jq >/dev/null 2>&1; then
