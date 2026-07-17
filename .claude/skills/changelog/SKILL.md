@@ -1,6 +1,6 @@
 ---
 name: changelog
-description: 되돌릴 수 없는 결정과 그 근거를 시간순으로 specs/DECISIONS.md에 기록한다. 아키텍처·의존성·API 계약 변경 시 사용.
+description: 되돌릴 수 없는 결정(ADR)과 그 근거를 시간순으로 specs/DECISIONS.md에 append-only 기록한다. 아키텍처·의존성·API 계약 변경 시 사용. 주의 — 이건 결정 로그이지 릴리스 버전 이력이 아니다(VERSION·CHANGELOG.md 갱신은 version-changelog 스킬).
 ---
 # changelog (결정 기록)
 결정·근거·대안·영향을 append-only로 `specs/DECISIONS.md`에 기록한다.
