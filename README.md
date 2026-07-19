@@ -1,3 +1,9 @@
+<p align="center">
+  <img src="docs/carve-banner.svg" alt="carve-harness — carve away the excess, keep the craft" width="680">
+</p>
+
+<p align="center"><b>필요한 것만 남기고, 나머지는 깎아낸다.</b></p>
+
 # Claude 하네스 (언어 무관 드롭인)
 
 [English](README.en.md) · 현재 버전 **v0.4.0** · 변경 내역 [CHANGELOG.md](CHANGELOG.md) · 강좌 [HARNESS_GUIDE.md](HARNESS_GUIDE.md)

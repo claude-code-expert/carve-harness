@@ -1,3 +1,9 @@
+<p align="center">
+  <img src="docs/carve-banner.svg" alt="carve-harness — carve away the excess, keep the craft" width="680">
+</p>
+
+<p align="center"><b>Keep what's essential. Carve away the rest.</b></p>
+
 # Claude Harness (language-agnostic drop-in)
 
 [한국어](README.md) · Current version **v0.4.0** · Changes: [CHANGELOG.md](CHANGELOG.md) · Course: [HARNESS_GUIDE.md](HARNESS_GUIDE.md) (Korean)
