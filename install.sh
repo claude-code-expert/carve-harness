@@ -847,7 +847,7 @@ elif CLAUDE_PROJECT_DIR="$HERE" bash "$HERE/.claude/hooks/harness-audit.sh"; the
     if [ -f "$HERE/.claude/skills/carve-harness-create/SKILL.md" ]; then
       say ""
       say "┌─────────────────────────────────────────────────────────────┐"
-      say "│  맞춤 하네스 구축 예약됨 — 전체 설치 완료, 지금 바로 동작    │"
+      say "│  맞춤 하네스 구축 예약됨 — 전체 설치 완료, 지금 바로 동작   │"
       say "└─────────────────────────────────────────────────────────────┘"
       say "프로젝트를 전수 분석해 이 스택에 맞게 맞춤화하려면"
       say "Claude Code 세션에서 다음을 실행하세요:"
