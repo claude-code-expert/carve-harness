@@ -22,7 +22,7 @@ Drop it into your project root and it works immediately.
 | **Self-audit** | `/harness-audit` — 42 mechanical checks PASS/FAIL the harness configuration itself |
 | **Verify loop** | `/verify-loop` — grades each claimed implementation 0–100 against real code, feeds gaps back to rework anything under 95, loops until every item passes. Stop hook blocks "done" while any item is unresolved → [verify-loop guide](docs/md/verify-loop-guide.md) |
 
-**Inventory**: 10 hooks (7 events + 3 manual CLI) · 16 slash commands · 20 agents · 27 skills · 18 rule files · 2 workflows · 16 test suites (187 cases) — full lists in the [component tables](#full-component-list-skills--commands--hooks) below
+**Inventory**: 10 hooks (7 events + 3 manual CLI) · 17 slash commands · 20 agents · 28 skills · 18 rule files · 3 workflows · 18 test suites (194 cases) — full lists in the [component tables](#full-component-list-skills--commands--hooks) below
 
 **Cross-agent**: hook blocking is Claude Code-only. Cursor/Codex/etc. follow `AGENTS.md` as the canonical rules, with `.githooks/pre-commit` as the final gate at commit time.
 
@@ -128,13 +128,13 @@ Once installed, the gates are automatic — protected-path writes are blocked, o
 | `/plan` `/verify` `/review` `/commit` | SC breakdown · SC verification · code review · commit→pull→push with your message |
 | `/squad-*` (8) | plan→review→QA→refactor→debug→security→docs→git pipeline |
 | `bash .claude/hooks/logs-report.sh [days]` | hook verdict log summary (`--rotate N` to rotate) |
-| `npm test` / `npm run test:install` | all 16 hook test suites / installer component-selection suite |
+| `npm test` / `npm run test:install` | all 18 hook test suites / installer component-selection suite |
 
 For customization (protected paths, formatters, verify commands, new stacks) and the full reference, see **`GUIDE.md`**.
 
 ## Orchestration & the verify loop
 
-Two higher-level workflows sit on top of the single-session guards: **Fable teams**, which split work across role-specific agents, and the **verify loop (Eval)**, which scores each spec requirement against the real implementation. Neither is tied to a specific model — without Fable 5, an opus/sonnet session or Cursor/Codex runs the same SOP by hand. Fable 5 just performs it as a default reflex.
+Three higher-level workflows sit on top of the single-session guards: **Fable teams**, which split work across role-specific agents; the **verify loop (Eval)**, which scores each spec requirement against the real implementation; and **golden-set eval (carve-eval)**, which tracks output quality over time against a fixed case set. None is tied to a specific model — without Fable 5, an opus/sonnet session or Cursor/Codex runs the same SOP by hand. Fable 5 just performs it as a default reflex.
 
 ### Fable teams — multi-agent orchestration
 
@@ -187,7 +187,7 @@ Five phases (`carve-verify-loop` workflow):
 ```
 P1 Checklist  goal → checklist items (claim · acceptance · owns) → specs/checklist.json
 P2 Build      per-item builder (worktree-isolated)
-P3 Score      per-item evaluator → code cross-check + test run → 0–100 + gap · evidence
+P3 Score      per-item evaluator → code cross-check + test run → 5-axis rubric (exists·match·test·contract·no_regress, sum 100) + gap · evidence
 P4 Loop       feed gaps of sub-95 items back to P2 (max 3 per item, 8 outer)
 P5 Verify     all items ≥95 → integrated final judgment (contract violations, regressions)
 ```
@@ -202,9 +202,24 @@ To specify items yourself, use the workflow: include `carve-verify-loop` or `ult
 
 **Effect** — while any item is below threshold or unscored, the `checklist-gate` Stop hook **blocks (exit 2)** the "done" claim; the enforcement holds even when you run the loop by hand without the workflow. Rework is surgical: only failing items, not a full re-run. A single `specs/checklist.json` is read by the builder, the scorer, and the gate (file-based communication), so state lives in one place. With no checklist.json the gate is a no-op, so ordinary work isn't disturbed. Details: [verify-loop guide](docs/md/verify-loop-guide.md).
 
+### Golden-set eval — carve-eval
+
+**What** — where the verify loop measures *per-task* completeness, golden-set eval tracks the quality of a fixed case set *over time*. It runs each case in `specs/goldenset/*.json` (input → rubric) k times and scores it, so after changing a prompt/agent/skill/rule you can confirm in numbers that outputs didn't get worse.
+
+```
+Load   specs/goldenset/*.json → cases (input · assert · k)
+Run    per case, k runs → deterministic asserts (contains·regex·negations) + llm-rubric
+Score  compute pass@k (capability) · pass^k (consistency) → append suiteScore to specs/eval-score.json
+       → flag [REGRESSION] if it drops more than delta (default 3pt) below the previous baseline
+```
+
+**How to use** — `/eval` (or say `run carve-eval`). With no golden set, build cases from 20–50 real failures via the `eval-goldenset` skill.
+
+**Effect** — scoring becomes a reproducible number, not a vibe, and prompt/rubric changes get caught as regressions. Separating pass@k (passes at least once) from pass^k (passes every time) exposes "sometimes-works" systems. The regression gate is report-only (opt-in CI wiring) — only teams that maintain a golden set enforce it.
+
 ## Full component list (skills · commands · hooks)
 
-### Skills (27)
+### Skills (28)
 
 > **Triggers when** = the situation that auto-fires the skill (description match) or the point at which you invoke it manually via `/skill-name`. Core gates (anti-ai-slop · carve-guide) fire automatically when their condition holds; the rest usually fire on the corresponding task signal.
 
@@ -236,11 +251,12 @@ To specify items yourself, use the workflow: include `carve-verify-loop` or `ult
 | `ask-matt` | docs/learn | When unsure which skill/flow to use | Router — which skill/flow fits your situation |
 | `setup-matt-pocock-skills` | setup | One-time, before first use of the engineering skills | Set up engineering skills for this repo (tracker, labels) |
 | `checklist-loop` | verify · orchestration | Running the grade-against-code loop by hand (without the workflow) | Spec→build→checklist→95-point scoring→rework loop SOP + checklist.json schema |
+| `eval-goldenset` | verify · orchestration | Confirming no regression via a golden set after a prompt/rule change · measuring pass@k/pass^k | Golden-set (input→rubric) quantitative scoring · score trend · regression SOP + case format |
 | `theme-factory` | vendor | When applying a color/font theme to an artifact | Apply color/font themes to artifacts — anti-slop gate still applies |
 
 > The vendored skill (`theme-factory`) is SKILL.md-only, sourced from `composiohq/awesome-claude-plugins`. Plugins `frontend-design` (design direction) and `ponytail` (simplification) ship as settings.json declarations, not skills.
 
-### Slash commands (16)
+### Slash commands (17)
 
 | Command | Purpose |
 |------|------|
@@ -249,6 +265,7 @@ To specify items yourself, use the workflow: include `carve-verify-loop` or `ult
 | `/plan` | Break work into success-criteria (SC) units → `specs/` |
 | `/verify` | Verify current changes against SC · build · types · tests |
 | `/verify-loop` | Spec→build→checklist→score loop — reworks every item until all pass 95 ([guide](docs/md/verify-loop-guide.md)) |
+| `/eval` | Re-score a golden set → pass@k/pass^k · score trend (`specs/eval-score.json`) · regression vs baseline |
 | `/review` | Review a diff for types, security, exceptions, state |
 | `/commit` | Commit + push current branch with your message (syncs before push) |
 | `/squad` | Invoke a Squad agent — `/squad <member> [task]` |
@@ -287,7 +304,7 @@ To specify items yourself, use the workflow: include `carve-verify-loop` or `ult
 ├── specs/                   # state: handoffs & decision log
 └── .claude/
     ├── settings.json        # 6 hook events registered
-    ├── hooks/  (10 + 16 test suites)
+    ├── hooks/  (10 + 18 test suites)
     ├── workflows/ (fable-team-pipeline · carve-verify-loop)
     ├── commands/ (16) · agents/ (20) · skills/ (27) · rules/ (18)
 ```
