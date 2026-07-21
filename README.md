@@ -6,7 +6,7 @@
 
 # Claude 하네스 (언어 무관 드롭인)
 
-[English](README.en.md) · 현재 버전 **v0.5.0** · 변경 내역 [CHANGELOG.md](CHANGELOG.md) · 강좌 [HARNESS_GUIDE.md](HARNESS_GUIDE.md)
+[English](README.en.md) · 현재 버전 **v0.5.1** · 변경 내역 [CHANGELOG.md](CHANGELOG.md) · 강좌 [HARNESS_GUIDE.md](HARNESS_GUIDE.md)
 
 코딩 에이전트의 규칙 위반을 "설득"이 아니라 **훅 exit 2로 차단**하는 가드레일 템플릿.
 프로젝트 루트에 드롭인하면 즉시 동작한다.
@@ -329,6 +329,7 @@ Score  pass@k(능력)·pass^k(일관성) 산출 → suiteScore를 specs/eval-sco
 
 | 버전 | 날짜 | 요약 |
 |------|------|------|
+| v0.5.1 | 2026-07-21 | replace non-working npx command in banner with eval tagline |
 | v0.5.0 | 2026-07-21 | carve-eval golden-set quantitative eval loop (Stage B) |
 | v0.4.1 | 2026-07-17 | mark caveman-activate.sh executable for AUDIT-01 |
 | v0.4.0 | 2026-07-16 | add spec-to-checklist verify loop with scored evaluator gate |
