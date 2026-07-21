@@ -23,7 +23,5 @@
   <text x="372" y="300" font-size="27" letter-spacing="0.4" fill="#9aa6b8">carve away the excess, keep the craft</text>
 
 
-  <rect x="372" y="372" width="262" height="44" rx="7" fill="#10151f" stroke="#232c3d" stroke-width="1.5"></rect>
-  <text x="392" y="400" font-size="21" fill="#5f6b7e">$</text>
-  <text x="412" y="400" font-size="21" fill="#cdd6e4">npx carve-harness</text>
+  <text x="372" y="401" font-size="20" fill="#9aa6b8">grade every claim against <tspan fill="#4d9dff">the code</tspan></text>
 </svg>
