@@ -6,7 +6,7 @@
 
 # Claude Harness (language-agnostic drop-in)
 
-[한국어](README.md) · Current version **v0.4.1** · Changes: [CHANGELOG.md](CHANGELOG.md) · Course: [HARNESS_GUIDE.md](HARNESS_GUIDE.md) (Korean)
+[한국어](README.md) · Current version **v0.5.0** · Changes: [CHANGELOG.md](CHANGELOG.md) · Course: [HARNESS_GUIDE.md](HARNESS_GUIDE.md) (Korean)
 
 A guardrail template that stops coding-agent rule violations with **hook exit 2 blocking** — not persuasion.
 Drop it into your project root and it works immediately.
@@ -329,6 +329,7 @@ Score  compute pass@k (capability) · pass^k (consistency) → append suiteScore
 
 | Version | Date | Summary |
 |---------|------|---------|
+| v0.5.0 | 2026-07-21 | carve-eval golden-set quantitative eval loop (Stage B) |
 | v0.4.1 | 2026-07-17 | mark caveman-activate.sh executable for AUDIT-01 |
 | v0.4.0 | 2026-07-16 | add spec-to-checklist verify loop with scored evaluator gate |
 | v0.3.0 | 2026-07-14 | embed ponytail and caveman modes into harness |
