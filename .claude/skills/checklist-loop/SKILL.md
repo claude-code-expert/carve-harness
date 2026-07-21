@@ -31,6 +31,7 @@ description: 개발이 스펙대로 됐는지 구현 주장 항목을 코드 대
       "owns": ["src/api/cancel/**"],
       "attempts": 2,
       "score": 88,
+      "axes": { "exists": 25, "match": 25, "test": 13, "contract": 15, "no_regress": 10 },
       "pass": false,
       "gaps": ["멱등성 미검증", "이미 취소된 주문 409 테스트 없음"],
       "evidence": "src/api/cancel/route.ts:12; test 3/4 pass"
@@ -40,7 +41,8 @@ description: 개발이 스펙대로 됐는지 구현 주장 항목을 코드 대
 ```
 
 - `claim`/`acceptance`/`owns`: 분해 단계에서 채운다. `owns` glob은 **항목끼리 겹치면 안 된다**(파일 오너 1개).
-- `score`/`pass`/`gaps`/`evidence`/`attempts`: 채점 단계에서 채운다. `pass = score >= threshold`.
+- `axes`/`score`/`pass`/`gaps`/`evidence`/`attempts`: 채점 단계에서 채운다. `score = 5축 합`, `pass = score >= threshold`.
+- **5축 루브릭(합 100)**: `exists`25·`match`25·`test`25·`contract`15·`no_regress`10. `test`는 실행 출력으로만 채운다 → verify 미실행이면 test=0 → 합 ≤75 < 95(거짓 완료 차단). 게이트는 `score`만 보므로 하위호환.
 
 ## 루프 SOP (순서 고정)
 
@@ -51,8 +53,8 @@ S1. Spec/분해   목표를 리서치 → 3~7개 항목으로 분해(claim·acce
                 specs/checklist.json 작성(전 항목 score:null). → Stop 게이트가 이때부터 완료를 막는다.
 S2. Build       미해결 항목(pass=false)마다 builder 1개. worktree 격리, 동시 3~5개 상한.
                 owns 밖 쓰기 금지. 재작업이면 아래 S4의 반성 프롬프트 + gaps를 입력으로 준다.
-S3. Score       항목마다 evaluator(read-only)에 채점 위임 → 코드 대조 + 테스트 실행으로 0~100.
-                결과를 checklist.json에 반영(score·pass·gaps·evidence·attempts++).
+S3. Score       항목마다 evaluator(read-only)에 채점 위임 → 코드 대조 + 테스트 실행으로 5축(exists·match·test·contract·no_regress) 채점, score=합.
+                결과를 checklist.json에 반영(axes·score·pass·gaps·evidence·attempts++).
 S4. Loop        score<임계 항목만 골라 gap을 builder에 되먹여 S2로. 미달 항목만 재작업(전수 아님).
                 반성 프롬프트 강제: "무엇이 실패했나? 어떤 구체적 변경이 임계를 넘기나? 같은 접근 반복 중인가?"
 S5. 종료        전 항목 pass=true → S6. / 특정 항목 3회(MAX_ATTEMPTS) 재작업에도 미달 → [ESCALATION] 후
