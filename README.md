@@ -1,3 +1,9 @@
+<p align="center">
+  <img src="docs/carve-banner.svg" alt="carve-harness — carve away the excess, keep the craft" width="680">
+</p>
+
+<p align="center"><b>필요한 것만 남기고, 나머지는 깎아낸다.</b></p>
+
 # Claude 하네스 (언어 무관 드롭인)
 
 [English](README.en.md) · 현재 버전 **v0.4.1** · 변경 내역 [CHANGELOG.md](CHANGELOG.md) · 강좌 [HARNESS_GUIDE.md](HARNESS_GUIDE.md)
@@ -16,7 +22,7 @@
 | **자가감사** | `/harness-audit` — 42개 기계 체크로 하네스 오구성 PASS/FAIL |
 | **검증 루프** | `/verify-loop` — 구현 주장을 항목별로 코드 대조 0~100 채점, 95점 미만은 gap 되먹여 재작업, 전 항목 95점까지 루프. 미달 잔존 시 Stop 훅이 완료 차단 → [검증 루프 가이드](docs/md/verify-loop-guide.md) |
 
-**구성 요소**: 훅 10종(7 이벤트 + 수동 CLI 3) · 슬래시 커맨드 16종 · 에이전트 20종 · 스킬 27종 · 규칙 18종 · 워크플로 2종 · 테스트 16 스위트(187건) — 전체 목록은 [전체 구성](#전체-구성-스킬커맨드훅) 표 참고
+**구성 요소**: 훅 10종(7 이벤트 + 수동 CLI 3) · 슬래시 커맨드 17종 · 에이전트 20종 · 스킬 28종 · 규칙 18종 · 워크플로 3종 · 테스트 18 스위트(194건) — 전체 목록은 [전체 구성](#전체-구성-스킬커맨드훅) 표 참고
 
 **크로스 에이전트**: 훅 차단은 Claude Code 전용. Cursor/Codex 등은 `AGENTS.md` 정본 + `.githooks/pre-commit`이 커밋 시점에 최종 차단.
 
@@ -122,13 +128,13 @@ bash uninstall.sh --yes    # 실제 제거 (manifest 범위만, 원래 있던 �
 | `/plan` `/verify` `/review` `/commit` | SC 분해 · SC 검증 · 코드 검토 · 인자 메시지로 commit→pull→push |
 | `/squad-*` (8종) | 기획→리뷰→QA→리팩토링→디버그→보안→문서→Git 파이프라인 |
 | `bash .claude/hooks/logs-report.sh [days]` | 훅 판정 로그 요약 (`--rotate N` 회전) |
-| `npm test` / `npm run test:install` | 전체 훅 테스트 16 스위트 / 설치 구성 선택 스위트 |
+| `npm test` / `npm run test:install` | 전체 훅 테스트 18 스위트 / 설치 구성 선택 스위트 |
 
 커스터마이징(보호 경로·포맷터·검증 명령·새 스택)·전체 레퍼런스는 **`GUIDE.md`** 참고.
 
 ## 오케스트레이션 · 검증 루프
 
-단일 세션 가드 위에 두 상위 워크플로가 얹힌다. 여러 에이전트를 역할별로 나눠 굴리는 **Fable 팀**과, 스펙 요구가 실제로 구현됐는지 항목별로 채점하는 **검증 루프(Eval)**다. 둘 다 특정 모델에 묶이지 않는다 — Fable 5가 없어도 opus·sonnet 세션이나 Cursor·Codex에서 같은 절차(SOP)를 손으로 밟으면 동작한다. Fable 5는 이 절차를 기본 반사로 수행할 뿐이다.
+단일 세션 가드 위에 세 상위 워크플로가 얹힌다. 여러 에이전트를 역할별로 나눠 굴리는 **Fable 팀**, 스펙 요구가 실제로 구현됐는지 항목별로 채점하는 **검증 루프(Eval)**, 고정 골든셋으로 산출물 품질을 시간축으로 추적하는 **골든셋 평가(carve-eval)**다. 셋 다 특정 모델에 묶이지 않는다 — Fable 5가 없어도 opus·sonnet 세션이나 Cursor·Codex에서 같은 절차(SOP)를 손으로 밟으면 동작한다. Fable 5는 이 절차를 기본 반사로 수행할 뿐이다.
 
 ### Fable 팀 — 멀티 에이전트 오케스트레이션
 
@@ -181,7 +187,7 @@ P4 Verify    evaluator 최종 SC 판정
 ```
 P1 Checklist  목표 → 체크리스트 항목 분해 (claim·acceptance·owns) → specs/checklist.json
 P2 Build      항목별 빌더(worktree 격리)
-P3 Score      항목별 evaluator → 코드 대조 + 테스트 실행 → 0~100 채점 + gap·evidence
+P3 Score      항목별 evaluator → 코드 대조 + 테스트 실행 → 5축 루브릭 채점(exists·match·test·contract·no_regress, 합100) + gap·evidence
 P4 Loop       score<95 항목만 gap 되먹여 P2로 (항목당 최대 3회, 외곽 8회)
 P5 Verify     전 항목 95↑ → 통합 최종 판정(계약 위반·회귀 점검)
 ```
@@ -196,9 +202,24 @@ P5 Verify     전 항목 95↑ → 통합 최종 판정(계약 위반·회귀 �
 
 **효과** — 미달·미채점 항목이 남으면 `checklist-gate` Stop 훅이 완료 선언을 **차단(exit 2)**한다. 워크플로 없이 손으로 돌려도 강제력이 걸린다. 재작업은 실패 항목만 외과적으로 고치지, 전수 재실행이 아니다. `specs/checklist.json` 하나를 빌더·채점자·게이트가 함께 읽어(파일 기반 통신) 상태가 한 곳에 모인다. checklist.json이 없으면 게이트는 무동작이라 일반 작업은 방해받지 않는다. 자세히: [검증 루프 가이드](docs/md/verify-loop-guide.md).
 
+### 골든셋 평가 — carve-eval
+
+**무엇** — 검증 루프가 *태스크당* 완성도를 본다면, 골든셋 평가는 고정된 케이스 집합의 품질을 *시간축으로* 추적한다. `specs/goldenset/*.json`의 케이스(입력→루브릭)를 케이스별 k회 실행해 채점하고, 프롬프트·에이전트·스킬·규칙을 바꾼 뒤 "더 나빠지지 않았는지"를 숫자로 확인한다.
+
+```
+Load   specs/goldenset/*.json → 케이스(입력·assert·k) 로드
+Run    케이스별 k회 실행 → 결정론 assert(contains·regex·부정형) + llm-rubric 채점
+Score  pass@k(능력)·pass^k(일관성) 산출 → suiteScore를 specs/eval-score.json에 append(추이)
+       → 직전 baseline 대비 delta(기본 3pt) 초과 하락 시 [REGRESSION] 보고
+```
+
+**어떻게 쓰나** — `/eval`(또는 발화에 `carve-eval 실행`). 골든셋이 없으면 `eval-goldenset` 스킬로 실제 실패 20~50건부터 케이스를 만든다.
+
+**효과** — 채점이 "느낌"이 아니라 재현 가능한 숫자가 되고, 프롬프트/루브릭 변경도 회귀로 잡힌다. pass@k(한 번이라도 통과)와 pass^k(매번 통과)를 분리해 "가끔 되는 시스템"을 드러낸다. 회귀 게이트는 리포트-온리(옵트인 CI 배선) — 골든셋을 유지하는 팀만 강제한다.
+
 ## 전체 구성 (스킬·커맨드·훅)
 
-### 스킬 (27종)
+### 스킬 (28종)
 
 > **발동 시점** = 스킬이 자동 트리거되는 상황(설명 매칭) 또는 `/스킬명`으로 수동 호출하는 시점. 코어 게이트(anti-ai-slop·carve-guide)는 조건 충족 시 자동, 나머지는 대개 해당 작업 신호에서 발동한다.
 
@@ -230,11 +251,12 @@ P5 Verify     전 항목 95↑ → 통합 최종 판정(계약 위반·회귀 �
 | `ask-matt` | 문서·교육 | 어떤 스킬·플로우를 쓸지 물을 때 | 상황에 맞는 스킬·플로우 안내 라우터 |
 | `setup-matt-pocock-skills` | 셋업 | 엔지니어링 스킬 최초 1회 셋업 시 | 이 리포에 엔지니어링 스킬 셋업(이슈 트래커·라벨) |
 | `checklist-loop` | 검증·오케스트레이션 | 구현 주장을 코드 대조 채점하는 루프를 손으로 돌릴 때(워크플로 없이) | 스펙→개발→체크리스트→95점 채점→재작업 루프 SOP + checklist.json 스키마 |
+| `eval-goldenset` | 검증·오케스트레이션 | 프롬프트·규칙 변경 후 골든셋으로 회귀 확인·pass@k/pass^k 측정 시 | 골든셋(입력→루브릭) 정량 채점·점수 추이·회귀 판정 SOP + 케이스 형식 |
 | `theme-factory` | 외부(벤더) | 산출물에 색·폰트 테마를 적용할 때 | 산출물에 테마(색·폰트) 적용 — anti-slop 게이트 여전히 적용 |
 
 > 벤더 스킬(`theme-factory`)은 `composiohq/awesome-claude-plugins`에서 SKILL.md만 벤더링. 플러그인 `frontend-design`(디자인 방향)·`ponytail`(간결화)은 스킬이 아니라 settings.json 선언으로 배포된다.
 
-### 슬래시 커맨드 (16종)
+### 슬래시 커맨드 (17종)
 
 | 커맨드 | 용도 |
 |------|------|
@@ -243,6 +265,7 @@ P5 Verify     전 항목 95↑ → 통합 최종 판정(계약 위반·회귀 �
 | `/plan` | 작업을 완료 기준(SC) 단위로 분해 → `specs/` |
 | `/verify` | 현재 변경을 SC·빌드·타입·테스트로 검증 |
 | `/verify-loop` | 스펙→개발→체크리스트→채점 루프 — 전 항목 95점까지 재작업 반복 ([가이드](docs/md/verify-loop-guide.md)) |
+| `/eval` | 골든셋 재채점 → pass@k/pass^k·점수 추이(`specs/eval-score.json`)·baseline 대비 회귀 판정 |
 | `/review` | 변경분을 타입·보안·예외·상태관리 관점 검토 |
 | `/commit` | 인자를 메시지로 현재 브랜치에 commit→pull→push (문제 시 해결책 제시) |
 | `/squad` | Squad 에이전트 호출 — `/squad <멤버> [작업]` |
@@ -281,7 +304,7 @@ P5 Verify     전 항목 95↑ → 통합 최종 판정(계약 위반·회귀 �
 ├── specs/                   # 상태: 핸드오프·결정 기록
 └── .claude/
     ├── settings.json        # 훅 6이벤트 등록
-    ├── hooks/  (10종 + tests 16 스위트)
+    ├── hooks/  (10종 + tests 18 스위트)
     ├── workflows/ (fable-team-pipeline · carve-verify-loop)
     ├── commands/ (16종) · agents/ (20종) · skills/ (27종) · rules/ (18종)
 ```
