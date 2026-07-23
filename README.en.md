@@ -22,7 +22,7 @@ Drop it into your project root and it works immediately.
 | **Self-audit** | `/harness-audit` — 42 mechanical checks PASS/FAIL the harness configuration itself |
 | **Verify loop** | `/verify-loop` — grades each claimed implementation 0–100 against real code, feeds gaps back to rework anything under 95, loops until every item passes. Stop hook blocks "done" while any item is unresolved → [verify-loop guide](docs/md/verify-loop-guide.md) |
 
-**Inventory**: 10 hooks (7 events + 3 manual CLI) · 17 slash commands · 20 agents · 28 skills · 18 rule files · 3 workflows · 18 test suites (194 cases) — full lists in the [component tables](#full-component-list-skills--commands--hooks) below
+**Inventory**: 13 hooks (5 event gates · 2 libraries · 6 CLI/helpers) · 14 slash commands · 12 agents · 9 skills · 10 rule files (+8 stack references in `docs/rules/`) · 3 workflows · 19 test suites (230 cases) — full lists in the [component tables](#full-component-list-skills--commands--hooks) below
 
 **Cross-agent**: hook blocking is Claude Code-only. Cursor/Codex/etc. follow `AGENTS.md` as the canonical rules, with `.githooks/pre-commit` as the final gate at commit time.
 
@@ -218,7 +218,7 @@ Score  compute pass@k (capability) · pass^k (consistency) → append suiteScore
 
 ## Full component list (skills · commands · hooks)
 
-### Skills (28)
+### Skills (9)
 
 > **Triggers when** = the situation that auto-fires the skill (description match) or the point at which you invoke it manually via `/skill-name`. Core gates (anti-ai-slop · carve-guide) fire automatically when their condition holds; the rest usually fire on the corresponding task signal.
 
@@ -230,32 +230,13 @@ Score  compute pass@k (capability) · pass^k (consistency) → append suiteScore
 | `changelog` | core | On irreversible arch / dependency / API-contract decisions | Record irreversible decisions + rationale in `specs/DECISIONS.md` |
 | `version-changelog` | core | When prepping a release version bump | Sync VERSION · CHANGELOG · README version history on release |
 | `carve-harness-create` | core | After a full install, to trim to your stack (`/carve-harness-create`) | Detect stack, prune components that don't fit → tailored harness |
-| `codebase-design` | design | When designing/improving a module interface or placing a seam | Shared vocabulary for deep-module design |
-| `design-an-interface` | design | When designing an API or comparing options ("design it twice") | Generate several interface designs via parallel sub-agents |
-| `domain-modeling` | design | When pinning domain terms / recording an ADR | Build/sharpen the domain model & ubiquitous language |
-| `improve-codebase-architecture` | design | When you ask to scan for deep-module opportunities | Scan for deepening opportunities → HTML report → apply |
-| `prototype` | design | When a throwaway prototype answers a design question | Throwaway prototype to answer a design question |
-| `implement` | build | When starting implementation from a PRD/issues | Implement from a PRD or set of issues |
-| `qa` | build | During a conversational bug-report / issue-filing ("QA session") | Conversational QA → file GitHub issues |
-| `request-refactor-plan` | build | When splitting a refactor into tiny-commit issues | Tiny-commit refactor plan filed as an issue |
-| `migrate-to-shoehorn` | build | When migrating test `as` assertions to shoehorn | Migrate test `as` assertions → `@total-typescript/shoehorn` |
-| `resolving-merge-conflicts` | build | During an in-progress merge/rebase conflict | Resolve an in-progress merge/rebase conflict |
-| `setup-pre-commit` | build | When setting up Husky/lint-staged pre-commit hooks | Set up Husky + lint-staged pre-commit hooks |
-| `teach` | docs/learn | When teaching a new concept or skill | Teach a new concept or skill |
-| `edit-article` | docs/learn | When editing/revising an article draft | Edit articles for structure & clarity |
-| `scaffold-exercises` | docs/learn | When scaffolding exercise directories | Scaffold exercise directory structures |
-| `to-prd` | docs/learn | When publishing the conversation as a PRD | Turn the conversation into a PRD on the issue tracker |
-| `to-issues` | docs/learn | When breaking a plan/PRD into issues | Break a plan/PRD into independently-grabbable issues |
-| `loop-me` | docs/learn | When interrogating a workflow spec you want to build | Interrogate specs for workflows you want to build |
-| `ask-matt` | docs/learn | When unsure which skill/flow to use | Router — which skill/flow fits your situation |
-| `setup-matt-pocock-skills` | setup | One-time, before first use of the engineering skills | Set up engineering skills for this repo (tracker, labels) |
 | `checklist-loop` | verify · orchestration | Running the grade-against-code loop by hand (without the workflow) | Spec→build→checklist→95-point scoring→rework loop SOP + checklist.json schema |
 | `eval-goldenset` | verify · orchestration | Confirming no regression via a golden set after a prompt/rule change · measuring pass@k/pass^k | Golden-set (input→rubric) quantitative scoring · score trend · regression SOP + case format |
 | `theme-factory` | vendor | When applying a color/font theme to an artifact | Apply color/font themes to artifacts — anti-slop gate still applies |
 
 > The vendored skill (`theme-factory`) is SKILL.md-only, sourced from `composiohq/awesome-claude-plugins`. Plugins `frontend-design` (design direction) and `ponytail` (simplification) ship as settings.json declarations, not skills.
 
-### Slash commands (17)
+### Slash commands (14)
 
 | Command | Purpose |
 |------|------|
@@ -267,21 +248,25 @@ Score  compute pass@k (capability) · pass^k (consistency) → append suiteScore
 | `/eval` | Re-score a golden set → pass@k/pass^k · score trend (`specs/eval-score.json`) · regression vs baseline |
 | `/review` | Review a diff for types, security, exceptions, state |
 | `/commit` | Commit + push current branch with your message (syncs before push) |
+| `/ponytail*` (6) | ponytail mode control · audit · debt · gain · review · help |
 
-### Hooks (10 — 5 event gates · 2 shared helpers · 3 manual CLI)
+### Hooks (13 — 5 event gates · 2 libraries · 6 CLI/helpers)
 
 | Hook | Trigger (when it fires) | Role |
 |------|------|------|
-| `pretool-guard` | PreToolUse — **before every** Write · Edit · Bash | Block writes to protected paths, secrets, dangerous git (exit 2); fail-closed |
+| `pretool-guard` | PreToolUse — **before every** Write · Edit · Bash | Block protected-path writes, secrets, dangerous commands (force push · `reset --hard` · `curl\|sh` · destructive SQL) + loop brake on the 5th identical tool call (exit 2); fail-closed |
 | `posttool-format` | PostToolUse — **right after** a file write/edit succeeds | Detect language by extension and format (post-process, exit 0) |
 | `stop-verify` | Stop — **just before** a response ends (the "done" claim) | Build/type/test gate for changed stacks (exit 2 on failure) |
 | `checklist-gate` | Stop — **just before** a response ends (after `stop-verify`) | Blocks "done" while `specs/checklist.json` has any item under 95 or unscored (exit 2). No-op when the file is absent |
 | `session-handoff` | At session **start · compaction · end** (SessionStart · PreCompact · SessionEnd) | Restore/save handoff + config banner |
 | `log-event` | When another hook records a verdict (internal subprocess call) | JSONL observability append — single source for schema & PII masking |
-| `lib-protected` | Referenced via `source` when a hook loads (never runs directly) | Single definition of the protected-path regex (pure data) |
+| `lib-protected` | Referenced via `source` when a hook loads (never runs directly) | Single definition of protected-path, secret and danger-command regexes (pure data) |
+| `lib-stop-guard` | Referenced via `source` by Stop hooks | Shared Stop loop-guard library |
+| `config-doctor` | On config checkups (manual/installer) | Diagnose settings/config consistency |
 | `harness-audit` | When `/harness-audit` runs (manual) | 42 read-only checks PASS/FAIL |
-| `logs-report` | When `logs-report.sh` runs (manual CLI) | JSONL verdict summary + N-day rotation |
+| `logs-report` | When `logs-report.sh` runs (manual CLI) | JSONL verdict summary + N-day rotation + `--tokens` per-session token accounting |
 | `eval-java` | When a Java/Spring quality score is needed (manual scorer) | Deterministic Java/Spring quality probability `P∈[0,1]`, no LLM |
+| `eval-state` | When carve-eval grades state asserts (helper) | Grade golden-set state asserts (files · commands · diff) against real state — never trust self-report |
 
 ## Layout
 
@@ -294,9 +279,10 @@ Score  compute pass@k (capability) · pass^k (consistency) → append suiteScore
 ├── specs/                   # state: handoffs & decision log
 └── .claude/
     ├── settings.json        # 6 hook events registered
-    ├── hooks/  (10 + 18 test suites)
-    ├── workflows/ (fable-team-pipeline · carve-verify-loop)
-    ├── commands/ (16) · agents/ (20) · skills/ (27) · rules/ (18)
+    ├── hooks/  (13 + 19 test suites)
+    ├── workflows/ (fable-team-pipeline · carve-verify-loop · carve-eval)
+    ├── commands/ (14) · agents/ (12) · skills/ (9) · rules/ (10)
+# docs/rules/code-convention/   # 8 stack reference guides (not auto-loaded — read on demand)
 ```
 
 ## Limitations
@@ -304,7 +290,7 @@ Score  compute pass@k (capability) · pass^k (consistency) → append suiteScore
 - Hook blocking is Claude Code-only — other agents are caught by pre-commit at commit time.
 - Bash write guard is best-effort: pipe/heredoc indirection is not detected (pre-commit is the second net).
 - Stop gate stacks: Java/Node/Python/bash — others pass unverified.
-- Always-on `rules/` increase session-start token cost.
+- Only slim `rules/` stay always-loaded (stack detail guides moved to `docs/rules/` — read on demand).
 
 ## Roadmap
 
