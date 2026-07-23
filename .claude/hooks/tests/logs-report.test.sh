@@ -33,6 +33,24 @@ fi
 CLAUDE_PROJECT_DIR="$tmp" bash "$HOOK" --rotate x >/dev/null 2>&1
 [ $? -ne 0 ] && ok "--rotate non-numeric rejected" || no "--rotate validation"
 
-rm -rf "$tmp"
+# (5) --tokens sums usage across transcript lines; lines without usage ignored.
+tdir=$(mktemp -d)
+{
+  printf '{"type":"user","message":{"role":"user"}}\n'
+  printf '{"type":"assistant","message":{"usage":{"input_tokens":100,"output_tokens":20,"cache_read_input_tokens":1000,"cache_creation_input_tokens":50}}}\n'
+  printf '{"type":"assistant","message":{"usage":{"input_tokens":30,"output_tokens":5,"cache_read_input_tokens":2000,"cache_creation_input_tokens":0}}}\n'
+} > "$tdir/sess-1.jsonl"
+out=$(CLAUDE_PROJECT_DIR="$tmp" CLAUDE_TRANSCRIPTS_DIR="$tdir" bash "$HOOK" --tokens 7)
+printf '%s' "$out" | grep -E 'sess-1[[:space:]]+130[[:space:]]+25[[:space:]]+3000[[:space:]]+50' >/dev/null \
+  && ok "--tokens sums per-session usage" || no "--tokens session sums ($out)"
+printf '%s' "$out" | grep -E 'TOTAL[[:space:]]+130[[:space:]]+25' >/dev/null \
+  && ok "--tokens TOTAL row" || no "--tokens total"
+
+# (6) --tokens with no transcript dir exits 0 with a notice (no crash).
+out=$(CLAUDE_PROJECT_DIR="$tmp" CLAUDE_TRANSCRIPTS_DIR="$tdir/none" bash "$HOOK" --tokens 7); rc=$?
+[ "$rc" -eq 0 ] && printf '%s' "$out" | grep -q '트랜스크립트 없음' \
+  && ok "--tokens missing dir is a notice, exit 0" || no "--tokens missing dir ($rc)"
+
+rm -rf "$tmp" "$tdir"
 printf -- '---\n%s passed, %s failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]
