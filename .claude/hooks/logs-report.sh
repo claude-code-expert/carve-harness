@@ -2,6 +2,7 @@
 # logs-report.sh — JSONL 가드 로그 요약 + 회전 (README Dev-4).
 #   logs-report.sh [days]          최근 N일(기본 7) 요약: 판정 분포·차단 상세
 #   logs-report.sh --rotate <days> N일보다 오래된 로그 삭제 (유일한 쓰기 동작)
+#   logs-report.sh --tokens [days] 세션별 토큰 사용량 (Claude Code 트랜스크립트 집계)
 # jq는 .claude/bin(vendor 설치본) 우선 — 오프라인 동작.
 
 DIR="${CLAUDE_PROJECT_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}"
@@ -23,6 +24,43 @@ if [ "${1:-}" = "--rotate" ]; then
   else
     echo "[carve-harness:logs-report] ${keep}일 초과 로그 없음"
   fi
+  exit 0
+fi
+
+if [ "${1:-}" = "--tokens" ]; then
+  days="${2:-7}"
+  case "$days" in *[!0-9]*|'') echo "[carve-harness:logs-report] 일수는 정수" >&2; exit 1;; esac
+  # Claude Code transcript dir: cwd path with / and . mangled to '-'.
+  # CLAUDE_TRANSCRIPTS_DIR overrides (tests / non-standard installs).
+  proj=$(printf '%s' "$DIR" | sed 's#[/.]#-#g')
+  TDIR="${CLAUDE_TRANSCRIPTS_DIR:-$HOME/.claude/projects/$proj}"
+  [ -d "$TDIR" ] || { echo "[carve-harness:logs-report] 트랜스크립트 없음: $TDIR"; exit 0; }
+  tfiles=$(find "$TDIR" -name '*.jsonl' -type f -mtime -"$days" | sort)
+  [ -n "$tfiles" ] || { echo "[carve-harness:logs-report] 최근 ${days}일 트랜스크립트 없음"; exit 0; }
+  echo "== 토큰 사용량 (최근 ${days}일, API 호출 usage 합산) =="
+  echo
+  printf '%-38s %12s %12s %14s %14s\n' "session" "input" "output" "cache-read" "cache-create"
+  total='{"in":0,"out":0,"cr":0,"cc":0}'
+  while IFS= read -r f; do
+    s=$(jq -s '[.[] | .message.usage? // empty]
+      | {in: ([.[].input_tokens // 0] | add // 0),
+         out: ([.[].output_tokens // 0] | add // 0),
+         cr: ([.[].cache_read_input_tokens // 0] | add // 0),
+         cc: ([.[].cache_creation_input_tokens // 0] | add // 0)}' "$f" 2>/dev/null)
+    [ -n "$s" ] || continue
+    name=$(basename "$f" .jsonl); name="${name:0:36}"
+    printf '%-38s %12s %12s %14s %14s\n' "$name" \
+      "$(printf '%s' "$s" | jq -r '.in')" "$(printf '%s' "$s" | jq -r '.out')" \
+      "$(printf '%s' "$s" | jq -r '.cr')" "$(printf '%s' "$s" | jq -r '.cc')"
+    total=$(jq -cn --argjson a "$total" --argjson b "$s" \
+      '{in: ($a.in + $b.in), out: ($a.out + $b.out), cr: ($a.cr + $b.cr), cc: ($a.cc + $b.cc)}')
+  done <<< "$tfiles"
+  echo
+  printf '%-38s %12s %12s %14s %14s\n' "TOTAL" \
+    "$(printf '%s' "$total" | jq -r '.in')" "$(printf '%s' "$total" | jq -r '.out')" \
+    "$(printf '%s' "$total" | jq -r '.cr')" "$(printf '%s' "$total" | jq -r '.cc')"
+  echo
+  echo "(비용 환산은 모델 단가에 따라 다름 — 단가표 없이 추정하지 않음)"
   exit 0
 fi
 

@@ -31,10 +31,10 @@
 
 | 리스트 항목 | 상태 | 근거 |
 |-------------|:----:|------|
-| A. mattpocock 스킬 세트 | ✅ 레포 내장 | `.claude/skills/` 19종 (implement·teach·domain-modeling 등) — 2026-07-08 `.agents/skills`에서 이전, 기존 기능과 중복 5종 제외 |
+| A. mattpocock 스킬 세트 | ⛔ 제거됨 | 하네스 무관 개인 스킬로 판단, 2026-07-23 배포물에서 제외 (히스토리에서 복구 가능) |
 | B. ECC 보안·평가 에이전트 | ✅ 설치됨 | 프로젝트 `.claude/agents/`: code-reviewer·evaluator·security-reviewer·silent-failure-hunter·state-reviewer |
 | C. GSD (SDD 킷) | ✅ 설치됨 | `~/.claude/agents/` gsd-* 33종 + `/gsd:*` 커맨드 동작 |
-| D-4. caveman (출력 압축) | ✅ 설치됨·활성 | 이 세션에서 caveman/ponytail 모드 동작 중 |
+| D-4. caveman (출력 압축) | ⛔ 제거됨 | ponytail과 역할 중복 — 2026-07-23 ponytail로 일원화 (사용자 전역 플러그인은 별개) |
 | 전제 도구 | ✅ jq·node·npm·pnpm·python3·pip·gradle | `command -v` 확인. jq·shellcheck는 `vendor/bin` 내장 — 오프라인 머신은 `install.sh`가 배치 |
 | D-2 codesight | ✅ 설치됨 | `.codesight/CODESIGHT.md` + `skills.md` 생성됨 (2026-07-07 스캔) |
 | D-3 superpowers | ✅ 설치됨·활성 | 플러그인 목록 확인 (`superpowers@superpowers-marketplace`), 세션에서 스킬 동작 |
@@ -63,6 +63,8 @@ harness/
 │   └── README.md
 ├── logs/                     # 관측: 날짜별 JSONL 이벤트 로그 (gitignore)
 ├── docs/md/                  # 초기 매뉴얼·설치 리스트 (역사 보존용 — 정본은 이 GUIDE)
+├── docs/rules/
+│   └── code-convention/      # 스택별 코딩 표준 상세본 8종 (자동 로드 아님 — 필요 시 참조)
 └── .claude/
     ├── settings.json         # 훅 6이벤트 + permissions.deny + $schema
     ├── bin/                  # install.sh가 vendor에서 배치 (gitignore)
@@ -76,13 +78,13 @@ harness/
     │   ├── lib-protected.sh      # PROTECTED_RE + SECRETS_RE 단일 소스
     │   ├── harness-audit.sh      # 기계적 자가감사
     │   ├── eval-java.sh          # Java/Spring 결정적 출력검증 스코어러 (P±오차)
-    │   └── tests/*.test.sh       # 훅별 어서션 (13 스위트)
-    ├── commands/             # /plan /verify /review /commit /harness-audit /squad*
-    ├── agents/               # reviewer 5종 + tdd-guide·e2e-runner·pr-test-analyzer + squad 8종 (16)
-    ├── skills/               # handoff · changelog · version-changelog · anti-ai-slop + mattpocock 파생 19종
+    │   ├── eval-state.sh         # 골든셋 상태 assert 채점기 (carve-eval 헬퍼)
+    │   └── tests/*.test.sh       # 훅별 어서션 (20 스위트)
+    ├── commands/             # /plan /verify /review /commit /harness-audit /eval /verify-loop /ponytail*
+    ├── agents/               # reviewer 5종 + tdd-guide·e2e-runner·pr-test-analyzer + fable 4종 (12)
+    ├── skills/               # handoff · changelog · version-changelog · anti-ai-slop · carve* · checklist-loop · eval-goldenset · theme-factory (9)
     └── rules/
         ├── common/           # security·testing·git-workflow (항상 적용)
-        ├── code-convention/  # 스택별 코딩 표준 8종
         ├── java-spring/      # patterns (**/*.java) · gateway-testing (게이트웨이 파일)
         ├── react-next/       # patterns (**/*.ts,tsx)
         └── safety.md · database.md · frontend.md · testing.md
@@ -96,15 +98,16 @@ harness/
 
 | 훅 | 이벤트 | 동작 | 종료코드 |
 |----|--------|------|----------|
-| `pretool-guard.sh` | PreToolUse (Write/Edit/MultiEdit/NotebookEdit/Bash) | ① jq 부재·JSON 파싱실패 → **차단**(fail-closed) ② 보호경로(`.env`·prod·시크릿·마이그레이션) 수정 차단 ③ Bash 쓰기명령이 보호경로 대상 시 차단 ④ **파일 내용 하드코딩 시크릿**(AKIA/sk-/ghp_/PEM/JWT) 차단 | 차단 **exit 2** / 허용 0 |
+| `pretool-guard.sh` | PreToolUse (Write/Edit/MultiEdit/NotebookEdit/Bash) | ① jq 부재·JSON 파싱실패 → **차단**(fail-closed) ② 보호경로(`.env`·prod·시크릿·마이그레이션) 수정 차단 ③ Bash 쓰기명령이 보호경로 대상 시 차단 ④ **파일 내용 하드코딩 시크릿**(AKIA/sk-/ghp_/PEM/JWT) 차단 ⑤ **위험 명령**(force push·`reset --hard`·`--no-verify`·히스토리 재작성·`docker … down -v`·`curl\|sh`·DB 클라이언트의 DROP/TRUNCATE/WHERE 없는 DELETE) 차단 ⑥ **루프 브레이크**: 동일 툴+동일 인자 5회 연속 시 차단(다른 호출이 끼면 리셋, `logs/.recent-calls`) | 차단 **exit 2** / 허용 0 |
 | `posttool-format.sh` | PostToolUse (Write/Edit) | 확장자 감지 포맷(spotless/prettier 등); 포맷터 미설치·오류를 **JSONL에 기록**(삼키지 않음) | 0 (비차단) |
 | `stop-verify.sh` | Stop | 스택 감지 후 빌드/타입/린트/테스트(Node는 `lint`/`test` 스크립트 있을 때 — CI `npm run lint`를 로컬로 앞당김); `stop_hook_active` **루프 차단**; jq 부재 시 best-effort 스킵; **변경 모듈만 증분**(git diff) | 실패 **exit 2** / 통과 0 |
 | `session-handoff.sh` | SessionStart / PreCompact / SessionEnd | start=핸드오프 복원, save=**실제 수집**(STATE.md TODO·미완료 플랜·git 카운트·DECISIONS 최근5) → `specs/HANDOFF.md` | 0 |
 | `log-event.sh` | (서브프로세스 헬퍼) | 6훅 진입점의 이벤트를 `logs/*.jsonl`에 1줄 append; 보호경로/PII는 `<masked>` | 항상 0 |
 | `lib-protected.sh` | (데이터) | `PROTECTED_RE`(보호경로) + `SECRETS_RE`(시크릿) 단일 정의 — 재정의 금지. `protected-extra.regex`/`secrets-extra.regex` OR-병합(업데이트 보존) | — |
-| `logs-report.sh` | (수동 CLI) | `logs/*.jsonl` 요약 리포트; `--rotate N`으로 N일 이전 로그 삭제 | 0 |
+| `logs-report.sh` | (수동 CLI) | `logs/*.jsonl` 요약 리포트; `--rotate N` N일 이전 로그 삭제; `--tokens [N]` 세션별 토큰 사용량(트랜스크립트 usage 합산 — 비용 폭주 사후 인지 방지) | 0 |
 | `harness-audit.sh` | (수동 CLI / `/harness-audit`) | 하네스 구성 42체크 PASS/FAIL (§7) | 실패 시 비영 |
 | `eval-java.sh` | (수동 CLI) | Java/Spring 결정적 출력검증 — gradle grader(compile·pass^k·JaCoCo·정적분석·ArchUnit·N+1) 파싱 → 재현 가능한 `P±오차` JSON emit. LLM 없음, jq/gradle 부재 시 "unable"(fail-closed) | 0 (unable=1) |
+| `eval-state.sh` | (carve-eval 헬퍼) | 골든셋 **상태 assert**(`file_exists`·`file_contains`·`cmd_exit0`·`git_diff_contains`)를 워크디렉토리 실상태로 결정적 채점 — 에이전트 자기 보고 불신(리워드 해킹 방지). 불능 입력 fail-closed | 0 (unusable=1) |
 
 **게이트웨이 확장** (게이트웨이 파일 변경 시): `stop-verify.sh`가 `*Gateway*/*Filter*/*Auth*/*RateLimit*.java` 변경을 감지하면 전체 대신 `*GatewayIntegration*` 통합 테스트만 증분 실행(GATE-04), 실패 시 exit 2(GATE-05).
 
@@ -122,9 +125,9 @@ harness/
 ## 5. 전체 인벤토리 (누락 없는 전량 리스트)
 
 > 이 절은 하네스가 동작하는 **모든** 커맨드·에이전트·스킬·룰의 완전한 목록이다. 훅은 §4 참조.
-> 호출 방식: **커맨드** = 슬래시 `/이름` · **에이전트** = description 자동위임 또는 `"use the X agent"` (squad는 트리거 키워드) · **스킬** = `/이름`(사용자 호출) 또는 description 자동발동.
+> 호출 방식: **커맨드** = 슬래시 `/이름` · **에이전트** = description 자동위임 또는 `"use the X agent"` · **스킬** = `/이름`(사용자 호출) 또는 description 자동발동.
 
-### 5.1 커맨드 (`.claude/commands/`, 15종)
+### 5.1 커맨드 (`.claude/commands/`, 14종)
 
 | 파일 | 호출 | 용도 · 사용법 · 예시 |
 |------|------|----------------------|
@@ -134,17 +137,11 @@ harness/
 | `commit.md` | `/commit` | commitlint 준수 커밋 메시지 준비. **자동호출 비활성**(`disable-model-invocation`) — 사용자만. 예: `/commit` |
 | `commit-branch.md` | `/commit-branch` | 현재 브랜치에 Conventional Commits로 커밋 + 푸시. `main` 직접·`--no-verify` 금지. 자동호출 비활성. 예: `/commit-branch` |
 | `harness-audit.md` | `/harness-audit` | 하네스 구성 42체크 PASS/FAIL(§7). 예: `/harness-audit` |
-| `squad.md` | `/squad <member> [task]` | Squad 에이전트 디스패처. 예: `/squad review 이 diff` |
-| `squad-plan.md` | `/squad-plan <feature>` | 기능 기획·유저스토리·와이어프레임. 예: `/squad-plan 결제 모듈` |
-| `squad-review.md` | `/squad-review [scope]` | 코드 리뷰(보안·성능·유지보수). 예: `/squad-review src/auth` |
-| `squad-qa.md` | `/squad-qa [scope]` | QA·테스트 실행·리포트. 예: `/squad-qa` |
-| `squad-refactor.md` | `/squad-refactor [scope]` | 중복·긴 함수·네이밍 리팩토링. 예: `/squad-refactor UserService` |
-| `squad-debug.md` | `/squad-debug <error>` | 근본 원인 분석(수정 제안만). 예: `/squad-debug "NPE at line 42"` |
-| `squad-audit.md` | `/squad-audit [scope]` | 보안 감사(OWASP·시크릿). 예: `/squad-audit` |
-| `squad-docs.md` | `/squad-docs [type]` | 문서 생성(README·API·JSDoc). 예: `/squad-docs api` |
-| `squad-gitops.md` | `/squad-gitops [type]` | 커밋 메시지·PR·체인지로그. 예: `/squad-gitops pr` |
+| `eval.md` | `/eval` | carve-eval 워크플로 실행(골든셋 채점). 예: `/eval` |
+| `verify-loop.md` | `/verify-loop` | carve-verify-loop 워크플로(수정→검증 반복). 예: `/verify-loop` |
+| `ponytail*.md` (6) | `/ponytail…` | ponytail 모드 제어·audit·debt·gain·review·help |
 
-### 5.2 에이전트 (`.claude/agents/`, 20종)
+### 5.2 에이전트 (`.claude/agents/`, 12종)
 
 **하네스 검증 에이전트** (생성/검증 분리 — Evaluator 축):
 
@@ -169,21 +166,9 @@ harness/
 | `fable-visualizer.md` | sonnet | 다이어그램·목업 전담(시각 게이트 준수). `"fable-visualizer로 다이어그램"` |
 
 > 파이프라인 전체는 `.claude/workflows/fable-team-pipeline.js` — `"fable-team-pipeline 실행"`(옵트인)으로 Spec→Build+Verify→Document→Verify 4-Phase 자동 실행.
+> (squad 파이프라인 에이전트 8종+커맨드 9종은 전문 리뷰어·fable 팀과 역할이 중복되어 제거됨 — v0.5.1 이후.)
 
-**Squad 파이프라인 에이전트** (트리거 키워드로 자동위임):
-
-| 파일 | 모델 | 설명 · 트리거 키워드 |
-|------|------|----------------------|
-| `squad-plan.md` | opus | 기획·브레인스토밍. 키워드: "기획","planning","브레인스토밍","유저스토리","와이어프레임","설계","스펙" |
-| `squad-review.md` | opus | 코드 리뷰. 키워드: "리뷰","review","코드 리뷰","PR 리뷰","코드 봐줘" (코드 변경 후 PROACTIVELY) |
-| `squad-qa.md` | sonnet | QA·테스트. 키워드: "테스트","test","QA","검증","동작 확인","돌려봐" |
-| `squad-refactor.md` | opus | 리팩토링. 키워드: "리팩토링","refactor","정리","클린업","추출","중복 제거","DRY" |
-| `squad-debug.md` | opus | 디버깅. 키워드: "디버깅","debug","에러","버그","왜 안 돼","안됨","크래시" |
-| `squad-audit.md` | opus | 보안 감사. 키워드: "보안","security","취약점","vulnerability","audit","OWASP","시크릿 검사" |
-| `squad-docs.md` | sonnet | 문서. 키워드: "문서","README","docs","API 문서","JSDoc","아키텍처 문서","주석" |
-| `squad-gitops.md` | haiku | Git 워크플로. 키워드: "커밋 메시지","commit message","PR 작성","체인지로그","릴리즈 노트" |
-
-### 5.3 스킬 (`.claude/skills/`, 26종)
+### 5.3 스킬 (`.claude/skills/`, 9종)
 
 **하네스 코어 스킬** (자동발동):
 
@@ -194,31 +179,9 @@ harness/
 | `version-changelog/` | 자동/`/version-changelog` | 릴리스 시 VERSION·CHANGELOG·README 버전이력 동시 갱신. **VERSION만 바꾸면 pre-commit 차단** |
 | `anti-ai-slop/` | 자동/`/anti-ai-slop` | 이미지·HTML·SVG 생성 전 발동 — 그라데이션·글로우·장식 모션 차단 게이트 |
 | `carve-guide/` | `/carve-guide` | 하네스 HTML 산출물 작성(디자인 시스템·anti-slop 게이트·theme-factory/frontend-design 검토·1000px 임베드 안전). §릴리스 인벤토리 갱신 모드는 리포 전용. v0.0.13부터 배포 |
-| `carve-harness-create/` | `/carve-harness-create` | 프로젝트 스택 분석 → 맞지 않는 규칙·에이전트·스킬을 KEEP/PRUNE 표로 제안, 1회 확인 후 `install.sh prune` 실행. 명시 호출 전용(`disable-model-invocation`). 의존성 간선(eval-java↔archunit·squad↔에이전트·fable↔워크플로) 미분리 |
-
-**mattpocock 파생 스킬 19종** (대부분 `/이름` 사용자 호출 전용 = `disable-model-invocation`):
-
-| 파일 | 호출 | 설명 |
-|------|------|------|
-| `ask-matt/` | `/ask-matt` | 상황에 맞는 스킬·플로우를 라우팅 |
-| `implement/` | `/implement` | PRD·이슈 기반으로 작업 구현 |
-| `teach/` | `/teach` | 새 스킬·개념을 가르침 |
-| `edit-article/` | `/edit-article` | 아티클 초안 구조·명료성·문장 개선 |
-| `to-prd/` | `/to-prd` | 현재 대화를 PRD로 합성해 이슈 트래커에 발행 |
-| `to-issues/` | `/to-issues` | 계획·스펙·PRD를 독립 이슈(트레이서 불릿)로 분해 |
-| `loop-me/` | `/loop-me` | 만들 워크플로 스펙을 심문식으로 다듬음 |
-| `improve-codebase-architecture/` | `/improve-codebase-architecture` | 심화(deepening) 기회를 HTML 리포트로 스캔 후 선택 심문 |
-| `setup-matt-pocock-skills/` | `/setup-matt-pocock-skills` | 리포에 이슈트래커·라벨·도메인 문서 레이아웃 최초 세팅 |
-| `codebase-design/` | 자동 | 깊은 모듈 설계 공용 어휘(인터페이스·seam·테스트 가능성) |
-| `design-an-interface/` | 자동 | 병렬 서브에이전트로 여러 인터페이스 설계안 생성("design it twice") |
-| `domain-modeling/` | 자동 | 프로젝트 도메인 모델·유비쿼터스 언어 구축·정련 |
-| `prototype/` | 자동 | 설계 질문에 답하는 일회용 프로토타입 |
-| `qa/` | 자동 | 대화형 QA — 버그 리포트를 GitHub 이슈로 발행 |
-| `request-refactor-plan/` | 자동 | 인터뷰로 tiny-commit 리팩터 계획 → GitHub 이슈 |
-| `migrate-to-shoehorn/` | 자동 | 테스트의 `as` 단언을 @total-typescript/shoehorn으로 이전 |
-| `resolving-merge-conflicts/` | 자동 | 진행 중인 git merge/rebase 충돌 해결 |
-| `scaffold-exercises/` | 자동 | 연습문제 디렉토리 구조(문제·해답·해설) 스캐폴딩 |
-| `setup-pre-commit/` | 자동 | Husky + lint-staged pre-commit(Prettier·타입체크·테스트) 세팅 |
+| `carve-harness-create/` | `/carve-harness-create` | 프로젝트 스택 분석 → 맞지 않는 규칙·에이전트·스킬을 KEEP/PRUNE 표로 제안, 1회 확인 후 `install.sh prune` 실행. 명시 호출 전용(`disable-model-invocation`). 의존성 간선(eval-java↔archunit·fable↔워크플로) 미분리 |
+| `checklist-loop/` | 자동 | Stop 게이트(checklist-gate.sh)와 연동되는 체크리스트 작성·소진 루프 |
+| `eval-goldenset/` | 자동/`/eval-goldenset` | 골든셋 태스크 정의 — carve-eval 워크플로의 채점 기준 |
 
 **벤더 스킬 1종** (외부 출처 벤더링, SKILL.md만):
 
@@ -228,7 +191,7 @@ harness/
 
 > 플러그인 `frontend-design`(디자인 방향)·`ponytail`(간결화)은 스킬이 아니라 `settings.json` 선언으로 배포된다(§5.1 참고).
 
-### 5.4 룰 (`.claude/rules/`, 18파일, glob 자동적용)
+### 5.4 룰 (`.claude/rules/` 10파일 자동적용 + `docs/rules/` 상세본 8파일 수동 참조)
 
 | 경로 | glob | 내용 |
 |------|------|------|
@@ -238,12 +201,12 @@ harness/
 | `safety.md` | 항상 | 위험동작(DB 파괴·git·프로덕션) 승인 게이트 |
 | `database.md` | 항상 | id/타임스탬프·soft delete·N+1·마이그레이션 |
 | `frontend.md` · `testing.md` | 항상 | 프론트·테스트 공통 |
-| `code-convention/dev-stack-*.md` (8) | 수동 참조 | java-spring·react·nextjs·typescript·javascript·python·fastapi·orm 스택 표준(상세본 — frontmatter 없음·glob 미로드, 필요 시 참조) |
+| `docs/rules/code-convention/dev-stack-*.md` (8) | 수동 참조 | java-spring·react·nextjs·typescript·javascript·python·fastapi·orm 스택 표준(상세본 — `.claude/rules/` 밖이라 자동 로드 안 됨, 필요 시 Read) |
 | `java-spring/patterns.md` | `**/*.java` | 계층 분리·생성자 주입·LAZY·트랜잭션 |
 | `java-spring/gateway-testing.md` | 게이트웨이 파일 | 5기능 검증 SC·테스트 피라미드·도구 스택 (GATE-04가 강제) |
 | `react-next/patterns.md` | `**/*.ts,tsx` | Hooks·key·서버상태 분리 |
 
-> 룰 상세본: `code-convention/dev-stack-*.md`. 파일 판별·게이트 매핑은 `harness-audit`(AUDIT-03/07)이 점검.
+> 룰 상세본: `docs/rules/code-convention/dev-stack-*.md`. 파일 판별·게이트 매핑은 `harness-audit`(AUDIT-03/07)이 점검.
 
 ---
 
@@ -441,7 +404,7 @@ Slack/위키에 그대로:
 | **gh CLI** | PR·이슈·원격 인증 | 배포판 패키지매니저(`brew/apt install gh`) | `gh auth login` → `gh pr create` (사설 레포 하네스 update 토큰도 `gh auth token`) |
 | **codesight** | 세션 시작 구조맵으로 탐색 토큰 절감 | `npx codesight --init` | `.codesight/CODESIGHT.md` 자동 참조 |
 | **superpowers** | 프로세스 스킬 프레임워크(brainstorming·systematic-debugging) | `/plugin install superpowers@superpowers-marketplace` | 스킬 자동 발동 |
-| **caveman / ponytail** | 출력 압축 / 과잉설계 억제 | `/plugin install caveman@caveman` · `ponytail@ponytail` | `/caveman lite\|full\|ultra` · `/ponytail lite\|full\|ultra` |
+| **ponytail** | 과잉설계 억제 | `/plugin install ponytail@ponytail` | `/ponytail lite\|full\|ultra` |
 | **LSP** | 코드탐색 토큰 대폭 절감 | `npx tweakcc --apply` + `npm i -g @vtsls/language-server` | ⚠️ **Claude Code 바이너리 패치** — 위험 높음, 신중히 |
 | **headroom** | API 페이로드 압축 | `pip install --user headroom` → `headroom wrap claude` | ⚠️ 전역 pip — 중간 위험 |
 

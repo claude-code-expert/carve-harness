@@ -35,9 +35,18 @@ description: 골든셋(고정 입력→루브릭 케이스)으로 산출물 품�
 }
 ```
 
-- `assert.type`: `contains` · `not_contains` · `regex` · `not_regex`(결정론, 워크플로가 순수 채점) · `llm-rubric`(정성, evaluator 위임).
+- `assert.type` 3계층:
+  - **텍스트**(순수 채점): `contains` · `not_contains` · `regex` · `not_regex`
+  - **상태**(`.claude/hooks/eval-state.sh`가 결정론 채점 — 워크디렉토리의 실제 상태):
+    `file_exists`(경로) · `file_contains`(`경로::리터럴`) · `cmd_exit0`(명령 exit 0) · `git_diff_contains`(diff 내 리터럴)
+  - **정성**: `llm-rubric`(evaluator 위임 — "평가의 평가" 문제가 있으니 상태 assert로 대체 가능하면 대체)
+- `setup`(선택): 케이스 실행 전 격리 워크디렉토리에서 실행할 bash 스크립트(환경 구성 — 파일·git 초기화 등).
+  상태 assert 또는 `setup`이 있으면 respondent는 **리포 밖 임시 디렉토리**에서 실행된다(골든셋 정답 비노출).
 - `k`: 반복 실행 횟수(기본 1, 상한 10). k>1이면 pass@k·pass^k가 의미를 가진다.
-- 알 수 없는 assert 타입·잘못된 정규식은 **fail-closed**(통과로 새지 않음).
+- 알 수 없는 assert 타입·잘못된 정규식·상태 채점 불능은 전부 **fail-closed**(통과로 새지 않음).
+
+**원칙: verifier는 에이전트의 말이 아니라 환경의 상태를 채점한다.** "파일을 만들었다"는 응답 텍스트가
+아니라 `file_exists`로, "테스트가 통과한다"는 주장이 아니라 `cmd_exit0`로 확인하라.
 
 ## 채점 규칙
 
@@ -50,6 +59,39 @@ description: 골든셋(고정 입력→루브릭 케이스)으로 산출물 품�
 - 직전 baseline(`specs/eval-score.json` 마지막 run) 대비 `suiteScore`가 **DELTA(기본 3pt) 초과 하락**하면 `regressed`.
 - `specs/eval-score.json`은 append-only 추이(`{"runs":[{run, suiteScore, cases[]}]}`) — 기존 원소 수정 금지.
 - 강제(CI/pre-push 차단)는 옵트인 — 팀이 골든셋을 유지할 때만 배선한다(과잉 차단 방지).
+
+## verifier 반복 절차 (첫 verifier는 거의 항상 틀린다)
+
+새 케이스를 추가하면 **채점 결과만 보지 말고 반드시 1회는 양쪽 궤적을 검사**한다:
+
+1. 케이스를 1회 실행한다(`/eval` 또는 단건).
+2. **에이전트 궤적** 검사: respondent가 실제로 무엇을 했나(툴콜·산출물) — 태스크를 우회했는가.
+3. **verifier 궤적** 검사: assert가 잰 것이 의도한 능력인가 — 프록시만 잰 것 아닌가.
+4. 아래 리워드 해킹 카탈로그로 점검 → 해당되면 케이스/setup/assert 수정 후 재실행.
+5. 두 궤적이 의도와 일치할 때만 골든셋에 확정 편입.
+
+**리워드 해킹 점검 카탈로그** (케이스 작성·리뷰 시 필수 통과):
+
+| 해킹 | 징후 | 대응 |
+|---|---|---|
+| 허위 주장 | "했다"는 텍스트만 있고 상태 변화 없음 | 텍스트 assert → 상태 assert(`file_exists`·`cmd_exit0`)로 교체 |
+| 프록시 충족 | 지표는 green인데 태스크 미완 | 최종 결과물 기준 상태 assert 추가 |
+| 정답 노출 | respondent가 골든셋/assert를 읽고 역산 | 상태 assert·setup 케이스는 자동으로 리포 밖 격리 — 텍스트 전용 케이스는 assert에 답 자체를 넣지 않기 |
+| 과잉 충족 | 금지어 회피를 위해 무의미한 출력 | `not_*` 만 있는 케이스에 positive assert 병행 |
+
+## 트레이스 마이닝 — 실패를 케이스로 (지속 개선 루프)
+
+프로덕션(실사용 세션)의 실패가 최고의 골든셋 소재다. 주기적으로:
+
+```bash
+# 가드 차단·검증 실패 이벤트 추출 → 케이스 후보
+cat logs/*.jsonl | jq -r 'select(.decision=="block") | [.ts,.tool,.reason//"-",.target//"-"] | @tsv'
+bash .claude/hooks/logs-report.sh 7        # 차단 상세 요약
+```
+
+- 반복되는 block(같은 tool/reason) = 하네스가 막아낸 실수 패턴 → 그 상황을 재현하는 케이스로.
+- `stop-verify` 실패·재작업 이력 = 출력 품질 실패 → 해당 태스크를 프롬프트+상태 assert로 고정.
+- **편향 주의**: 트레이스 기반 케이스는 "이미 아는 문제"로 치우친다 — 합성 시나리오(경계값·미발생 위험)를 별도 보충.
 
 ## 시작 로드맵 (덱 §5)
 
@@ -64,9 +106,12 @@ description: 골든셋(고정 입력→루브릭 케이스)으로 산출물 품�
 /eval                       # specs/goldenset/*.json 전체 재채점 → 추이 append → 회귀 판정
 ```
 
-또는 발화에 `carve-eval 실행`. 인자: `{ goldenset?: glob, threshold?: 70, delta?: 3 }`.
+또는 발화에 `carve-eval 실행`. 인자: `{ goldenset?: glob, threshold?: 70, delta?: 3, config?: "라벨" }`.
+
+- 추이 엔트리에 하네스 `VERSION`과 `config` 라벨이 함께 기록된다 — **환경·태스크 고정, 구성만 교체**
+  방식으로 버전 간(v0.5.1 vs 다음)·구성 간(모델 A vs B) 비교가 가능.
 
 ## 참고
-- 루프 코드: `.claude/workflows/carve-eval.js`
-- 예시 골든셋: `.claude/skills/eval-goldenset/example-goldenset.json`
+- 루프 코드: `.claude/workflows/carve-eval.js` · 상태 채점기: `.claude/hooks/eval-state.sh`
+- 예시 골든셋: `example-goldenset.json`(텍스트) · `example-harness-e2e.json`(상태 기반 — 하네스 능력 e2e)
 - 태스크당 5축 채점: `.claude/skills/checklist-loop/SKILL.md`

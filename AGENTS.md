@@ -115,7 +115,7 @@
 
 ## 9. 스택 감지 · 도메인 규칙
 
-- `**/*.java` → `.claude/rules/java-spring/` · `**/*.ts,tsx` → `.claude/rules/react-next/` · 공통 → `.claude/rules/common/` · 스택 표준 → `.claude/rules/code-convention/`.
+- `**/*.java` → `.claude/rules/java-spring/` · `**/*.ts,tsx` → `.claude/rules/react-next/` · 공통 → `.claude/rules/common/` · 스택 표준 상세본 → `docs/rules/code-convention/`(자동 로드 아님 — 필요 시 해당 스택 파일만 읽어라).
 - 프로젝트 도메인 불변식·금지사항은 `CLAUDE.md`에 추가한다(예: "주문 금액 음수 불가", "결제 승인 없이 배송상태 변경 금지"). 다른 에이전트는 그 규칙도 준수.
 
 ---
@@ -132,5 +132,5 @@
 
 ---
 
-*출처: 이 리포의 `CLAUDE.md`(전역 가드레일) + `.claude/CLAUDE.md`(행동 지침). 세 파일은 같은 규칙을 공유한다 — 하나를 고치면 나머지도 맞춰라. Claude Code는 CLAUDE.md로 진입하고, 그 외 에이전트는 이 AGENTS.md를 정본으로 읽는다.*
+*이 AGENTS.md가 **규칙 정본**이다. `CLAUDE.md`(루트)는 진입점 — 하네스 3기둥·절대 금지 요약·응답 언어 프로토콜·도메인 규칙만 담는다. `.claude/CLAUDE.md`는 Claude Code 고유 지침만 담는다. 규칙 수정은 여기서 하고, 두 파일에는 중복 조항을 만들지 마라.*
 </content>

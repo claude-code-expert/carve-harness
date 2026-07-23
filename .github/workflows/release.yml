@@ -32,6 +32,14 @@ jobs:
             *)                                echo "skip=false" >> "$GITHUB_OUTPUT" ;;
           esac
 
+      - name: Regression gate (hook tests + self-audit)
+        if: steps.guard.outputs.skip == 'false'
+        run: |
+          git config core.hooksPath .githooks
+          bash .claude/hooks/tests/run-all.sh
+          bash .github/tests/release-bump.test.sh
+          bash .claude/hooks/harness-audit.sh
+
       - name: Derive next version
         if: steps.guard.outputs.skip == 'false'
         id: v

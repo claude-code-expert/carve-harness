@@ -37,6 +37,7 @@ A("not_regex catches PII", gradeAssertions("010-1234-5678", [{ type: "not_regex"
 A("invalid regex is fail-closed", gradeAssertions("x", [{ type: "regex", value: "(" }]).passed === false);
 A("unknown assert type is fail-closed", gradeAssertions("x", [{ type: "bogus", value: "y" }]).passed === false);
 A("llm-rubric skipped by det grader", gradeAssertions("x", [{ type: "llm-rubric", value: "y" }]).passed === true);
+A("state types skipped by text grader", gradeAssertions("x", [{ type: "file_exists", value: "a" }, { type: "file_contains", value: "a::b" }, { type: "cmd_exit0", value: "true" }, { type: "git_diff_contains", value: "c" }]).passed === true);
 A("empty asserts pass", gradeAssertions("x", []).passed === true);
 EOF
   if node "$T"; then pass=$((pass + 1)); else fail=$((fail + 1)); fi

@@ -1,0 +1,26 @@
+name: ci
+
+# 하네스 회귀 게이트 — 훅·규칙·설치기 변경이 PASS를 깨는지 머지 전에 판별한다.
+# 결정적 검증만 수행(LLM 평가 없음): 훅 테스트 스위트 + release-bump 테스트 + 자가감사.
+on:
+  pull_request:
+  push:
+    branches: [develop]
+
+jobs:
+  harness-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Enable repo git hooks (audit precondition)
+        run: git config core.hooksPath .githooks
+
+      - name: Hook test suite
+        run: bash .claude/hooks/tests/run-all.sh
+
+      - name: Release bump tests
+        run: bash .github/tests/release-bump.test.sh
+
+      - name: Harness self-audit
+        run: bash .claude/hooks/harness-audit.sh

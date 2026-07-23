@@ -126,7 +126,6 @@ Once installed, the gates are automatic — protected-path writes are blocked, o
 |---------|---------|
 | `/harness-audit` | 42-check PASS/FAIL of the harness configuration |
 | `/plan` `/verify` `/review` `/commit` | SC breakdown · SC verification · code review · commit→pull→push with your message |
-| `/squad-*` (8) | plan→review→QA→refactor→debug→security→docs→git pipeline |
 | `bash .claude/hooks/logs-report.sh [days]` | hook verdict log summary (`--rotate N` to rotate) |
 | `npm test` / `npm run test:install` | all 18 hook test suites / installer component-selection suite |
 
@@ -268,15 +267,6 @@ Score  compute pass@k (capability) · pass^k (consistency) → append suiteScore
 | `/eval` | Re-score a golden set → pass@k/pass^k · score trend (`specs/eval-score.json`) · regression vs baseline |
 | `/review` | Review a diff for types, security, exceptions, state |
 | `/commit` | Commit + push current branch with your message (syncs before push) |
-| `/squad` | Invoke a Squad agent — `/squad <member> [task]` |
-| `/squad-plan` | Feature planning |
-| `/squad-review` | Code review |
-| `/squad-qa` | Run QA tests |
-| `/squad-refactor` | Refactor code |
-| `/squad-debug` | Debug an issue |
-| `/squad-audit` | Security audit |
-| `/squad-docs` | Generate docs |
-| `/squad-gitops` | Git workflow (commit · PR · changelog) |
 
 ### Hooks (10 — 5 event gates · 2 shared helpers · 3 manual CLI)
 
