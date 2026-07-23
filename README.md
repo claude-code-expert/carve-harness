@@ -22,7 +22,7 @@
 | **자가감사** | `/harness-audit` — 42개 기계 체크로 하네스 오구성 PASS/FAIL |
 | **검증 루프** | `/verify-loop` — 구현 주장을 항목별로 코드 대조 0~100 채점, 95점 미만은 gap 되먹여 재작업, 전 항목 95점까지 루프. 미달 잔존 시 Stop 훅이 완료 차단 → [검증 루프 가이드](docs/md/verify-loop-guide.md) |
 
-**구성 요소**: 훅 10종(7 이벤트 + 수동 CLI 3) · 슬래시 커맨드 17종 · 에이전트 20종 · 스킬 28종 · 규칙 18종 · 워크플로 3종 · 테스트 18 스위트(194건) — 전체 목록은 [전체 구성](#전체-구성-스킬커맨드훅) 표 참고
+**구성 요소**: 훅 13종(이벤트 게이트 5 · 라이브러리 2 · CLI·헬퍼 6) · 슬래시 커맨드 14종 · 에이전트 12종 · 스킬 9종 · 규칙 10종(+스택 상세본 8, `docs/rules/`) · 워크플로 3종 · 테스트 19 스위트(230건) — 전체 목록은 [전체 구성](#전체-구성-스킬커맨드훅) 표 참고
 
 **크로스 에이전트**: 훅 차단은 Claude Code 전용. Cursor/Codex 등은 `AGENTS.md` 정본 + `.githooks/pre-commit`이 커밋 시점에 최종 차단.
 
@@ -126,8 +126,8 @@ bash uninstall.sh --yes    # 실제 제거 (manifest 범위만, 원래 있던 �
 |------|------|
 | `/harness-audit` | 하네스 구성 42체크 PASS/FAIL |
 | `/plan` `/verify` `/review` `/commit` | SC 분해 · SC 검증 · 코드 검토 · 인자 메시지로 commit→pull→push |
-| `bash .claude/hooks/logs-report.sh [days]` | 훅 판정 로그 요약 (`--rotate N` 회전) |
-| `npm test` / `npm run test:install` | 전체 훅 테스트 18 스위트 / 설치 구성 선택 스위트 |
+| `bash .claude/hooks/logs-report.sh [days]` | 훅 판정 로그 요약 (`--rotate N` 회전 · `--tokens N` 세션별 토큰 사용량) |
+| `npm test` / `npm run test:install` | 전체 훅 테스트 19 스위트 / 설치 구성 선택 스위트 |
 
 커스터마이징(보호 경로·포맷터·검증 명령·새 스택)·전체 레퍼런스는 **`GUIDE.md`** 참고.
 
@@ -218,7 +218,7 @@ Score  pass@k(능력)·pass^k(일관성) 산출 → suiteScore를 specs/eval-sco
 
 ## 전체 구성 (스킬·커맨드·훅)
 
-### 스킬 (28종)
+### 스킬 (9종)
 
 > **발동 시점** = 스킬이 자동 트리거되는 상황(설명 매칭) 또는 `/스킬명`으로 수동 호출하는 시점. 코어 게이트(anti-ai-slop·carve-guide)는 조건 충족 시 자동, 나머지는 대개 해당 작업 신호에서 발동한다.
 
@@ -230,32 +230,13 @@ Score  pass@k(능력)·pass^k(일관성) 산출 → suiteScore를 specs/eval-sco
 | `changelog` | 코어 | 아키텍처·의존성·API 계약 등 비가역 결정 시 | 되돌릴 수 없는 결정·근거를 `specs/DECISIONS.md`에 기록 |
 | `version-changelog` | 코어 | 릴리스 버전 변경(버전 업) 준비 시 | 릴리스 시 VERSION·CHANGELOG·README 버전 이력 동기 갱신 |
 | `carve-harness-create` | 코어 | 전체 설치 후 스택 맞춤 정리 시(`/carve-harness-create`) | 스택 감지 후 불필요 구성 prune → 맞춤 하네스 |
-| `codebase-design` | 설계 | 모듈 인터페이스 설계·개선·심(seam) 배치 논의 시 | 깊은 모듈 설계 공용 어휘·심화 기회 |
-| `design-an-interface` | 설계 | API 설계·인터페이스 대안 비교(“design it twice”) 시 | 병렬 서브에이전트로 인터페이스 안 여러 개 생성·비교 |
-| `domain-modeling` | 설계 | 도메인 용어·유비쿼터스 언어 정립·ADR 기록 시 | 도메인 모델·유비쿼터스 언어 정립 |
-| `improve-codebase-architecture` | 설계 | 딥모듈 심화 기회 스캔을 요청할 때 | 딥모듈 기회 스캔 → HTML 리포트 → 반영 |
-| `prototype` | 설계 | 설계 질문 검증용 버리는 프로토타입이 필요할 때 | 설계 질문에 답하는 버리는(throwaway) 프로토타입 |
-| `implement` | 구현 | PRD·이슈 기반 구현에 착수할 때 | PRD·이슈 기반 구현 |
-| `qa` | 구현 | 대화형 버그 리포트·이슈 등록(“QA 세션”) 시 | 대화형 QA → GitHub 이슈 등록 |
-| `request-refactor-plan` | 구현 | 리팩터를 작은 커밋 단위 이슈로 쪼갤 때 | 작은 커밋 단위 리팩터 계획을 이슈로 |
-| `migrate-to-shoehorn` | 구현 | 테스트 `as` 단언 → shoehorn 이관 시 | 테스트 `as` 단언 → `@total-typescript/shoehorn` 이관 |
-| `resolving-merge-conflicts` | 구현 | 진행 중 머지/리베이스 충돌이 났을 때 | 진행 중 머지/리베이스 충돌 해결 |
-| `setup-pre-commit` | 구현 | Husky/lint-staged pre-commit 셋업을 요청할 때 | Husky + lint-staged pre-commit 훅 셋업 |
-| `teach` | 문서·교육 | 새 개념·스킬 교육을 요청할 때 | 새 개념·스킬 교육 |
-| `edit-article` | 문서·교육 | 글 초안 편집·개선을 요청할 때 | 글 구조·명확성 개선 편집 |
-| `scaffold-exercises` | 문서·교육 | 연습문제 디렉토리 구조 생성을 요청할 때 | 연습문제 디렉토리 구조 생성 |
-| `to-prd` | 문서·교육 | 대화를 PRD로 발행할 때 | 대화를 PRD로 만들어 이슈 트래커에 발행 |
-| `to-issues` | 문서·교육 | 계획·PRD를 개별 이슈로 분해할 때 | 계획·PRD를 독립적으로 잡을 수 있는 이슈로 분해 |
-| `loop-me` | 문서·교육 | 만들 워크플로 스펙을 대화로 파고들 때 | 만들 워크플로 스펙을 대화로 파고들기 |
-| `ask-matt` | 문서·교육 | 어떤 스킬·플로우를 쓸지 물을 때 | 상황에 맞는 스킬·플로우 안내 라우터 |
-| `setup-matt-pocock-skills` | 셋업 | 엔지니어링 스킬 최초 1회 셋업 시 | 이 리포에 엔지니어링 스킬 셋업(이슈 트래커·라벨) |
 | `checklist-loop` | 검증·오케스트레이션 | 구현 주장을 코드 대조 채점하는 루프를 손으로 돌릴 때(워크플로 없이) | 스펙→개발→체크리스트→95점 채점→재작업 루프 SOP + checklist.json 스키마 |
 | `eval-goldenset` | 검증·오케스트레이션 | 프롬프트·규칙 변경 후 골든셋으로 회귀 확인·pass@k/pass^k 측정 시 | 골든셋(입력→루브릭) 정량 채점·점수 추이·회귀 판정 SOP + 케이스 형식 |
 | `theme-factory` | 외부(벤더) | 산출물에 색·폰트 테마를 적용할 때 | 산출물에 테마(색·폰트) 적용 — anti-slop 게이트 여전히 적용 |
 
 > 벤더 스킬(`theme-factory`)은 `composiohq/awesome-claude-plugins`에서 SKILL.md만 벤더링. 플러그인 `frontend-design`(디자인 방향)·`ponytail`(간결화)은 스킬이 아니라 settings.json 선언으로 배포된다.
 
-### 슬래시 커맨드 (17종)
+### 슬래시 커맨드 (14종)
 
 | 커맨드 | 용도 |
 |------|------|
@@ -267,21 +248,25 @@ Score  pass@k(능력)·pass^k(일관성) 산출 → suiteScore를 specs/eval-sco
 | `/eval` | 골든셋 재채점 → pass@k/pass^k·점수 추이(`specs/eval-score.json`)·baseline 대비 회귀 판정 |
 | `/review` | 변경분을 타입·보안·예외·상태관리 관점 검토 |
 | `/commit` | 인자를 메시지로 현재 브랜치에 commit→pull→push (문제 시 해결책 제시) |
+| `/ponytail*` (6) | ponytail 모드 제어·audit·debt·gain·review·help |
 
-### 훅 (10종 — 이벤트 게이트 5 · 공유 헬퍼 2 · 수동 CLI 3)
+### 훅 (13종 — 이벤트 게이트 5 · 라이브러리 2 · CLI·헬퍼 6)
 
 | 훅 | 트리거 (언제 작동) | 역할 |
 |------|------|------|
-| `pretool-guard` | PreToolUse — Write·Edit·Bash 실행 **직전마다** | 보호 경로·시크릿·위험 git 쓰기 차단(exit 2), fail-closed |
+| `pretool-guard` | PreToolUse — Write·Edit·Bash 실행 **직전마다** | 보호 경로·시크릿·위험 명령(force push·`reset --hard`·`curl\|sh`·파괴적 SQL) 차단 + 동일 툴콜 5연속 루프 브레이크(exit 2), fail-closed |
 | `posttool-format` | PostToolUse — 파일 쓰기·수정 성공 **직후** | 확장자 언어 감지 후 포맷(후처리, exit 0) |
 | `stop-verify` | Stop — 응답 종료(완료 선언) **직전** | 변경 스택 빌드·타입·테스트 게이트(실패 exit 2) |
 | `checklist-gate` | Stop — 응답 종료 **직전**(`stop-verify` 뒤) | `specs/checklist.json` 미달(<95)·미채점 항목 남으면 완료 차단(exit 2). 파일 없으면 무동작 |
 | `session-handoff` | 세션 **시작·압축·종료** 시점(SessionStart·PreCompact·SessionEnd) | 핸드오프 복원·저장 + 구성 배너 |
 | `log-event` | 다른 훅이 판정을 기록할 때(내부 서브프로세스 호출) | JSONL 관측 append — 스키마·PII 마스킹 단일 출처 |
-| `lib-protected` | 훅 로드 시 `source`로 참조(직접 실행 안 함) | 보호 경로 정규식 단일 정의(순수 데이터) |
+| `lib-protected` | 훅 로드 시 `source`로 참조(직접 실행 안 함) | 보호 경로·시크릿·위험 명령 정규식 단일 정의(순수 데이터) |
+| `lib-stop-guard` | Stop 훅 로드 시 `source`로 참조 | Stop 루프 가드 공유 라이브러리 |
+| `config-doctor` | 설정 점검 시(수동/설치기) | settings·구성 파일 정합 진단 |
 | `harness-audit` | `/harness-audit` 실행 시(수동) | 42 체크 read-only PASS/FAIL |
-| `logs-report` | `logs-report.sh` 실행 시(수동 CLI) | JSONL 판정 요약 + N일 회전 |
+| `logs-report` | `logs-report.sh` 실행 시(수동 CLI) | JSONL 판정 요약 + N일 회전 + `--tokens` 세션별 토큰 회계 |
 | `eval-java` | Java/Spring 품질 스코어가 필요할 때(수동 스코어러) | Java/Spring 결정적 품질 확률 `P∈[0,1]`, LLM 없음 |
+| `eval-state` | carve-eval 상태 assert 채점 시(헬퍼) | 골든셋 상태 assert(파일·명령·diff)를 실상태로 결정적 채점 — 자기 보고 불신 |
 
 ## 구조
 
@@ -294,9 +279,10 @@ Score  pass@k(능력)·pass^k(일관성) 산출 → suiteScore를 specs/eval-sco
 ├── specs/                   # 상태: 핸드오프·결정 기록
 └── .claude/
     ├── settings.json        # 훅 6이벤트 등록
-    ├── hooks/  (10종 + tests 18 스위트)
-    ├── workflows/ (fable-team-pipeline · carve-verify-loop)
-    ├── commands/ (16종) · agents/ (20종) · skills/ (27종) · rules/ (18종)
+    ├── hooks/  (13종 + tests 19 스위트)
+    ├── workflows/ (fable-team-pipeline · carve-verify-loop · carve-eval)
+    ├── commands/ (14종) · agents/ (12종) · skills/ (9종) · rules/ (10종)
+# docs/rules/code-convention/   # 스택 상세본 8종 (자동 로드 아님 — 필요 시 참조)
 ```
 
 ## 한계
@@ -304,7 +290,7 @@ Score  pass@k(능력)·pass^k(일관성) 산출 → suiteScore를 specs/eval-sco
 - 훅 차단은 Claude Code 전용 — 타 에이전트는 pre-commit이 커밋 시점 차단.
 - Bash 쓰기 가드는 best-effort: 파이프·heredoc 간접 우회 미탐 (pre-commit이 2차 차단).
 - Stop 게이트 스택: Java/Node/Python/bash — 그 외는 미검증 통과.
-- `rules/` 상시 로드로 세션 시작 토큰 증가.
+- `rules/` 슬림본만 상시 로드(스택 상세본은 `docs/rules/`로 분리 — 필요 시 참조).
 
 ## 로드맵
 
