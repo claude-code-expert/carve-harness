@@ -8,7 +8,7 @@
 ## 쿼리 작성
 - N+1 문제 방지: include 또는 join 적극 활용
 - 대량 조회 시 반드시 페이지네이션 적용
-- 트랜잭션 필요 시 사용 중인 ORM의 트랜잭션 API 사용 (상세: `.claude/rules/code-convention/dev-stack-orm.md`)
+- 트랜잭션 필요 시 사용 중인 ORM의 트랜잭션 API 사용 (상세: `docs/rules/code-convention/dev-stack-orm.md`)
 
 ## 마이그레이션
 - 마이그레이션 파일명에 변경 내용 명시

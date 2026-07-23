@@ -49,7 +49,7 @@ argument-hint: "[--dry-run]"
 - **CI**: `.github/workflows/`·`.gitlab-ci.yml` 존재.
 - **외부 도구 PATH**: `command -v gh ruff prettier tsc npx` — 스택에 필요한데 없는 것을 ADD 후보로.
 - **규모**: `git ls-files | wc -l`, 소스 디렉토리 수, 모노레포 신호(`pnpm-workspace.yaml`·`turbo.json`·
-  `workspaces`·하위 `package.json` 2개+). 대규모 → fable/squad 유지, 소형 단일 → 프루닝 후보.
+  `workspaces`·하위 `package.json` 2개+). 대규모 → fable 유지, 소형 단일 → 프루닝 후보.
 
 분석 결과를 **한 문단**으로 먼저 요약해 보여준다(무슨 스택·규모로 판단했는지, 근거 파일 명시).
 
@@ -88,9 +88,9 @@ CLAUDE.md·AGENTS.md·`.claude/CLAUDE.md`의 정합성을 점검한다. 각 항�
 
 ### 3-2. 누락된 하네스 구성 복구
 감지 스택에 **해당하는데 규칙/에이전트가 없으면**(이전 prune 등) 복구 제안:
-- 예: `*.java` 다수인데 `.claude/rules/java-spring/`·`dev-stack-java-spring.md`·`eval-java.sh` 부재 → 복구.
+- 예: `*.java` 다수인데 `.claude/rules/java-spring/`·`docs/rules/code-convention/dev-stack-java-spring.md`·`eval-java.sh` 부재 → 복구.
 - 복구 수단: 직전 prune이면 `bash install.sh rollback`, 아니면 `bash install.sh update`(정본 재-fetch) 안내.
-- **의존성 간선 존중**(4단계 표와 동일): eval-java ⟷ archunit, squad cmd ⟷ agent는 함께 복구.
+- **의존성 간선 존중**(4단계 표와 동일): eval-java ⟷ archunit, fable workflow ⟷ agent는 함께 복구.
 
 ### 3-3. 설정 스캐폴딩
 - CLAUDE.md 도메인 규칙 섹션이 비었으면 `## 도메인 규칙` 스캐폴드 제안(2단계 placeholder와 연동).
@@ -99,7 +99,7 @@ CLAUDE.md·AGENTS.md·`.claude/CLAUDE.md`의 정합성을 점검한다. 각 항�
 ## 4. 절단 계산 (PRUNE) — KEEP/PRUNE 집합
 
 **ALWAYS-KEEP** + **감지 스택 게이트** + **의존성 간선**으로 유지 경로 집합을 만든다. 경로는 prune이
-이해하는 확장 granularity(디렉토리 단위 또는 `code-convention/dev-stack-*.md` 파일 단위)로 쓴다.
+이해하는 확장 granularity(디렉토리 단위 또는 `docs/rules/code-convention/dev-stack-*.md` 파일 단위)로 쓴다.
 
 ### ALWAYS-KEEP (스택 무관, 반드시 keep-list 포함)
 `install.sh prune`의 PROTECTED 정규식이 자동 보호하는 것(hooks 코어·settings.json·`safety.md`·
@@ -118,16 +118,17 @@ CLAUDE.md·AGENTS.md·`.claude/CLAUDE.md`의 정합성을 점검한다. 각 항�
 | Python/FastAPI | `dev-stack-python.md` · `dev-stack-fastapi.md`(FastAPI 감지 시) |
 | ORM/DB | `.claude/rules/database.md` · `dev-stack-orm.md` |
 
+> `dev-stack-*.md` 상세본의 경로는 `docs/rules/code-convention/` (자동 로드 아님, 참조본).
+
 ### 하드 의존성 간선 (묶어서 keep 또는 prune — 절대 분리 금지)
 1. **eval-java ⟷ archunit** (★최우선): `eval-java.sh` keep면 `java-spring`(archunit 포함)도 keep.
    한쪽만 남기면 `harness-audit` **AUDIT-08 FAIL**. Java 미감지 → 둘 다 prune.
-2. **squad**: `commands/squad*.md`(9) ⟷ `agents/squad-*.md`(8). 함께 keep 또는 함께 prune.
-3. **fable**: `workflows/fable-team-pipeline.js` ⟷ `agents/fable-*`(4) + `docs/md/orchestration.md` +
+2. **fable**: `workflows/fable-team-pipeline.js` ⟷ `agents/fable-*`(4) + `docs/md/orchestration.md` +
    `docs/md/fable-team-guide.md`. 함께.
-4. **review ⟷ 리뷰어**: `commands/review.md`(ALWAYS-KEEP)가 `code-reviewer`·`security-reviewer`·
+3. **review ⟷ 리뷰어**: `commands/review.md`(ALWAYS-KEEP)가 `code-reviewer`·`security-reviewer`·
    `silent-failure-hunter`를 참조 → 이 3개 에이전트 keep.
 
-소형 단일 스택: squad·fable 프루닝 후보. 멀티모듈/모노레포/대규모: 유지. 애매하면 KEEP.
+소형 단일 스택: fable 프루닝 후보. 멀티모듈/모노레포/대규모: 유지. 애매하면 KEEP.
 
 ## 5. 통합 제안표 (FIX / ADD / KEEP / PRUNE)
 
@@ -179,4 +180,4 @@ KEEP 조정·FIX 취사선택이 필요하면 말씀하세요." — **놓친 스
 - 설정 파일 편집(FIX)은 **되돌리기 위해 git 필요** — dirty 트리면 diff 검토 후 커밋 권장.
 - 외부 도구·GSD 설치는 **안내만** 한다 — 사용자 머신 상태를 임의로 바꾸지 않는다.
 - prune은 되돌릴 수 있으나 한 버전에서 prune/update를 섞으면 백업이 겹칠 수 있다 — clean 버전에서 한 번에 권장.
-- 이 스킬은 모델 무관 경로 집합으로 fable/squad를 다룬다 — 미설치면 manifest에 없어 자동으로 건너뛴다.
+- 이 스킬은 모델 무관 경로 집합으로 fable을 다룬다 — 미설치면 manifest에 없어 자동으로 건너뛴다.

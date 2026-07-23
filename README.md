@@ -126,7 +126,6 @@ bash uninstall.sh --yes    # 실제 제거 (manifest 범위만, 원래 있던 �
 |------|------|
 | `/harness-audit` | 하네스 구성 42체크 PASS/FAIL |
 | `/plan` `/verify` `/review` `/commit` | SC 분해 · SC 검증 · 코드 검토 · 인자 메시지로 commit→pull→push |
-| `/squad-*` (8종) | 기획→리뷰→QA→리팩토링→디버그→보안→문서→Git 파이프라인 |
 | `bash .claude/hooks/logs-report.sh [days]` | 훅 판정 로그 요약 (`--rotate N` 회전) |
 | `npm test` / `npm run test:install` | 전체 훅 테스트 18 스위트 / 설치 구성 선택 스위트 |
 
@@ -268,15 +267,6 @@ Score  pass@k(능력)·pass^k(일관성) 산출 → suiteScore를 specs/eval-sco
 | `/eval` | 골든셋 재채점 → pass@k/pass^k·점수 추이(`specs/eval-score.json`)·baseline 대비 회귀 판정 |
 | `/review` | 변경분을 타입·보안·예외·상태관리 관점 검토 |
 | `/commit` | 인자를 메시지로 현재 브랜치에 commit→pull→push (문제 시 해결책 제시) |
-| `/squad` | Squad 에이전트 호출 — `/squad <멤버> [작업]` |
-| `/squad-plan` | 기능 기획 |
-| `/squad-review` | 코드 리뷰 |
-| `/squad-qa` | QA 테스트 실행 |
-| `/squad-refactor` | 코드 리팩터 |
-| `/squad-debug` | 이슈 디버깅 |
-| `/squad-audit` | 보안 감사 |
-| `/squad-docs` | 문서 생성 |
-| `/squad-gitops` | Git 워크플로(커밋·PR·체인지로그) |
 
 ### 훅 (10종 — 이벤트 게이트 5 · 공유 헬퍼 2 · 수동 CLI 3)
 

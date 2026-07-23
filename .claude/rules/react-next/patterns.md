@@ -4,7 +4,7 @@ paths: ["**/*.ts", "**/*.tsx"]
 # React / Next.js / TypeScript 규칙 (자동 로드)
 
 > 자동 로드되는 **규칙 목록**. 코드 샘플·근거·프로젝트 구조는 상세본 참조:
-> `.claude/rules/code-convention/dev-stack-{react,nextjs,typescript,orm}.md`
+> `docs/rules/code-convention/dev-stack-{react,nextjs,typescript,orm}.md`
 > 최종 정합: 2026-07-07 (React 19 · Next 16 · TS 5 — Context7 검증)
 
 ## TypeScript

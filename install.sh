@@ -215,7 +215,7 @@ run_setup() {
 
 # 설치 대상 목록 — uninstall.sh는 설치 시 기록되는 manifest만 신뢰한다.
 # 구성(component) 5종 + core. 설치 시 선택 가능, core는 항상 설치.
-MD_PATHS=( CLAUDE.md AGENTS.md RULES.md .cursorrules codex.md .claude/CLAUDE.md .claude/rules specs/README.md )
+MD_PATHS=( CLAUDE.md AGENTS.md RULES.md .cursorrules codex.md .claude/CLAUDE.md .claude/rules docs/rules specs/README.md )
 HOOK_PATHS=( .claude/settings.json .claude/hooks .githooks )
 SKILL_PATHS=( .claude/skills )
 DEV_SKILLS=""   # 배포 제외 스킬 목록(공백 구분). 현재 없음 — carve-guide는 v0.0.13부터 배포 포함. 훅과 build_items·strip이 이 목록을 참조
@@ -236,7 +236,7 @@ comp_of() { # $1=경로 → 구성 이름
     .claude/skills*)   echo skills ;;
     .claude/commands*) echo commands ;;
     .claude/agents*|.claude/workflows*|docs/md/*) echo orchestrator ;;
-    CLAUDE.md|AGENTS.md|RULES.md|.cursorrules|codex.md|.claude/CLAUDE.md|.claude/rules*|specs/README.md) echo md ;;
+    CLAUDE.md|AGENTS.md|RULES.md|.cursorrules|codex.md|.claude/CLAUDE.md|.claude/rules*|docs/rules*|specs/README.md) echo md ;;
     *) echo core ;;
   esac
 }
@@ -454,8 +454,8 @@ select_components() { # → $COMPONENTS + $SELECTED_PATHS. env > AUTO_PROJECT > 
 
 # ── prune 헬퍼 ────────────────────────────────────────────────────────────────
 # manifest의 coarse 디렉토리 줄을 현재 on-disk per-child 줄로 펼쳐 stdout에 출력(원본 불변).
-# 파일 단위 제거의 선행. rules는 프루닝 단위가 불규칙 — code-convention만 파일 단위로,
-# 나머지 하위는 dir 단위로. 멱등: 이미 펼쳐진 줄(exact 매치 아님)은 그대로 통과.
+# 파일 단위 제거의 선행. rules 하위는 dir 단위, docs/rules(code-convention 참조본)는
+# 파일 단위로. 멱등: 이미 펼쳐진 줄(exact 매치 아님)은 그대로 통과.
 prune_expand_manifest() {
   local p f g
   while IFS= read -r p; do
@@ -467,10 +467,14 @@ prune_expand_manifest() {
         else printf '%s\n' "$p"; fi ;;
       .claude/rules)
         if [ -d "$HERE/$p" ]; then
+          for f in "$HERE/$p"/*; do [ -e "$f" ] && printf '%s\n' "$p/${f##*/}"; done
+        else printf '%s\n' "$p"; fi ;;
+      docs/rules)
+        if [ -d "$HERE/$p" ]; then
           for f in "$HERE/$p"/*; do
             [ -e "$f" ] || continue
-            if [ "${f##*/}" = "code-convention" ] && [ -d "$f" ]; then
-              for g in "$f"/*; do [ -e "$g" ] && printf '%s\n' "$p/code-convention/${g##*/}"; done
+            if [ -d "$f" ]; then
+              for g in "$f"/*; do [ -e "$g" ] && printf '%s\n' "$p/${f##*/}/${g##*/}"; done
             else printf '%s\n' "$p/${f##*/}"; fi
           done
         else printf '%s\n' "$p"; fi ;;
@@ -836,9 +840,9 @@ elif CLAUDE_PROJECT_DIR="$HERE" bash "$HERE/.claude/hooks/harness-audit.sh"; the
   [ "$warn" -eq 0 ] && say "설치 완료 — 하네스 전 게이트 활성." \
                     || say "설치 완료(경고 있음) — 위 WARN/ACTION/SKIP 항목 확인."
   if command -v node >/dev/null 2>&1; then
-    say "모드: ponytail(게으른 시니어)·caveman(출력 압축) 다음 세션부터 자동 활성 — 해제: 'normal mode'"
+    say "모드: ponytail(게으른 시니어) 다음 세션부터 자동 활성 — 해제: 'normal mode'"
   else
-    say "모드: caveman 자동 활성. ponytail은 node 미설치로 비활성 — node 설치 시 자동 활성"
+    say "모드: ponytail은 node 미설치로 비활성 — node 설치 시 자동 활성"
   fi
   if [ "$MODE" = "install" ]; then
     # 배너는 carve-harness-create 스킬이 설치됐는지로 판단한다(AUTO_PROJECT 아님):

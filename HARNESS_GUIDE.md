@@ -285,9 +285,9 @@ jq·shellcheck는 `vendor/bin`에 정적 바이너리 내장(SHA256 검증) — 
 | 자산 | 규모 | 활용 |
 |------|------|------|
 | 훅 | 8종 (6 이벤트) | 자동 — 손댈 일 없음. 커스터마이징은 `GUIDE.md` §8 |
-| 커맨드 | 14종 | `/plan`(SC 분해) `/verify`(SC 검증) `/review`(검토) `/commit`(커밋 준비) `/harness-audit` + `/squad-*` 8종 |
-| 에이전트 | 13종 | 검증 전담: evaluator·code/security/silent-failure/state-reviewer — "use the security-reviewer agent"로 호출, 생성/검증 분리 |
-| 스킬 | 22종 | `handoff`(수동 핸드오프) `changelog`(결정 기록→DECISIONS.md) `version-changelog`(릴리스 필수) + mattpocock 파생 19종(`/implement` `/teach` `/domain-modeling` 등) |
+| 커맨드 | 14종 | `/plan`(SC 분해) `/verify`(SC 검증) `/review`(검토) `/commit`(커밋 준비) `/harness-audit` `/eval` `/verify-loop` + `/ponytail*` 6종 |
+| 에이전트 | 12종 | 검증 전담: evaluator·code/security/silent-failure/state-reviewer — "use the security-reviewer agent"로 호출, 생성/검증 분리 |
+| 스킬 | 9종 | `handoff`(수동 핸드오프) `changelog`(결정 기록→DECISIONS.md) `version-changelog`(릴리스 필수) + anti-ai-slop·carve-guide·carve-harness-create·checklist-loop·eval-goldenset·theme-factory |
 | 규칙 | 17파일 | `common/` 상시 + 스택별 glob 자동 로드 (java-spring·react-next·python·ts·orm 등 8 스택 표준) |
 | 테스트 | 11 스위트 125건 | 게이트 회귀 — 훅 수정 후 반드시 실행 |
 
@@ -297,7 +297,7 @@ jq·shellcheck는 `vendor/bin`에 정적 바이너리 내장(SHA256 검증) — 
 |------|------|------|
 | **GSD** (get-shit-done) | SDD 킷: 로드맵→플랜→실행→검증 오케스트레이션 (`.planning/` 산출) | `npx get-shit-done-cc --local` (setup이 제안) |
 | **superpowers** | 스킬 프레임워크 (brainstorming·systematic-debugging 등 프로세스 스킬) | `/plugin install superpowers@superpowers-marketplace` |
-| **caveman / ponytail** | 출력 압축 / 과잉 엔지니어링 억제 플러그인 | `/plugin install caveman@caveman` 등 |
+| **ponytail** | 과잉 엔지니어링 억제 플러그인 | `/plugin install ponytail@ponytail` |
 | **codesight** | 구조맵으로 탐색 토큰 절감 (`.codesight/`) | `npx codesight --init` |
 | gh CLI | PR·API 작업 | 배포판 패키지 매니저 |
 

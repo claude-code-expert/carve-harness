@@ -23,8 +23,7 @@
     ] } ],
     "SessionStart":[ { "hooks": [
       { "type": "command", "command": "bash ${CLAUDE_PROJECT_DIR}/.claude/hooks/session-handoff.sh start" },
-      { "type": "command", "command": "command -v node >/dev/null 2>&1 && node ${CLAUDE_PROJECT_DIR}/vendor/ponytail/hooks/ponytail-activate.js || true", "timeout": 5 },
-      { "type": "command", "command": "bash ${CLAUDE_PROJECT_DIR}/.claude/hooks/caveman-activate.sh", "timeout": 5 }
+      { "type": "command", "command": "command -v node >/dev/null 2>&1 && node ${CLAUDE_PROJECT_DIR}/vendor/ponytail/hooks/ponytail-activate.js || true", "timeout": 5 }
     ] } ],
     "UserPromptSubmit":[ { "hooks": [
       { "type": "command", "command": "command -v node >/dev/null 2>&1 && node ${CLAUDE_PROJECT_DIR}/vendor/ponytail/hooks/ponytail-mode-tracker.js || true", "timeout": 5 }

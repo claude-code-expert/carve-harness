@@ -35,9 +35,9 @@ mkkeep() {
 .claude/agents/code-reviewer.md
 .claude/agents/security-reviewer.md
 .claude/agents/silent-failure-hunter.md
-.claude/rules/code-convention/dev-stack-python.md
-.claude/rules/code-convention/dev-stack-fastapi.md
-.claude/rules/code-convention/dev-stack-orm.md
+docs/rules/code-convention/dev-stack-python.md
+docs/rules/code-convention/dev-stack-fastapi.md
+docs/rules/code-convention/dev-stack-orm.md
 .claude/rules/database.md
 EOF
 }
@@ -54,7 +54,7 @@ KEEP="$TA/keep.list"; mkkeep > "$KEEP"
 [ ! -e "$TA/.claude/rules/java-spring" ] && ok "java-spring pruned" || no "java-spring still present"
 
 # (3) python rules kept
-[ -f "$TA/.claude/rules/code-convention/dev-stack-python.md" ] \
+[ -f "$TA/docs/rules/code-convention/dev-stack-python.md" ] \
   && ok "python rules kept" || no "python rules pruned"
 
 # (4) core hooks + git-hooks + settings intact (constraint/feedback pillar)
@@ -75,20 +75,12 @@ else
   no "eval-java.sh should have been pruned (not in keep-list)"
 fi
 
-# (7) edge: squad command pruned => squad agent pruned (no dangling command)
-if [ ! -e "$TA/.claude/commands/squad-plan.md" ]; then
-  [ ! -e "$TA/.claude/agents/squad-plan.md" ] \
-    && ok "edge: squad cmd + agent pruned together" || no "dangling squad-plan agent"
-else
-  no "squad-plan.md should have been pruned (not in keep-list)"
-fi
-
-# (8) manifest rewritten to keep-set
+# (7) manifest rewritten to keep-set
 ! grep -q 'java-spring' "$TA/.claude/harness-manifest.txt" \
   && grep -q 'dev-stack-python' "$TA/.claude/harness-manifest.txt" \
   && ok "manifest reflects keep-set" || no "manifest not updated"
 
-# (9) audit still passes after prune
+# (8) audit still passes after prune
 aout=$( cd "$TA" && CLAUDE_PROJECT_DIR="$TA" bash .claude/hooks/harness-audit.sh 2>&1 )
 printf '%s' "$aout" | grep -q "0 failed" && ok "harness-audit passes post-prune" || no "audit FAIL post-prune"
 
