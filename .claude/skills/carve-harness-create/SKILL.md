@@ -95,6 +95,8 @@ CLAUDE.md·AGENTS.md·`.claude/CLAUDE.md`의 정합성을 점검한다. 각 항�
 ### 3-3. 설정 스캐폴딩
 - CLAUDE.md 도메인 규칙 섹션이 비었으면 `## 도메인 규칙` 스캐폴드 제안(2단계 placeholder와 연동).
 - 보호 경로가 필요해 보이면(`.pem`·`config/prod/` 등 감지) `protected-extra.regex` 추가 제안.
+- `specs/goldenset/`이 비었으면 골든셋 day-0 부트스트랩 제안 — 감지된 핵심 경로 기반 3~5케이스 초안
+  (절차·검수 규칙은 `eval-goldenset` 스킬 "day-0 부트스트랩" 절, 인간 검수 전 확정 금지).
 
 ## 4. 절단 계산 (PRUNE) — KEEP/PRUNE 집합
 
@@ -103,7 +105,7 @@ CLAUDE.md·AGENTS.md·`.claude/CLAUDE.md`의 정합성을 점검한다. 각 항�
 
 ### ALWAYS-KEEP (스택 무관, 반드시 keep-list 포함)
 `install.sh prune`의 PROTECTED 정규식이 자동 보호하는 것(hooks 코어·settings.json·`safety.md`·
-`common/*`·`testing.md`·CLAUDE.md·AGENTS.md·RULES.md·`.cursorrules`·`codex.md`·`.claude/CLAUDE.md`·
+`common/*`·CLAUDE.md·AGENTS.md·`.cursorrules`·`codex.md`·`.claude/CLAUDE.md`·
 `vendor`·`.githooks`·`VERSION`·스크립트)은 keep-list에 없어도 유지된다. 아래는 PROTECTED가 아니므로
 **keep-list에 명시**한다:
 - `.claude/skills/handoff` · `changelog` · `version-changelog` · `anti-ai-slop` · `carve-harness-create`(자신)
@@ -114,7 +116,7 @@ CLAUDE.md·AGENTS.md·`.claude/CLAUDE.md`의 정합성을 점검한다. 각 항�
 | 감지 | KEEP |
 | --- | --- |
 | Java/Spring | `.claude/rules/java-spring`(dir 전체, archunit 포함) · `dev-stack-java-spring.md` · **`.claude/hooks/eval-java.sh`** |
-| TS/React/Next | `.claude/rules/react-next` · `frontend.md` · `dev-stack-typescript.md` · `dev-stack-react.md` · `dev-stack-nextjs.md` · `dev-stack-javascript.md` (감지된 하위스택만) |
+| TS/React/Next | `.claude/rules/react-next` · `dev-stack-typescript.md` · `dev-stack-react.md` · `dev-stack-nextjs.md` · `dev-stack-javascript.md` (감지된 하위스택만) |
 | Python/FastAPI | `dev-stack-python.md` · `dev-stack-fastapi.md`(FastAPI 감지 시) |
 | ORM/DB | `.claude/rules/database.md` · `dev-stack-orm.md` |
 
@@ -125,8 +127,7 @@ CLAUDE.md·AGENTS.md·`.claude/CLAUDE.md`의 정합성을 점검한다. 각 항�
    한쪽만 남기면 `harness-audit` **AUDIT-08 FAIL**. Java 미감지 → 둘 다 prune.
 2. **fable**: `workflows/fable-team-pipeline.js` ⟷ `agents/fable-*`(4) + `docs/md/orchestration.md` +
    `docs/md/fable-team-guide.md`. 함께.
-3. **review ⟷ 리뷰어**: `commands/review.md`(ALWAYS-KEEP)가 `code-reviewer`·`security-reviewer`·
-   `silent-failure-hunter`를 참조 → 이 3개 에이전트 keep.
+3. **review ⟷ 리뷰어**: `commands/review.md`(ALWAYS-KEEP)가 `security-reviewer`를 참조 → 이 에이전트 keep.
 
 소형 단일 스택: fable 프루닝 후보. 멀티모듈/모노레포/대규모: 유지. 애매하면 KEEP.
 

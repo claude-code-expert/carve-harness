@@ -84,5 +84,33 @@ else
 fi
 rm -rf "$pd"
 
+# ── GATE-C5/C6 (adversarial-audit patches): the graded party must not be able to
+# end the grading — deleting the scorecard or lowering the bar must not pass.
+gd=$(mktemp -d); mkdir -p "$gd/specs"
+cg() { printf '%s' '{}' | CLAUDE_PROJECT_DIR="$gd" bash "$HOOK" >/dev/null 2>&1; }
+
+printf '%s' "$ONE_LOW" > "$gd/specs/checklist.json"; cg
+[ $? -eq 2 ] && [ -f "$gd/specs/.checklist-active" ] \
+  && { echo "PASS: unresolved item sets tombstone (GATE-C5)"; pass=$((pass + 1)); } \
+  || { echo "FAIL: tombstone not set on block"; fail=$((fail + 1)); }
+
+rm -f "$gd/specs/checklist.json"; cg
+[ $? -eq 2 ] && { echo "PASS: deleting checklist.json still blocks (GATE-C5)"; pass=$((pass + 1)); } \
+             || { echo "FAIL: checklist deletion escaped the gate"; fail=$((fail + 1)); }
+
+printf '%s' '{"threshold":0,"items":[{"id":"c1","score":0,"pass":true}]}' > "$gd/specs/checklist.json"; cg
+[ $? -eq 2 ] && { echo "PASS: lowered threshold floored at 95 (GATE-C6)"; pass=$((pass + 1)); } \
+             || { echo "FAIL: threshold self-lowering escaped the gate"; fail=$((fail + 1)); }
+
+printf '%s' '{"threshold":95,"items":[{"id":"c1","score":97,"pass":true}]}' > "$gd/specs/checklist.json"; cg
+[ $? -eq 0 ] && [ ! -f "$gd/specs/.checklist-active" ] \
+  && { echo "PASS: passing run clears the tombstone (GATE-C5)"; pass=$((pass + 1)); } \
+  || { echo "FAIL: tombstone survived a passing run"; fail=$((fail + 1)); }
+
+rm -f "$gd/specs/checklist.json"; cg
+[ $? -eq 0 ] && { echo "PASS: no tombstone, no checklist -> no-op"; pass=$((pass + 1)); } \
+             || { echo "FAIL: cleared loop should be a no-op"; fail=$((fail + 1)); }
+rm -rf "$gd"
+
 printf -- '---\n%s passed, %s failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]

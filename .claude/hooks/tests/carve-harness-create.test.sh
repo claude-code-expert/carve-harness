@@ -32,9 +32,7 @@ mkkeep() {
 .claude/commands/plan.md
 .claude/commands/review.md
 .claude/commands/verify.md
-.claude/agents/code-reviewer.md
 .claude/agents/security-reviewer.md
-.claude/agents/silent-failure-hunter.md
 docs/rules/code-convention/dev-stack-python.md
 docs/rules/code-convention/dev-stack-fastapi.md
 docs/rules/code-convention/dev-stack-orm.md

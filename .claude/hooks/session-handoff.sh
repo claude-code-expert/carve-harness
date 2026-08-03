@@ -80,7 +80,7 @@ BANNER
     _ls '.claude/commands/*.md' .md | _inv "커맨드"
     _ls '.claude/agents/*.md' .md | _inv "에이전트"
     _ls '.claude/workflows/*' '' | _inv "워크플로"
-    for d in CLAUDE.md AGENTS.md RULES.md codex.md .cursorrules .claude/CLAUDE.md specs/README.md; do
+    for d in CLAUDE.md AGENTS.md codex.md .cursorrules .claude/CLAUDE.md specs/README.md; do
       [ -e "$d" ] && printf '%s\n' "$d"   # install.sh MD_PATHS와 동기 유지
     done | _inv "문서"
     find .claude/rules -name '*.md' 2>/dev/null \

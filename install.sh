@@ -215,7 +215,7 @@ run_setup() {
 
 # 설치 대상 목록 — uninstall.sh는 설치 시 기록되는 manifest만 신뢰한다.
 # 구성(component) 5종 + core. 설치 시 선택 가능, core는 항상 설치.
-MD_PATHS=( CLAUDE.md AGENTS.md RULES.md .cursorrules codex.md .claude/CLAUDE.md .claude/rules docs/rules specs/README.md )
+MD_PATHS=( CLAUDE.md AGENTS.md .cursorrules codex.md .claude/CLAUDE.md .claude/rules docs/rules specs/README.md )
 HOOK_PATHS=( .claude/settings.json .claude/hooks .githooks )
 SKILL_PATHS=( .claude/skills )
 DEV_SKILLS=""   # 배포 제외 스킬 목록(공백 구분). 현재 없음 — carve-guide는 v0.0.13부터 배포 포함. 훅과 build_items·strip이 이 목록을 참조
@@ -236,7 +236,7 @@ comp_of() { # $1=경로 → 구성 이름
     .claude/skills*)   echo skills ;;
     .claude/commands*) echo commands ;;
     .claude/agents*|.claude/workflows*|docs/md/*) echo orchestrator ;;
-    CLAUDE.md|AGENTS.md|RULES.md|.cursorrules|codex.md|.claude/CLAUDE.md|.claude/rules*|docs/rules*|specs/README.md) echo md ;;
+    CLAUDE.md|AGENTS.md|.cursorrules|codex.md|.claude/CLAUDE.md|.claude/rules*|docs/rules*|specs/README.md) echo md ;;
     *) echo core ;;
   esac
 }
@@ -501,7 +501,7 @@ prune_run() {
     fail "빈 keep-list — 전체 제거 방지. 최소 1개 --keep-file/--keep-list 필요"
   fi
   # PROTECTED 코어 — keep/remove 로직 이전에 무조건 유지(하네스 3기둥·크로스에이전트 진입·스크립트).
-  local prot='^(CLAUDE\.md|AGENTS\.md|RULES\.md|\.cursorrules|codex\.md|\.claude/CLAUDE\.md|\.claude/settings\.json|\.claude/hooks(/|$)|\.claude/rules/safety\.md|\.claude/rules/common(/|$)|\.claude/rules/testing\.md|vendor(/|$)|\.githooks(/|$)|VERSION|install\.sh|uninstall\.sh)'
+  local prot='^(CLAUDE\.md|AGENTS\.md|\.cursorrules|codex\.md|\.claude/CLAUDE\.md|\.claude/settings\.json|\.claude/hooks(/|$)|\.claude/rules/safety\.md|\.claude/rules/common(/|$)|vendor(/|$)|\.githooks(/|$)|VERSION|install\.sh|uninstall\.sh)'
   local OLDV BAK tmp work removed=0 p remove
   OLDV=$(cat "$VSTAMP" 2>/dev/null | tr -d '[:space:]'); OLDV="${OLDV:-unknown}"
   BAK="$HERE/logs/harness-backup/v$OLDV"   # update와 동일 경로 → rollback이 그대로 복원

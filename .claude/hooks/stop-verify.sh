@@ -23,7 +23,7 @@ fail=0
 # verify all (never skip when change-detection is impossible).
 have_git=0
 command -v git >/dev/null 2>&1 && git rev-parse --is-inside-work-tree >/dev/null 2>&1 && have_git=1
-java_changed=1; node_changed=1; py_changed=1; sh_changed=1
+java_changed=1; node_changed=1; py_changed=1; sh_changed=1; go_changed=1; rs_changed=1
 # GATE-04 defaults: git 없으면 full(java_other=1, gw off) — 회피는 변경 식별 가능할 때만.
 gw_changed=0; java_other=1
 # 게이트웨이 파일 판별 단일 소스 — audit(AUDIT-07)이 같은 개념을 참조.
@@ -32,8 +32,10 @@ if [ "$have_git" -eq 1 ]; then
   CHANGED=$(git status --porcelain 2>/dev/null | sed 's/^...//')
   printf '%s\n' "$CHANGED" | grep -Eq '\.(java|kt|gradle)'    && java_changed=1 || java_changed=0
   printf '%s\n' "$CHANGED" | grep -Eq '\.(ts|tsx)$|package\.json' && node_changed=1 || node_changed=0
-  printf '%s\n' "$CHANGED" | grep -Eq '\.py$|pyproject\.toml'  && py_changed=1 || py_changed=0
+  printf '%s\n' "$CHANGED" | grep -Eq '\.py$|pyproject\.toml|requirements[^/]*\.txt|setup\.(py|cfg)' && py_changed=1 || py_changed=0
   printf '%s\n' "$CHANGED" | grep -Eq '\.sh$|^\.githooks/'     && sh_changed=1 || sh_changed=0
+  printf '%s\n' "$CHANGED" | grep -Eq '\.go$|go\.(mod|sum)'    && go_changed=1 || go_changed=0
+  printf '%s\n' "$CHANGED" | grep -Eq '\.rs$|Cargo\.(toml|lock)' && rs_changed=1 || rs_changed=0
   # GATE-04: 게이트웨이 관련 java 변경 여부 + 그 외 java 변경 여부(섞이면 full).
   printf '%s\n' "$CHANGED" | grep -Eq "$GW_RE" && gw_changed=1 || gw_changed=0
   printf '%s\n' "$CHANGED" | grep -E '\.(java|kt|gradle)$' | grep -Ev "$GW_RE" | grep -q . && java_other=1 || java_other=0
@@ -89,7 +91,10 @@ fi
 
 # --- Python: 린트 + 테스트 (변경 시에만, 도구 있을 때만 — best-effort).
 # pytest exit 5 = "no tests collected" — 테스트 없는 프로젝트의 false fail 방지.
-if [ "$py_changed" -eq 1 ] && [ -f pyproject.toml ]; then
+# GATE-06: 프로젝트 판별은 pyproject.toml 하나가 아니다 — requirements.txt/setup.py만
+# 쓰는 프로젝트가 통째로 스킵되던 갭(적대적 감사 G7)을 막는다.
+if [ "$py_changed" -eq 1 ] && { [ -f pyproject.toml ] || [ -f requirements.txt ] \
+     || [ -f setup.py ] || [ -f setup.cfg ]; }; then
   if command -v ruff >/dev/null 2>&1; then
     ruff check . 2>&1 | tail -20 || fail=1
   fi
@@ -98,6 +103,25 @@ if [ "$py_changed" -eq 1 ] && [ -f pyproject.toml ]; then
     printf '%s\n' "$py_out" | tail -20
     [ "$py_rc" -ne 0 ] && [ "$py_rc" -ne 5 ] && fail=1
   fi
+fi
+
+# --- Go: 빌드(=타입체크) + vet + 테스트 (변경 시에만, 툴체인 있을 때만).
+# GATE-07: CLI·서버 프로젝트의 주력 스택인데 게이트가 없어 깨진 코드가 통과하던 갭.
+# `go build`가 컴파일 게이트, `go vet`이 정적 게이트, `go test ./...`가 테스트 게이트.
+if [ "$go_changed" -eq 1 ] && [ -f go.mod ] && command -v go >/dev/null 2>&1; then
+  go build ./... 2>&1 | tail -20 || fail=1
+  go vet ./... 2>&1 | tail -20 || fail=1
+  go_out=$(go test ./... 2>&1); go_rc=$?
+  printf '%s\n' "$go_out" | tail -20
+  # "no test files"만 있는 리포는 실패 아님 — 테스트 없는 프로젝트의 false fail 방지.
+  [ "$go_rc" -ne 0 ] && ! printf '%s\n' "$go_out" | grep -qi 'no test files' && fail=1
+fi
+
+# --- Rust: cargo check(=컴파일) + test (변경 시에만, 툴체인 있을 때만).
+# check는 코드 생성 없이 타입·차용 검사만 — 게이트 목적엔 build보다 빠르고 충분하다.
+if [ "$rs_changed" -eq 1 ] && [ -f Cargo.toml ] && command -v cargo >/dev/null 2>&1; then
+  cargo check --quiet 2>&1 | tail -20 || fail=1
+  cargo test --quiet 2>&1 | tail -20 || fail=1
 fi
 
 # --- Bash: 훅/스크립트 정적분석 + 훅 자가 테스트 (변경 시에만).

@@ -4,7 +4,6 @@ paths: ["**/*Gateway*.java", "**/*Filter*.java", "**/*Auth*.java", "**/*RateLimi
 # 게이트웨이 검증 규칙 (자동 로드 · GWV)
 
 > 게이트웨이 5기능(라우팅·인증·인가·API키·레이트리미트)은 비즈니스 로직이 아니라 **교차 관심사**라, 단위 테스트로는 "실제 구동"을 증명 못 한다. 스텁 백엔드 + 실 컨테이너로 게이트웨이를 통째로 띄워 요청을 흘려보내는 **통합 테스트가 핵심**이다.
-> 개념·근거·코드 골격·확장 방향: `.planning/milestones/v2-gateway-verification/phase-1-gateway-testing.md`
 > ⚠️ 도구 버전은 프로젝트의 Spring Cloud Gateway 릴리스에서 재확인(아래 스택은 구조 기준).
 
 ## GWV-01 · 기능별 검증 + 합격기준(SC)

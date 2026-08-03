@@ -2,7 +2,7 @@
 
 > 코딩 에이전트를 "잘 설득하는" 단계를 지나, **어기면 물리적으로 실패하는 시스템**으로 만드는 방법.
 > 이 문서 하나로 개념 → 구조 → 단계별 구축 → 실증 → 운영 워크플로우까지 완주한다.
-> 실습 환경: 이 레포(v0.0.8). 모든 실행 예시는 실제 실행 결과다.
+> 실습 환경: 이 레포(v0.6.0). 모든 실행 예시는 실제 실행 결과다(4장 캡처는 v0.0.8 시점).
 
 **대상 독자**: Claude Code(또는 임의 코딩 에이전트)로 실무 개발을 하며, 에이전트의 사고(규칙 무시·미검증 완료 선언·컨텍스트 소실)를 구조적으로 막고 싶은 사람.
 
@@ -198,7 +198,7 @@ AUDIT-06  스킬: 프런트매터 · 이름 충돌
 AUDIT-07  게이트웨이 룰 ↔ Stop 게이트(GATE-04) 매핑 (게이트웨이 하네스만)
 ```
 
-각 게이트에는 **테스트 스위트**도 붙인다 — 이 레포는 11 스위트 125건 (차단은 exit 2, 통과는 exit 0을 어서션).
+각 게이트에는 **테스트 스위트**도 붙인다 — 이 레포는 19 스위트 230건 (차단은 exit 2, 통과는 exit 0을 어서션).
 
 ### 6단계. 패키징 — 드롭인·업데이트·롤백
 
@@ -257,7 +257,7 @@ $ tail -3 logs/$(date -u +%F).jsonl
 
 ```bash
 bash .claude/hooks/harness-audit.sh                        # 40 PASS / exit 0
-for t in .claude/hooks/tests/*.test.sh; do bash "$t"; done  # 11 스위트 125건 green
+for t in .claude/hooks/tests/*.test.sh; do bash "$t"; done  # 19 스위트 230건 green
 bash .claude/hooks/logs-report.sh 7                         # 최근 7일 판정 요약
 ```
 
@@ -278,7 +278,7 @@ bash .claude/hooks/logs-report.sh 7                         # 최근 7일 판정
 | 롤백 | `bash install.sh rollback` — 직전 버전 복원 (오프라인) |
 | 제거 | `bash uninstall.sh --yes` — manifest 범위만, 드라이런 기본 |
 
-jq·shellcheck는 `vendor/bin`에 정적 바이너리 내장(SHA256 검증) — 인터넷 없는 머신도 동작.
+jq·shellcheck는 시스템 PATH 전제 — `vendor/bin` 내장 바이너리는 v0.6.x에서 제거(git 히스토리 보존).
 
 ### 5.2 내장 인벤토리와 활용법
 
@@ -286,10 +286,10 @@ jq·shellcheck는 `vendor/bin`에 정적 바이너리 내장(SHA256 검증) — 
 |------|------|------|
 | 훅 | 8종 (6 이벤트) | 자동 — 손댈 일 없음. 커스터마이징은 `GUIDE.md` §8 |
 | 커맨드 | 14종 | `/plan`(SC 분해) `/verify`(SC 검증) `/review`(검토) `/commit`(커밋 준비) `/harness-audit` `/eval` `/verify-loop` + `/ponytail*` 6종 |
-| 에이전트 | 12종 | 검증 전담: evaluator·code/security/silent-failure/state-reviewer — "use the security-reviewer agent"로 호출, 생성/검증 분리 |
+| 에이전트 | 7종 | 검증 전담: evaluator·security-reviewer·pr-test-analyzer + fable 4종 — "use the security-reviewer agent"로 호출, 생성/검증 분리 |
 | 스킬 | 9종 | `handoff`(수동 핸드오프) `changelog`(결정 기록→DECISIONS.md) `version-changelog`(릴리스 필수) + anti-ai-slop·carve-guide·carve-harness-create·checklist-loop·eval-goldenset·theme-factory |
-| 규칙 | 17파일 | `common/` 상시 + 스택별 glob 자동 로드 (java-spring·react-next·python·ts·orm 등 8 스택 표준) |
-| 테스트 | 11 스위트 125건 | 게이트 회귀 — 훅 수정 후 반드시 실행 |
+| 규칙 | 8파일 | `common/` 상시 + 스택별 glob 자동 로드 (+`docs/rules/` 상세본 8종은 수동 참조) |
+| 테스트 | 19 스위트 230건 | 게이트 회귀 — 훅 수정 후 반드시 실행 |
 
 ### 5.3 함께 설치된 외부 생태계 (선택)
 
@@ -301,7 +301,7 @@ jq·shellcheck는 `vendor/bin`에 정적 바이너리 내장(SHA256 검증) — 
 | **codesight** | 구조맵으로 탐색 토큰 절감 (`.codesight/`) | `npx codesight --init` |
 | gh CLI | PR·API 작업 | 배포판 패키지 매니저 |
 
-이 레포 자체가 GSD 산출물이다 — `.planning/`에 5개 페이즈(로드맵→검증)가 기록돼 있으니 SDD 흐름의 실물 예시로 참고.
+이 레포 자체가 GSD 산출물이다 — 5개 페이즈 기록(구 `.planning/`)은 git 히스토리에 보존.
 
 ---
 
@@ -397,4 +397,4 @@ extra 파일은 manifest 밖 — **하네스를 업데이트해도 보존**된�
 
 ---
 
-*근거: 이 레포 실코드(`.claude/hooks/*`)·실행 결과(4장 캡처, 2026-07-09)·`.planning/` 페이즈 기록. 버전 기준 v0.0.8.*
+*근거: 이 레포 실코드(`.claude/hooks/*`)·실행 결과(4장 캡처, 2026-07-09)·페이즈 기록(git 히스토리). 버전 기준 v0.6.0(4장 캡처는 v0.0.8 시점).*

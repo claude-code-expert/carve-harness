@@ -58,6 +58,16 @@ if [ "$tool" = "Bash" ]; then
     bash "$LOG_EVENT" PreToolUse Bash block ""
     exit 2
   fi
+  # (3a-0b) GUARD-08: recursive delete of a critical target (project root, `/`,
+  # $HOME). Needs BOTH the rm-recursive shape and a critical target, so ordinary
+  # `rm -rf build/` is untouched. Complements settings.json deny, which only
+  # prefix-matches `rm -rf` and so misses `rm -r -f` / `sudo rm -rf`.
+  if printf '%s' "$cmd" | grep -Eq "$DANGER_RM_RE" \
+    && printf '%s' "$cmd" | grep -Eq "$DANGER_RM_TARGET_RE"; then
+    echo "[carve-harness:guard] 재귀 삭제 차단(safety.md — 루트/홈/프로젝트 전체): $cmd" >&2
+    bash "$LOG_EVENT" PreToolUse Bash block ""
+    exit 2
+  fi
   if printf '%s' "$cmd" | grep -Eq "$DANGER_SQL_RE"; then
     if printf '%s' "$cmd" | grep -Eqi "$DANGER_SQL_KW_RE" \
       || { printf '%s' "$cmd" | grep -Eqi 'DELETE[[:space:]]+FROM' \
@@ -69,7 +79,8 @@ if [ "$tool" = "Bash" ]; then
   fi
   if printf '%s' "$cmd" | grep -Eq "(>>?|(^|[[:space:]])tee[[:space:]])[[:space:]]*['\"]?[^[:space:]|;&<>]*${PROTECTED_RE}" \
     || printf '%s' "$cmd" | grep -Eq "(sed|perl)[[:space:]]+-i[^|;&]*${PROTECTED_RE}" \
-    || printf '%s' "$cmd" | grep -Eq "(^|[;&|][[:space:]]*)(cp|mv|install)[[:space:]][^|;&]*${PROTECTED_RE}"; then
+    || printf '%s' "$cmd" | grep -Eq "(^|[;&|][[:space:]]*)${CMD_PFX}(cp|mv|install)[[:space:]][^|;&]*${PROTECTED_RE}" \
+    || printf '%s' "$cmd" | grep -Eq "(^|[;&|][[:space:]]*)${CMD_PFX}(rm|unlink|shred|truncate|touch)[[:space:]][^|;&]*${PROTECTED_RE}"; then
     echo "[carve-harness:guard] Bash 쓰기 차단(보호 경로): $cmd" >&2
     bash "$LOG_EVENT" PreToolUse Bash block ""
     exit 2

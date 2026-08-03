@@ -185,5 +185,48 @@ else
   echo "SKIP: Node lint gate fixture (git/npm absent)"
 fi
 
+# ── GATE-06/07 (adversarial-audit patches): Go/Rust/loose-Python projects used to
+# pass any broken code because no branch claimed them. Toolchains are stubbed on
+# PATH so the assertion is about the GATE, not about having go/ruff installed.
+if command -v git >/dev/null 2>&1; then
+  stub=$(mktemp -d)
+  mk_stub() { printf '#!/bin/sh\nexit %s\n' "$2" > "$stub/$1"; chmod +x "$stub/$1"; }
+  gate_in() { # <dir> -> exit code with stubs on PATH
+    ( cd "$1" && printf '{}' | PATH="$stub:$PATH" bash "$NABS_HOOK" >/dev/null 2>&1; echo $? )
+  }
+  # Go: go.mod + changed .go, stub `go` fails -> blocked; passes -> allowed.
+  gdir=$(mktemp -d)
+  ( cd "$gdir" && git init -q && git config user.email t@t && git config user.name t )
+  printf 'module x\n' > "$gdir/go.mod"; printf 'package main\n' > "$gdir/main.go"
+  mk_stub go 1
+  [ "$(gate_in "$gdir")" -eq 2 ] && { echo "PASS: GATE-07 Go failing build blocks (exit 2)"; pass=$((pass + 1)); } \
+                                 || { echo "FAIL: GATE-07 Go gate did not block"; fail=$((fail + 1)); }
+  mk_stub go 0
+  [ "$(gate_in "$gdir")" -eq 0 ] && { echo "PASS: GATE-07 Go clean build allows (exit 0)"; pass=$((pass + 1)); } \
+                                 || { echo "FAIL: GATE-07 Go clean run blocked"; fail=$((fail + 1)); }
+  rm -rf "$gdir"
+
+  # Rust: Cargo.toml + changed .rs, stub `cargo` fails -> blocked.
+  rdir=$(mktemp -d)
+  ( cd "$rdir" && git init -q && git config user.email t@t && git config user.name t )
+  printf '[package]\nname="x"\n' > "$rdir/Cargo.toml"; mkdir -p "$rdir/src"; printf 'fn main(){}\n' > "$rdir/src/main.rs"
+  mk_stub cargo 1
+  [ "$(gate_in "$rdir")" -eq 2 ] && { echo "PASS: GATE-07 Rust failing check blocks (exit 2)"; pass=$((pass + 1)); } \
+                                 || { echo "FAIL: GATE-07 Rust gate did not block"; fail=$((fail + 1)); }
+  rm -rf "$rdir"
+
+  # Python without pyproject.toml (requirements.txt only) — previously skipped entirely.
+  pdir=$(mktemp -d)
+  ( cd "$pdir" && git init -q && git config user.email t@t && git config user.name t )
+  printf 'flask\n' > "$pdir/requirements.txt"; printf 'x = 1\n' > "$pdir/app.py"
+  mk_stub ruff 1; mk_stub pytest 0
+  [ "$(gate_in "$pdir")" -eq 2 ] && { echo "PASS: GATE-06 requirements.txt project is gated (exit 2)"; pass=$((pass + 1)); } \
+                                 || { echo "FAIL: GATE-06 loose-Python project skipped the gate"; fail=$((fail + 1)); }
+  rm -rf "$pdir"
+  rm -rf "$stub"
+else
+  echo "SKIP: GATE-06/07 fixtures (git absent)"
+fi
+
 printf -- '---\n%s passed, %s failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]
