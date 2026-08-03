@@ -6,7 +6,7 @@
 
 # Claude Harness (language-agnostic drop-in)
 
-[한국어](README.md) · Current version **v0.6.0** · Changes: [CHANGELOG.md](CHANGELOG.md) · Course: [HARNESS_GUIDE.md](HARNESS_GUIDE.md) (Korean)
+[한국어](README.md) · Current version **v0.7.0** · Changes: [CHANGELOG.md](CHANGELOG.md) · Course: [HARNESS_GUIDE.md](HARNESS_GUIDE.md) (Korean)
 
 A guardrail template that stops coding-agent rule violations with **hook exit 2 blocking** — not persuasion.
 Drop it into your project root and it works immediately.
@@ -313,6 +313,7 @@ Score  compute pass@k (capability) · pass^k (consistency) → append suiteScore
 
 | Version | Date | Summary |
 |---------|------|---------|
+| v0.7.0 | 2026-08-03 | harden gates after adversarial audit |
 | v0.6.0 | 2026-07-23 | add per-session token usage report |
 | v0.5.1 | 2026-07-21 | replace non-working npx command in banner with eval tagline |
 | v0.5.0 | 2026-07-21 | carve-eval golden-set quantitative eval loop (Stage B) |
