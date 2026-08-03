@@ -2,10 +2,10 @@
 
 > Claude Code 드롭인 하네스 — 전체 사용 설명 + 설치 내역.
 > 대상: 이 하네스를 쓰거나 다른 프로젝트에 이식하려는 사용자.
-> 기준: 릴리스 **v0.0.10** (v1 하드닝 + 오프라인·크로스에이전트 + update/rollback/setup + 게이트웨이 검증 v2 + Java/Spring 결정적 evaluator v3 + 설치 구성 선택·fable 오케스트레이터 팀). `/harness-audit` = 42 PASS.
-> 최종 갱신: 2026-07-09.
+> 기준: 릴리스 **v0.6.0** (v1 하드닝 + 크로스에이전트 + update/rollback/setup + 게이트웨이 검증 v2 + Java/Spring 결정적 evaluator v3 + 설치 구성 선택·fable 오케스트레이터 팀 + verify-loop·carve-eval + 강한 모델 기준 감량). `/harness-audit` = 46 PASS.
+> 최종 갱신: 2026-08-03.
 
-이 문서는 `docs/md/HARNESS-TEMPLATE-MANUAL.md`(초기 뼈대 매뉴얼)와 `docs/md/harness-install-list.md`(외부 도구 설치 리스트)를 대체·갱신한다. 초기 매뉴얼은 하드닝 이전 상태(훅 4종·프로즈 감사·빈 스텁)를 기술하므로, **현재 상태는 이 GUIDE를 정본으로 본다.**
+초기 뼈대 매뉴얼·외부 도구 설치 리스트(구 `docs/md/`)는 v0.6.x에서 제거됐다(git 히스토리 보존). **현재 상태는 이 GUIDE를 정본으로 본다.**
 
 ---
 
@@ -27,15 +27,15 @@
 
 ## 2. 설치 내역 (이 환경 검증 결과)
 
-`harness-install-list.md`의 생태계는 이 환경에 **이미 설치돼 있다.** 위험·전역·중복 명령(`npx tweakcc --apply`=Claude Code 패치, `curl|bash`, 전역 `npm -g`/`pip`, `~/.claude`로 clone)은 **자동 실행하지 않았다**(리스트 자체의 "전체설치 금지" 지침 + `safety.md` 준수). 필요한 것만 아래 상태로 확인.
+설치 리스트의 생태계는 이 환경에 **이미 설치돼 있다.** 위험·전역·중복 명령(`npx tweakcc --apply`=Claude Code 패치, `curl|bash`, 전역 `npm -g`/`pip`, `~/.claude`로 clone)은 **자동 실행하지 않았다**(리스트 자체의 "전체설치 금지" 지침 + `safety.md` 준수). 필요한 것만 아래 상태로 확인.
 
 | 리스트 항목 | 상태 | 근거 |
 |-------------|:----:|------|
 | A. mattpocock 스킬 세트 | ⛔ 제거됨 | 하네스 무관 개인 스킬로 판단, 2026-07-23 배포물에서 제외 (히스토리에서 복구 가능) |
-| B. ECC 보안·평가 에이전트 | ✅ 설치됨 | 프로젝트 `.claude/agents/`: code-reviewer·evaluator·security-reviewer·silent-failure-hunter·state-reviewer |
+| B. ECC 보안·평가 에이전트 | ✅ 설치됨 | 프로젝트 `.claude/agents/`: evaluator·security-reviewer (단일 관점 리뷰어 5종은 2026-07-28 제거 — /review가 다관점 커버) |
 | C. GSD (SDD 킷) | ✅ 설치됨 | `~/.claude/agents/` gsd-* 33종 + `/gsd:*` 커맨드 동작 |
 | D-4. caveman (출력 압축) | ⛔ 제거됨 | ponytail과 역할 중복 — 2026-07-23 ponytail로 일원화 (사용자 전역 플러그인은 별개) |
-| 전제 도구 | ✅ jq·node·npm·pnpm·python3·pip·gradle | `command -v` 확인. jq·shellcheck는 `vendor/bin` 내장 — 오프라인 머신은 `install.sh`가 배치 |
+| 전제 도구 | ✅ jq·node·npm·pnpm·python3·pip·gradle | `command -v` 확인. jq·shellcheck는 시스템 PATH 전제 (`vendor/bin` 내장 바이너리는 v0.6.x에서 제거) |
 | D-2 codesight | ✅ 설치됨 | `.codesight/CODESIGHT.md` + `skills.md` 생성됨 (2026-07-07 스캔) |
 | D-3 superpowers | ✅ 설치됨·활성 | 플러그인 목록 확인 (`superpowers@superpowers-marketplace`), 세션에서 스킬 동작 |
 | D-1 LSP / D-5 headroom | ⛔ 미설치(선택) | 토큰 절감용. 필요 시 §9 참고 — 전역/네트워크라 승인 후 수동 |
@@ -51,18 +51,17 @@
 harness/
 ├── CLAUDE.md                 # 제약: 전역 가드레일 (3기둥·스택감지)
 ├── AGENTS.md                 # 에이전트 공통 표준 (크로스 에이전트 정본)
-├── RULES.md                  # 룰 인덱스
 ├── GUIDE.md                  # (이 문서)
 ├── VERSION                   # 릴리스 버전 (update 비교 기준)
 ├── install.sh                # 설치기: curl 원격/오프라인 부트스트랩 + update/rollback/setup (멱등)
 ├── uninstall.sh              # 제거기: manifest 기반, 드라이런 기본
-├── vendor/bin/               # 내장 정적 바이너리: jq·shellcheck + SHA256SUMS
+├── vendor/ponytail/          # ponytail 모드 벤더링
 ├── .githooks/pre-commit      # 에이전트 무관 커밋 게이트 (jq 불필요)
 ├── .gitignore                # logs/ · 루트 .env* · specs/HANDOFF.md · .claude/bin/
 ├── specs/                    # 상태: SDD 산출물 (HANDOFF/DECISIONS는 훅·스킬이 생성)
 │   └── README.md
 ├── logs/                     # 관측: 날짜별 JSONL 이벤트 로그 (gitignore)
-├── docs/md/                  # 초기 매뉴얼·설치 리스트 (역사 보존용 — 정본은 이 GUIDE)
+├── docs/md/                  # 오케스트레이션·fable 팀·verify-loop 가이드
 ├── docs/rules/
 │   └── code-convention/      # 스택별 코딩 표준 상세본 8종 (자동 로드 아님 — 필요 시 참조)
 └── .claude/
@@ -79,15 +78,15 @@ harness/
     │   ├── harness-audit.sh      # 기계적 자가감사
     │   ├── eval-java.sh          # Java/Spring 결정적 출력검증 스코어러 (P±오차)
     │   ├── eval-state.sh         # 골든셋 상태 assert 채점기 (carve-eval 헬퍼)
-    │   └── tests/*.test.sh       # 훅별 어서션 (20 스위트)
+    │   └── tests/*.test.sh       # 훅별 어서션 (19 스위트)
     ├── commands/             # /plan /verify /review /commit /harness-audit /eval /verify-loop /ponytail*
-    ├── agents/               # reviewer 5종 + tdd-guide·e2e-runner·pr-test-analyzer + fable 4종 (12)
+    ├── agents/               # evaluator·security-reviewer·pr-test-analyzer + fable 4종 (7)
     ├── skills/               # handoff · changelog · version-changelog · anti-ai-slop · carve* · checklist-loop · eval-goldenset · theme-factory (9)
     └── rules/
         ├── common/           # security·testing·git-workflow (항상 적용)
         ├── java-spring/      # patterns (**/*.java) · gateway-testing (게이트웨이 파일)
         ├── react-next/       # patterns (**/*.ts,tsx)
-        └── safety.md · database.md · frontend.md · testing.md
+        └── safety.md · database.md
 ```
 
 ---
@@ -98,14 +97,15 @@ harness/
 
 | 훅 | 이벤트 | 동작 | 종료코드 |
 |----|--------|------|----------|
-| `pretool-guard.sh` | PreToolUse (Write/Edit/MultiEdit/NotebookEdit/Bash) | ① jq 부재·JSON 파싱실패 → **차단**(fail-closed) ② 보호경로(`.env`·prod·시크릿·마이그레이션) 수정 차단 ③ Bash 쓰기명령이 보호경로 대상 시 차단 ④ **파일 내용 하드코딩 시크릿**(AKIA/sk-/ghp_/PEM/JWT) 차단 ⑤ **위험 명령**(force push·`reset --hard`·`--no-verify`·히스토리 재작성·`docker … down -v`·`curl\|sh`·DB 클라이언트의 DROP/TRUNCATE/WHERE 없는 DELETE) 차단 ⑥ **루프 브레이크**: 동일 툴+동일 인자 5회 연속 시 차단(다른 호출이 끼면 리셋, `logs/.recent-calls`) | 차단 **exit 2** / 허용 0 |
+| `pretool-guard.sh` | PreToolUse (Write/Edit/MultiEdit/NotebookEdit/Bash) | ① jq 부재·JSON 파싱실패 → **차단**(fail-closed) ② 보호경로(`.env`·prod·시크릿·마이그레이션) 수정 차단 ③ Bash 쓰기명령이 보호경로 대상 시 차단 ④ **파일 내용 하드코딩 시크릿**(AKIA/sk-/ghp_/PEM/JWT) 차단 ⑤ **위험 명령**(force push·`reset --hard`·`--no-verify`·히스토리 재작성·`docker … down -v`·`curl\|sh`·DB 클라이언트의 DROP/TRUNCATE/WHERE 없는 DELETE) 차단 ⑥ **루프 브레이크**: 동일 툴+동일 인자 5회 연속 시 차단(다른 호출이 끼면 리셋, `logs/.recent-calls`) ⑦ **GUARD-07 자기보호**: 설치본(`harness-manifest.txt` 존재)에서 `.claude/hooks/`·`settings.json`·manifest 수정/삭제 차단 — 소스 레포는 예외 ⑧ **GUARD-08**: 보호경로 삭제(`rm`·`touch`·`shred`)와 루트/홈/프로젝트 재귀 삭제 차단, `env`/`sudo`/`VAR=` 접두 우회 커버 | 차단 **exit 2** / 허용 0 |
 | `posttool-format.sh` | PostToolUse (Write/Edit) | 확장자 감지 포맷(spotless/prettier 등); 포맷터 미설치·오류를 **JSONL에 기록**(삼키지 않음) | 0 (비차단) |
-| `stop-verify.sh` | Stop | 스택 감지 후 빌드/타입/린트/테스트(Node는 `lint`/`test` 스크립트 있을 때 — CI `npm run lint`를 로컬로 앞당김); `stop_hook_active` **루프 차단**; jq 부재 시 best-effort 스킵; **변경 모듈만 증분**(git diff) | 실패 **exit 2** / 통과 0 |
+| `stop-verify.sh` | Stop | 스택 감지 후 빌드/타입/린트/테스트 — Java(gradle)·Node/TS(tsc·lint·test)·Python(ruff·pytest, `pyproject.toml`/`requirements.txt`/`setup.py` 중 하나면 활성)·**Go**(build·vet·test)·**Rust**(cargo check·test)·bash(shellcheck·훅 자가테스트); 각 스택은 툴체인 있을 때만 실행; `stop_hook_active` **루프 차단**; jq 부재 시 best-effort 스킵; **변경 모듈만 증분**(git diff) | 실패 **exit 2** / 통과 0 |
+| `checklist-gate.sh` | Stop (`stop-verify` 뒤) | `specs/checklist.json` 미달(<임계)·미채점 잔존 시 완료 차단. 루프 미개시면 무동작. **자가 우회 차단**: 채점 파일 삭제 시 tombstone(`specs/.checklist-active`)이 계속 차단, threshold는 하한 95로 클램프(`CARVE_CHECKLIST_FLOOR`로만 변경) | 미완 **exit 2** / 완료 0 |
 | `session-handoff.sh` | SessionStart / PreCompact / SessionEnd | start=핸드오프 복원, save=**실제 수집**(STATE.md TODO·미완료 플랜·git 카운트·DECISIONS 최근5) → `specs/HANDOFF.md` | 0 |
 | `log-event.sh` | (서브프로세스 헬퍼) | 6훅 진입점의 이벤트를 `logs/*.jsonl`에 1줄 append; 보호경로/PII는 `<masked>` | 항상 0 |
 | `lib-protected.sh` | (데이터) | `PROTECTED_RE`(보호경로) + `SECRETS_RE`(시크릿) 단일 정의 — 재정의 금지. `protected-extra.regex`/`secrets-extra.regex` OR-병합(업데이트 보존) | — |
 | `logs-report.sh` | (수동 CLI) | `logs/*.jsonl` 요약 리포트; `--rotate N` N일 이전 로그 삭제; `--tokens [N]` 세션별 토큰 사용량(트랜스크립트 usage 합산 — 비용 폭주 사후 인지 방지) | 0 |
-| `harness-audit.sh` | (수동 CLI / `/harness-audit`) | 하네스 구성 42체크 PASS/FAIL (§7) | 실패 시 비영 |
+| `harness-audit.sh` | (수동 CLI / `/harness-audit`) | 하네스 구성 46체크 PASS/FAIL (§7) | 실패 시 비영 |
 | `eval-java.sh` | (수동 CLI) | Java/Spring 결정적 출력검증 — gradle grader(compile·pass^k·JaCoCo·정적분석·ArchUnit·N+1) 파싱 → 재현 가능한 `P±오차` JSON emit. LLM 없음, jq/gradle 부재 시 "unable"(fail-closed) | 0 (unable=1) |
 | `eval-state.sh` | (carve-eval 헬퍼) | 골든셋 **상태 assert**(`file_exists`·`file_contains`·`cmd_exit0`·`git_diff_contains`)를 워크디렉토리 실상태로 결정적 채점 — 에이전트 자기 보고 불신(리워드 해킹 방지). 불능 입력 fail-closed | 0 (unusable=1) |
 
@@ -136,25 +136,23 @@ harness/
 | `review.md` | `/review` | 변경분을 타입·보안·예외·상태관리 관점 검토. 예: `/review` |
 | `commit.md` | `/commit` | commitlint 준수 커밋 메시지 준비. **자동호출 비활성**(`disable-model-invocation`) — 사용자만. 예: `/commit` |
 | `commit-branch.md` | `/commit-branch` | 현재 브랜치에 Conventional Commits로 커밋 + 푸시. `main` 직접·`--no-verify` 금지. 자동호출 비활성. 예: `/commit-branch` |
-| `harness-audit.md` | `/harness-audit` | 하네스 구성 42체크 PASS/FAIL(§7). 예: `/harness-audit` |
+| `harness-audit.md` | `/harness-audit` | 하네스 구성 46체크 PASS/FAIL(§7). 예: `/harness-audit` |
 | `eval.md` | `/eval` | carve-eval 워크플로 실행(골든셋 채점). 예: `/eval` |
 | `verify-loop.md` | `/verify-loop` | carve-verify-loop 워크플로(수정→검증 반복). 예: `/verify-loop` |
 | `ponytail*.md` (6) | `/ponytail…` | ponytail 모드 제어·audit·debt·gain·review·help |
 
-### 5.2 에이전트 (`.claude/agents/`, 12종)
+### 5.2 에이전트 (`.claude/agents/`, 7종)
 
 **하네스 검증 에이전트** (생성/검증 분리 — Evaluator 축):
 
 | 파일 | 모델 | 설명 · 호출 |
 |------|------|-------------|
 | `evaluator.md` | sonnet | 생성물을 완료기준(SC)·타입 안전성으로 독립 검증. `"use the evaluator agent"` |
-| `code-reviewer.md` | sonnet | 가독성·구조·중복·에러 처리 리뷰. `"use the code-reviewer agent"` |
 | `security-reviewer.md` | sonnet | 시크릿 노출·인증/인가 누락·인젝션 + **게이트웨이 인증/인가/레이트리미트 우회**. `"use the security-reviewer agent"` |
-| `silent-failure-hunter.md` | haiku | 삼켜진 예외·빈 catch·무시된 에러 반환값 탐지. `"use the silent-failure-hunter agent"` |
-| `state-reviewer.md` | sonnet | 프론트 상태관리(전역/서버/로컬 경계)·트랜잭션 경계 검증. `"use the state-reviewer agent"` |
-| `tdd-guide.md` | sonnet | 게이트웨이·백엔드 기능을 red→green TDD 루프로 유도, GSD `<verify><done>` 연결. `"use the tdd-guide agent"` |
-| `e2e-runner.md` | sonnet | 게이트웨이 Walking Skeleton(전 구간 관통 e2e) 세우고 실행. `"use the e2e-runner agent"` |
 | `pr-test-analyzer.md` | sonnet | 변경분(PR/diff)의 테스트 충분성 평가(커버리지·SC매핑·스텁괴리). `"use the pr-test-analyzer agent"` |
+
+> 단일 관점 리뷰어 5종(code-reviewer·silent-failure-hunter·state-reviewer·tdd-guide·e2e-runner)은
+> 2026-07-28 제거 — `/review` 한 번이 다관점을 커버(강한 모델 기준, git 히스토리에서 복구 가능).
 
 **fable 오케스트레이터 팀** (Agent Teams·Workflow 슬롯 전용 — 호출법·모델 무관 SOP는 `docs/md/fable-team-guide.md`):
 
@@ -191,7 +189,7 @@ harness/
 
 > 플러그인 `frontend-design`(디자인 방향)·`ponytail`(간결화)은 스킬이 아니라 `settings.json` 선언으로 배포된다(§5.1 참고).
 
-### 5.4 룰 (`.claude/rules/` 10파일 자동적용 + `docs/rules/` 상세본 8파일 수동 참조)
+### 5.4 룰 (`.claude/rules/` 8파일 자동적용 + `docs/rules/` 상세본 8파일 수동 참조)
 
 | 경로 | glob | 내용 |
 |------|------|------|
@@ -200,7 +198,6 @@ harness/
 | `common/git-workflow.md` | 항상 | Conventional Commits, force push 금지 |
 | `safety.md` | 항상 | 위험동작(DB 파괴·git·프로덕션) 승인 게이트 |
 | `database.md` | 항상 | id/타임스탬프·soft delete·N+1·마이그레이션 |
-| `frontend.md` · `testing.md` | 항상 | 프론트·테스트 공통 |
 | `docs/rules/code-convention/dev-stack-*.md` (8) | 수동 참조 | java-spring·react·nextjs·typescript·javascript·python·fastapi·orm 스택 표준(상세본 — `.claude/rules/` 밖이라 자동 로드 안 됨, 필요 시 Read) |
 | `java-spring/patterns.md` | `**/*.java` | 계층 분리·생성자 주입·LAZY·트랜잭션 |
 | `java-spring/gateway-testing.md` | 게이트웨이 파일 | 5기능 검증 SC·테스트 피라미드·도구 스택 (GATE-04가 강제) |
@@ -233,7 +230,7 @@ curl -fsSL https://raw.githubusercontent.com/claude-code-expert/carve-harness/ma
 ```
 /gsd:new-project → /gsd:plan-phase N → /gsd:execute-phase N → /gsd:verify-work
 ```
-(이 프로젝트 자체가 이 흐름의 산출물 — `.planning/`에 5개 페이즈 기록.)
+(이 프로젝트 자체가 이 흐름의 산출물 — 페이즈 기록(구 `.planning/`)은 git 히스토리 보존.)
 
 **실제 시나리오 — "로그인 폼 추가"(Java+React)**:
 ```
@@ -266,11 +263,11 @@ bash .claude/hooks/harness-audit.sh      # 또는 슬래시 /harness-audit
 - **AUDIT-05**: 규칙 위생 — 빈 파일 · ' copy' 파일 · 바이트 동일 중복.
 - **AUDIT-06**: 스킬 — 프런트매터 검증 · repo↔전역 이름 충돌.
 
-Claude Code 업그레이드마다 재실행해 게이트가 여전히 작동하는지 증명. 현재: **42 PASS, 0 FAIL**.
+Claude Code 업그레이드마다 재실행해 게이트가 여전히 작동하는지 증명. 현재: **46 PASS, 0 FAIL**.
 
 테스트 스위트도 함께:
 ```bash
-npm test   # 13 스위트 전부 green (= bash .claude/hooks/tests/run-all.sh)
+npm test   # 19 스위트 전부 green (= bash .claude/hooks/tests/run-all.sh)
 ```
 
 ---
@@ -310,45 +307,44 @@ npm test   # 13 스위트 전부 green (= bash .claude/hooks/tests/run-all.sh)
 | 특정 명령 실행 금지 | `settings.json` `permissions.deny` (safety.md 승인 필요) | `Bash(kubectl delete*)` |
 | 코드 패턴 (음수 금액 등) | 훅으로 못 잡음 — **테스트로 강제** (`.claude/rules/common/testing.md`) | 도메인 단위 테스트 |
 
-### 8.2 미지원 스택 게이트 추가 — Go 예시 (그대로 복붙 후 치환)
+### 8.2 미지원 스택 게이트 추가 — Ruby 예시 (그대로 복붙 후 치환)
 
-3파일 수정이면 끝. Rust/Ruby도 명령만 바꿔 동일.
+Java·Node/TS·Python·Go·Rust·bash는 내장이다. 그 외(Ruby·PHP·C#·Swift·Dart)는 3파일 수정이면 붙는다.
 
-**① 규칙 파일** — `.claude/rules/go/conventions.md` 생성 (`paths` glob이 자동 로드 트리거):
+**① 규칙 파일** — `.claude/rules/ruby/conventions.md` 생성 (`paths` glob이 자동 로드 트리거):
 
 ```markdown
 ---
-paths: ["**/*.go"]
+paths: ["**/*.rb"]
 ---
-# Go 규칙 (자동 로드)
-- gofmt 통과 필수. 에러는 반드시 처리 (`_ =` 무시 금지).
-- 패키지명 소문자 단수. context.Context는 첫 파라미터.
+# Ruby 규칙 (자동 로드)
+- rubocop 통과 필수. 예외를 삼키지 않는다(`rescue nil` 금지).
+- 메서드는 한 가지 일만. 파일당 클래스 1개.
 ```
 
-**② Stop 게이트** — `.claude/hooks/stop-verify.sh`의 변경 감지부(30행 부근)와 게이트부에 각각 추가:
+**② Stop 게이트** — `.claude/hooks/stop-verify.sh`의 변경 감지부와 게이트부에 각각 추가:
 
 ```bash
-# 감지부 — 기존 java/node/py/sh 라인 아래에:
-go_changed=1
-[ -n "$CHANGED" ] && { printf '%s\n' "$CHANGED" | grep -Eq '\.go$|go\.mod' && go_changed=1 || go_changed=0; }
+# 감지부 — 기존 java/node/py/go/rs/sh 라인 아래에:
+rb_changed=1
+[ -n "$CHANGED" ] && { printf '%s\n' "$CHANGED" | grep -Eq '\.rb$|Gemfile' && rb_changed=1 || rb_changed=0; }
 
 # 게이트부 — 기존 스택 블록들 아래에 (도구 없으면 skip = 기존 관례):
-if [ "$go_changed" -eq 1 ] && [ -f go.mod ]; then
-  if command -v go >/dev/null 2>&1; then
-    test -z "$(gofmt -l . 2>/dev/null)" || { echo "gofmt 미준수"; fail=1; }
-    go vet ./... 2>&1 | tail -20 || fail=1
-    go test ./... 2>&1 | tail -20 || fail=1
-  fi
+if [ "$rb_changed" -eq 1 ] && [ -f Gemfile ]; then
+  command -v rubocop >/dev/null 2>&1 && { rubocop 2>&1 | tail -20 || fail=1; }
+  command -v rspec   >/dev/null 2>&1 && { rspec   2>&1 | tail -20 || fail=1; }
 fi
 ```
 
-**③ 검증** — 게이트가 진짜 무는지 확인하고 끝:
+**③ 검증** — 게이트가 진짜 무는지 확인하고 끝. 툴체인이 없는 머신에서도 증명하려면 스텁을 PATH에 얹는다(내장 스택 테스트가 쓰는 방식):
 
 ```bash
-bash -n .claude/hooks/stop-verify.sh                    # 문법
-echo 'package main' > /tmp/bad.go                        # 일부러 gofmt 위반 파일로
-CLAUDE_PROJECT_DIR=$PWD bash .claude/hooks/stop-verify.sh # exit 2 나오면 성공
-bash .claude/hooks/harness-audit.sh                      # 42 PASS 유지 확인
+bash -n .claude/hooks/stop-verify.sh                       # 문법
+S=$(mktemp -d); printf '#!/bin/sh\nexit 1\n' > "$S/rubocop"; chmod +x "$S/rubocop"
+W=$(mktemp -d); (cd "$W" && git init -q && touch Gemfile app.rb && git add -A \
+  && git -c user.email=t@t -c user.name=t commit -qm i && printf 'x\n' >> app.rb \
+  && printf '{}' | PATH="$S:$PATH" bash "$OLDPWD/.claude/hooks/stop-verify.sh"; echo "exit=$?")  # 2면 성공
+bash .claude/hooks/harness-audit.sh                        # 46 PASS 유지 확인
 ```
 
 > 주의: `stop-verify.sh`는 manifest 파일 — 하네스 `update` 시 덮이고 백업(`logs/harness-backup/`)에 남는다. 업데이트 후 커스텀 case를 백업에서 재적용하라 (UPDATED 로그에 표시됨).
@@ -369,13 +365,13 @@ Slack/위키에 그대로:
   .claude/hooks/protected-extra.regex 수정 PR로 올려주세요.
 ```
 
-신규 입장 확인법: `bash .claude/hooks/harness-audit.sh` 가 42 PASS면 정상 세팅.
+신규 입장 확인법: `bash .claude/hooks/harness-audit.sh` 가 46 PASS면 정상 세팅.
 
 ---
 
 ## 9. 사용자가 별도로 설치해야 하는 것
 
-하네스는 **번들하지 않는 전제 도구**가 있다. jq·shellcheck는 `vendor/bin` 내장이라 `install.sh`가 배치하지만, 아래는 **사용자/프로젝트가 직접** 설치한다. 필수(하네스 게이트 동작 전제)와 선택(워크플로 강화)으로 나눈다.
+하네스는 도구를 번들하지 않는다. jq·shellcheck 포함 아래는 **사용자/프로젝트가 직접** 설치한다. 필수(하네스 게이트 동작 전제)와 선택(워크플로 강화)으로 나눈다.
 
 ### 9.1 필수 — 하네스 동작 전제
 
@@ -414,11 +410,11 @@ Slack/위키에 그대로:
 
 ## 10. 검증 / 한계
 
-- 훅 9개 `bash -n` clean · 테스트 13 스위트(147건) 전부 통과(`npm test`) · `/harness-audit` 42 PASS. (2026-07-10 실검증)
-- **한계(문서화된 천장)**: Bash 파이프/heredoc 간접 쓰기의 시크릿 스캔은 best-effort; 코드 `TODO/FIXME` 스캔은 범위 밖; `LICENSE` 미추가(보류). 추적: `.planning/REQUIREMENTS.md`.
+- 훅 13개 `bash -n` clean · 테스트 19 스위트(260건) 전부 통과(`npm test`) · `/harness-audit` 46 PASS. (2026-08-03 실검증)
+- **한계(적대적 감사로 실측한 천장, 2026-08-03)**: ① Bash 쓰기 가드는 명령 표면만 — 변수 간접(`F=.env; … > $F`)·인터프리터 경유(`python3 -c`) 미탐 ② 시크릿 스캔은 리터럴 매칭 — base64·분할 조립 미탐 ③ 위험 명령은 셸 alias/함수로 감싸면 미탐, `curl -o f && bash f` 미탐 ④ Stop 게이트는 6스택(Java·Node·Python·Go·Rust·bash)만, 각 스택 툴체인 설치 시에만 작동 ⑤ checklist 게이트는 삭제·threshold 하향은 막지만 **거짓 채점 내용**은 못 막음 ⑥ 코드 `TODO/FIXME` 스캔 범위 밖 ⑦ `LICENSE` 미추가(보류). 재현: 우회 프로브 34종(`redteam-probe.sh`), 추적: `specs/HANDOFF.md`.
 - 훅/스킬 규약은 Claude Code 버전에 따라 바뀔 수 있음 — 도입 전 `/hooks`·`/plugins`로 현행 확인, `code.claude.com/docs` 대조.
 
 ---
 
-*근거: 이 리포의 `.planning/`(Phase 1–5 산출물), `.claude/` 실제 파일, `/harness-audit` 실행 결과. 초기 매뉴얼/설치리스트는 `docs/md/`에 보존.*
+*근거: `.claude/` 실제 파일, `/harness-audit` 실행 결과. Phase 1–5 산출물(구 `.planning/`)·초기 매뉴얼·설치리스트는 git 히스토리에 보존.*
 </content>

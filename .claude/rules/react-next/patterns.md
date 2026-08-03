@@ -22,6 +22,11 @@ paths: ["**/*.ts", "**/*.tsx"]
 - [SHOULD] 서버 상태 = TanStack Query, 클라 상태 = Zustand — 전역 상태에 서버 데이터 저장 금지.
 - [SHOULD] feature 폴더 단방향(`shared → features → app`), cross-feature import 금지(ESLint 강제). 파일당 export 컴포넌트 1개.
 - [SHOULD] a11y: 시맨틱 태그·label·alt·키보드 지원. React 19: `ref`=일반 prop(`forwardRef` 불필요), `use()`·Actions 활용.
+- [SHOULD] Props 타입명 = 컴포넌트명+`Props`(예: `ButtonProps`). 스타일은 Tailwind + `cn()` 조합, 인라인 스타일 금지.
+
+## 테스트 (TS)
+- [SHOULD] `describe` = 대상, `it` = "should …" 동작 서술. AAA(Arrange-Act-Assert) 구조.
+- [SHOULD] 외부 의존성은 mock(`__mocks__/`, `jest.mock()`은 파일 상단).
 
 ## Next.js (16 · App Router)
 - [MUST] App Router만(Pages Router 혼용 금지). 기본 Server Component, 상호작용 잎(leaf)에만 `'use client'`.

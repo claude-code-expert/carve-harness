@@ -68,10 +68,16 @@ S6. 최종        evaluator 통합 최종 판정(항목 간 계약 위반·회�
 
 `specs/checklist.json`이 존재하고 `score<threshold`거나 미채점(`score:null`) 항목이 남으면
 Stop 훅 `checklist-gate.sh`가 완료를 **차단(exit 2)**한다("미완 N개 — 루프 계속"). 워크플로 없이 손으로 돌려도 강제력이 걸린다.
-파일이 없으면 무동작 — 루프를 쓰지 않는 작업은 방해받지 않는다.
+루프를 연 적 없으면 무동작 — 루프를 쓰지 않는 작업은 방해받지 않는다.
 
 - 루프 시작: checklist.json 작성(전 항목 미채점) → 게이트 활성.
 - 루프 종료: 전 항목 pass=true → 게이트 통과. 또는 escalated 항목을 사람이 승인 후 checklist.json에서 제거/조정.
+
+**자가 우회는 막혀 있다** (채점당하는 쪽이 채점을 끝낼 수 없다):
+
+- **채점 파일 삭제 → 계속 차단.** 첫 차단 때 tombstone `specs/.checklist-active`가 생기고, 정상 완료(전 항목 통과)만이 그것을 지운다. checklist.json이 사라지면 게이트는 "복원해서 채점을 마쳐라"로 차단한다.
+- **threshold 하향 → 무효.** 파일의 `threshold`가 하한(기본 95)보다 낮으면 하한으로 클램프된다. 진짜 다른 기준이 필요하면 파일이 아니라 환경변수 `CARVE_CHECKLIST_FLOOR`로 바꾼다(에이전트가 못 건드리는 축).
+- tombstone·checklist 경로는 `PROTECTED_RE`에 있어 에이전트의 Write·`rm` 둘 다 차단된다. **루프를 중단하려면 사람이** 자기 셸에서 `rm specs/.checklist-active`를 실행한다 — 중단은 사람의 결정이다.
 
 ## 워크플로로 자동 실행
 

@@ -21,14 +21,29 @@ else
   no "fetch-mode install (exit $code)"
 fi
 
-# (2) post-install wiring: hooksPath set, .gitignore harness block, vendored bin staged.
+# (2) post-install wiring: hooksPath set, .gitignore harness block.
+# (vendored jq/shellcheck removed in v0.6.x — .claude/bin no longer staged)
 if [ "$(git -C "$T" config core.hooksPath)" = ".githooks" ] \
-   && grep -q '>>> harness' "$T/.gitignore" \
-   && [ -x "$T/.claude/bin/jq" ]; then
-  ok "wiring: hooksPath + gitignore block + .claude/bin/jq"
+   && grep -q '>>> harness' "$T/.gitignore"; then
+  ok "wiring: hooksPath + gitignore block"
 else
   no "wiring"
 fi
+
+# (2b) GUARD-07: in an INSTALLED harness (manifest present) the gates protect
+# themselves — an agent must not be able to neuter a hook, settings.json, or the
+# manifest. In the source repo (no manifest) the same paths stay editable.
+sp() { # <expected> <label> <json>
+  printf '%s' "$3" | CLAUDE_PROJECT_DIR="$T" bash "$T/.claude/hooks/pretool-guard.sh" >/dev/null 2>&1
+  local got=$?
+  [ "$got" -eq "$1" ] && { ok "$2"; } || { no "$2 (expected $1, got $got)"; }
+}
+sp 2 "self-protect: hook overwrite blocked"     '{"tool_name":"Write","tool_input":{"file_path":".claude/hooks/pretool-guard.sh","content":"exit 0"}}'
+sp 2 "self-protect: settings.json blocked"      '{"tool_name":"Write","tool_input":{"file_path":".claude/settings.json","content":"{}"}}'
+sp 2 "self-protect: manifest rm blocked"        '{"tool_name":"Bash","tool_input":{"command":"rm .claude/harness-manifest.txt"}}'
+sp 2 "self-protect: hooks dir rm -rf blocked"   '{"tool_name":"Bash","tool_input":{"command":"rm -rf .claude/hooks/"}}'
+sp 0 "self-protect: ordinary source edit ok"    '{"tool_name":"Write","tool_input":{"file_path":"src/app.ts","content":"const a=1"}}'
+sp 0 "self-protect: reading a hook ok"          '{"tool_name":"Bash","tool_input":{"command":"head .claude/hooks/pretool-guard.sh"}}'
 
 # (3) existing file preserved (no clobber) and excluded from manifest.
 T2=$(mktemp -d); git -C "$T2" init -q

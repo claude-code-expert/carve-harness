@@ -15,18 +15,17 @@ Drop it into your project root and it works immediately.
 
 | Pillar | Behavior |
 |--------|----------|
-| **Constraints** | PreToolUse hook blocks writes to protected paths (`.env`, prod configs, migrations) and hardcoded secrets. Fail-closed when jq is missing or JSON is malformed |
-| **Feedback** | Stop hook blocks "done" claims while build/type/lint/tests fail — incremental, changed stacks only (Node runs `lint`/`test` scripts when present, bringing CI's `npm run lint` local) |
+| **Constraints** | PreToolUse hook blocks writes to protected paths (`.env`, prod configs, migrations) and hardcoded secrets. Fail-closed when jq is missing or JSON is malformed. **Gate self-protection** — in an installed harness the hooks, `settings.json` and manifest cannot be edited or deleted either (the agent cannot switch the gates off) |
+| **Feedback** | Stop hook blocks "done" claims while build/type/lint/tests fail — incremental, changed stacks only (Java, Node/TS, Python, Go, Rust, bash; each runs only when its toolchain is installed, bringing CI's `npm run lint` local) |
 | **State** | Handoff auto-saved at session end/compaction (real TODOs and decisions), restored at start |
 | **Observability** | Every hook verdict logged to `logs/*.jsonl` (PII masked), with report/rotation. The session-start banner lists every loaded component, and all hook messages carry a unified `[carve-harness:<hook>]` prefix |
-| **Self-audit** | `/harness-audit` — 42 mechanical checks PASS/FAIL the harness configuration itself |
+| **Self-audit** | `/harness-audit` — 46 mechanical checks PASS/FAIL the harness configuration itself |
 | **Verify loop** | `/verify-loop` — grades each claimed implementation 0–100 against real code, feeds gaps back to rework anything under 95, loops until every item passes. Stop hook blocks "done" while any item is unresolved → [verify-loop guide](docs/md/verify-loop-guide.md) |
 
-**Inventory**: 13 hooks (5 event gates · 2 libraries · 6 CLI/helpers) · 14 slash commands · 12 agents · 9 skills · 10 rule files (+8 stack references in `docs/rules/`) · 3 workflows · 19 test suites (230 cases) — full lists in the [component tables](#full-component-list-skills--commands--hooks) below
+**Inventory**: 13 hooks (5 event gates · 2 libraries · 6 CLI/helpers) · 14 slash commands · 7 agents · 9 skills · 8 rule files (+8 stack references in `docs/rules/`) · 3 workflows · 19 test suites (260 cases) — full lists in the [component tables](#full-component-list-skills--commands--hooks) below
 
 **Cross-agent**: hook blocking is Claude Code-only. Cursor/Codex/etc. follow `AGENTS.md` as the canonical rules, with `.githooks/pre-commit` as the final gate at commit time.
 
-**Offline-complete**: static jq/shellcheck binaries bundled (`vendor/bin`, SHA256-verified) — installs without internet.
 
 > **Demo**: <a href="https://claude-code-expert.github.io/carve-harness/docs/html/harness-demo/index.html" target="_blank" rel="noopener noreferrer">before/after screen comparison (new window)</a> — the same prompt rendered without the harness (slop) and with it (clean), side by side, with a table mapping each change to the rule that forced it.
 
@@ -42,7 +41,7 @@ curl -fsSL https://raw.githubusercontent.com/claude-code-expert/carve-harness/ma
 - Existing files are never touched (reported as SKIP) — installed paths are recorded in `.claude/harness-manifest.txt`.
 - **Exception: `.claude/settings.json` is merged, not skipped** — your existing config (`permissions`, `model`, own hooks) is preserved while the harness's 6 hook events plus LSP/plugin declarations are registered via jq (idempotent). Skipping it would leave the hooks unregistered and every gate (banner, guard, verify) inert.
 - **LSP + plugins auto-declared**: settings.json declares the `vtsls` (TypeScript/React/JavaScript LSP), `jdtls` (Java LSP), `ponytail`, and `frontend-design` (design-direction skill) plugins along with their marketplaces (`claude-code-lsps` · `ponytail` · `claude-code-plugins`) — Claude Code installs them after a trust prompt at session start. Server binaries are separate: `bash install.sh setup` offers a global npm install of vtsls; jdtls needs `brew install jdtls` (JDK required). Missing binaries are reported as NOTE lines at the end of install.
-- The installer ends by running `/harness-audit` — 42 PASS means all gates are live.
+- The installer ends by running `/harness-audit` — 46 PASS means all gates are live.
 
 **On any full install** (project-aware `[1]`, non-interactive `curl | bash`/env, or manual with everything selected) the installer prints the banner below at the end, pointing you to run `/carve-harness-create` in a session (it fires **only via the slash command**, not a natural-language request). The installer output is in Korean:
 
@@ -124,7 +123,7 @@ Once installed, the gates are automatic — protected-path writes are blocked, o
 
 | Command | Purpose |
 |---------|---------|
-| `/harness-audit` | 42-check PASS/FAIL of the harness configuration |
+| `/harness-audit` | 46-check PASS/FAIL of the harness configuration |
 | `/plan` `/verify` `/review` `/commit` | SC breakdown · SC verification · code review · commit→pull→push with your message |
 | `bash .claude/hooks/logs-report.sh [days]` | hook verdict log summary (`--rotate N` to rotate) |
 | `npm test` / `npm run test:install` | all 18 hook test suites / installer component-selection suite |
@@ -240,7 +239,7 @@ Score  compute pass@k (capability) · pass^k (consistency) → append suiteScore
 
 | Command | Purpose |
 |------|------|
-| `/harness-audit` | 42-check PASS/FAIL of the harness configuration |
+| `/harness-audit` | 46-check PASS/FAIL of the harness configuration |
 | `/commit-branch` | Commit + push on the current branch, Conventional Commits (never `main` directly) |
 | `/plan` | Break work into success-criteria (SC) units → `specs/` |
 | `/verify` | Verify current changes against SC · build · types · tests |
@@ -254,16 +253,16 @@ Score  compute pass@k (capability) · pass^k (consistency) → append suiteScore
 
 | Hook | Trigger (when it fires) | Role |
 |------|------|------|
-| `pretool-guard` | PreToolUse — **before every** Write · Edit · Bash | Block protected-path writes, secrets, dangerous commands (force push · `reset --hard` · `curl\|sh` · destructive SQL) + loop brake on the 5th identical tool call (exit 2); fail-closed |
+| `pretool-guard` | PreToolUse — **before every** Write · Edit · Bash | Block protected-path writes *and deletes*, secrets, dangerous commands (force push · `reset --hard` · `curl\|sh` · destructive SQL · recursive delete of `/`/`$HOME`/project root) + harness self-protection (GUARD-07, installed harnesses) + loop brake on the 5th identical tool call (exit 2); fail-closed |
 | `posttool-format` | PostToolUse — **right after** a file write/edit succeeds | Detect language by extension and format (post-process, exit 0) |
 | `stop-verify` | Stop — **just before** a response ends (the "done" claim) | Build/type/test gate for changed stacks (exit 2 on failure) |
-| `checklist-gate` | Stop — **just before** a response ends (after `stop-verify`) | Blocks "done" while `specs/checklist.json` has any item under 95 or unscored (exit 2). No-op when the file is absent |
+| `checklist-gate` | Stop — **just before** a response ends (after `stop-verify`) | Blocks "done" while `specs/checklist.json` has any item under 95 or unscored (exit 2). No-op when no loop was started. **Self-bypass blocked** — deleting the scorecard leaves a tombstone (`specs/.checklist-active`) that keeps blocking, and a lowered threshold is floored back to 95 |
 | `session-handoff` | At session **start · compaction · end** (SessionStart · PreCompact · SessionEnd) | Restore/save handoff + config banner |
 | `log-event` | When another hook records a verdict (internal subprocess call) | JSONL observability append — single source for schema & PII masking |
 | `lib-protected` | Referenced via `source` when a hook loads (never runs directly) | Single definition of protected-path, secret and danger-command regexes (pure data) |
 | `lib-stop-guard` | Referenced via `source` by Stop hooks | Shared Stop loop-guard library |
 | `config-doctor` | On config checkups (manual/installer) | Diagnose settings/config consistency |
-| `harness-audit` | When `/harness-audit` runs (manual) | 42 read-only checks PASS/FAIL |
+| `harness-audit` | When `/harness-audit` runs (manual) | 46 read-only checks PASS/FAIL |
 | `logs-report` | When `logs-report.sh` runs (manual CLI) | JSONL verdict summary + N-day rotation + `--tokens` per-session token accounting |
 | `eval-java` | When a Java/Spring quality score is needed (manual scorer) | Deterministic Java/Spring quality probability `P∈[0,1]`, no LLM |
 | `eval-state` | When carve-eval grades state asserts (helper) | Grade golden-set state asserts (files · commands · diff) against real state — never trust self-report |
@@ -274,29 +273,38 @@ Score  compute pass@k (capability) · pass^k (consistency) → append suiteScore
 ├── CLAUDE.md / AGENTS.md    # canonical rules (Claude / cross-agent)
 ├── VERSION · CHANGELOG.md · RELEASE.md
 ├── install.sh / uninstall.sh   # install·update·rollback·setup / removal
-├── vendor/bin/              # bundled jq·shellcheck (+ SHA256SUMS)
+├── vendor/ponytail/         # vendored ponytail mode
 ├── .githooks/              # pre-commit·commit-msg (agent-agnostic commit gate)
 ├── specs/                   # state: handoffs & decision log
 └── .claude/
     ├── settings.json        # 6 hook events registered
     ├── hooks/  (13 + 19 test suites)
     ├── workflows/ (fable-team-pipeline · carve-verify-loop · carve-eval)
-    ├── commands/ (14) · agents/ (12) · skills/ (9) · rules/ (10)
+    ├── commands/ (14) · agents/ (7) · skills/ (9) · rules/ (8)
 # docs/rules/code-convention/   # 8 stack reference guides (not auto-loaded — read on demand)
 ```
 
 ## Limitations
 
+> Measured, not assumed — everything below is a hole an adversarial audit (34 bypass attempts) actually got through.
+
 - Hook blocking is Claude Code-only — other agents are caught by pre-commit at commit time.
-- Bash write guard is best-effort: pipe/heredoc indirection is not detected (pre-commit is the second net).
-- Stop gate stacks: Java/Node/Python/bash — others pass unverified.
+- The Bash write guard reads the command surface only. **Variable indirection (`F=.env; echo x > $F`) and interpreter detours (`python3 -c "open('.env','w')"`) go undetected** (pre-commit is the second net). Redirects, `tee`, `cp`/`mv`, `sed -i`, `rm`/`touch` are blocked.
+- Secret scanning is **literal matching**. Base64-encoded or split-and-concatenated keys (`"sk-"+"..."`) slip through — a human still has to review.
+- Dangerous-command blocking is command-position based. `env`/`sudo`/`VAR=` prefixes are covered, but **a shell alias or function wrapper hides the command**, and so does `curl -o file && bash file` (two-step download-then-run).
+- Stop gate stacks: Java, Node/TS, Python, Go, Rust, bash — others (Ruby, PHP, C#, Swift, Dart …) pass unverified. **Each stack only bites when its toolchain is installed** (`go`, `cargo`, `ruff`/`pytest` absent → best-effort skip).
+- Gate self-protection (GUARD-07) is active **in installed harnesses only** (keyed on `.claude/harness-manifest.txt`) — the harness source repo must be able to edit its own hooks.
+- The verify-loop gate stops a deleted checklist and a lowered threshold, but **cannot catch a scorecard that simply lies** (mitigated by keeping the evaluator separate from the builder).
 - Only slim `rules/` stay always-loaded (stack detail guides moved to `docs/rules/` — read on demand).
 
 ## Roadmap
 
-- [ ] Stack gate expansion: Go·Rust (detect → gofmt/vet/test, cargo)
-- [ ] Stronger detection of indirect Bash writes (pipes, heredocs)
-- [ ] Cover deny-pattern variants (`rm -r -f`, etc.)
+- [x] Stack gate expansion: Go (build·vet·test) · Rust (cargo check·test) · wider Python detection (requirements.txt, setup.py)
+- [x] Gate self-protection — hooks, settings.json and the manifest can no longer be edited or deleted (GUARD-07)
+- [x] Cover deny-pattern variants — `rm -r -f`, `--recursive`, `env`/`sudo`/`VAR=` prefixes (GUARD-08)
+- [ ] Stack gate expansion, round 2: Ruby · PHP · C# · Swift · Dart
+- [ ] Stronger detection of indirect Bash writes (variables, interpreter detours)
+- [ ] Secret scanning for encoded variants (base64, split concatenation)
 - [ ] Clean up files added by an update on rollback (manifest diff)
 - [ ] Semantic version comparison (downgrade protection)
 - [ ] Skill trigger-phrase (description-level) duplicate detection

@@ -15,18 +15,17 @@
 
 | 기둥 | 동작 |
 |------|------|
-| **제약** | 보호 경로(`.env`·prod·마이그레이션)·하드코딩 시크릿 쓰기를 PreToolUse 훅이 차단. jq 부재·JSON 파손 시 fail-closed |
-| **피드백** | Stop 훅이 빌드·타입·린트·테스트 실패 시 완료 선언 차단 — 변경된 스택만 증분 검증(Node는 `lint`/`test` 스크립트 있을 때만, CI의 `npm run lint`를 로컬로 앞당김) |
+| **제약** | 보호 경로(`.env`·prod·마이그레이션)·하드코딩 시크릿 쓰기를 PreToolUse 훅이 차단. jq 부재·JSON 파손 시 fail-closed. **게이트 자기보호** — 설치본에서는 훅·`settings.json`·manifest 수정/삭제도 차단(에이전트가 게이트를 끄지 못한다) |
+| **피드백** | Stop 훅이 빌드·타입·린트·테스트 실패 시 완료 선언 차단 — 변경된 스택만 증분 검증(Java·Node/TS·Python·Go·Rust·bash. 각 스택 툴체인이 있을 때만 실행, CI의 `npm run lint`를 로컬로 앞당김) |
 | **상태** | 세션 종료·압축 시 핸드오프 자동 저장(실제 TODO·결정 수집), 시작 시 복원 |
 | **관측** | 모든 훅 판정을 `logs/*.jsonl`에 기록 (PII 마스킹), 리포트·회전 지원. 세션 시작 배너가 로드된 전 구성을 표시하고, 훅 메시지는 `[carve-harness:<hook>]` 프리픽스로 통일 |
-| **자가감사** | `/harness-audit` — 42개 기계 체크로 하네스 오구성 PASS/FAIL |
+| **자가감사** | `/harness-audit` — 46개 기계 체크로 하네스 오구성 PASS/FAIL |
 | **검증 루프** | `/verify-loop` — 구현 주장을 항목별로 코드 대조 0~100 채점, 95점 미만은 gap 되먹여 재작업, 전 항목 95점까지 루프. 미달 잔존 시 Stop 훅이 완료 차단 → [검증 루프 가이드](docs/md/verify-loop-guide.md) |
 
-**구성 요소**: 훅 13종(이벤트 게이트 5 · 라이브러리 2 · CLI·헬퍼 6) · 슬래시 커맨드 14종 · 에이전트 12종 · 스킬 9종 · 규칙 10종(+스택 상세본 8, `docs/rules/`) · 워크플로 3종 · 테스트 19 스위트(230건) — 전체 목록은 [전체 구성](#전체-구성-스킬커맨드훅) 표 참고
+**구성 요소**: 훅 13종(이벤트 게이트 5 · 라이브러리 2 · CLI·헬퍼 6) · 슬래시 커맨드 14종 · 에이전트 7종 · 스킬 9종 · 규칙 8종(+스택 상세본 8, `docs/rules/`) · 워크플로 3종 · 테스트 19 스위트(260건) — 전체 목록은 [전체 구성](#전체-구성-스킬커맨드훅) 표 참고
 
 **크로스 에이전트**: 훅 차단은 Claude Code 전용. Cursor/Codex 등은 `AGENTS.md` 정본 + `.githooks/pre-commit`이 커밋 시점에 최종 차단.
 
-**오프라인 완결**: jq·shellcheck 정적 바이너리 내장(`vendor/bin`, SHA256 검증) — 인터넷 없이 설치 가능.
 
 > **데모**: <a href="https://claude-code-expert.github.io/carve-harness/docs/html/harness-demo/index.html" target="_blank" rel="noopener noreferrer">하네스 적용 전/후 화면 비교 (새 창)</a> — 같은 프롬프트로 만든 미적용(slop) vs 적용(클린) HTML을 나란히 놓고, 어떤 규칙이 무엇을 바꿨는지 표로 정리.
 
@@ -42,7 +41,7 @@ curl -fsSL https://raw.githubusercontent.com/claude-code-expert/carve-harness/ma
 - 기존 파일은 건드리지 않는다(SKIP 보고) — 설치 목록은 `.claude/harness-manifest.txt`에 기록.
 - **예외: `.claude/settings.json`은 스킵이 아니라 병합**한다 — 기존 설정(`permissions`·`model`·자체 훅)을 보존하며 하네스 훅 6이벤트 + LSP/플러그인 선언을 jq로 등록(멱등). 이걸 스킵하면 훅이 미등록돼 배너·가드·검증이 전부 무력화되기 때문.
 - **LSP·플러그인 자동 선언**: settings.json이 `vtsls`(TypeScript·React·JavaScript LSP)·`jdtls`(Java LSP)·`ponytail`·`frontend-design`(디자인 방향 스킬) 플러그인과 각 마켓플레이스(`claude-code-lsps`·`ponytail`·`claude-code-plugins`)를 선언한다 — 세션 시작 시 Claude Code가 신뢰 승인 후 자동 설치. 서버 실행 파일은 별도: vtsls는 `bash install.sh setup`에서 npm 전역 설치 제안, jdtls는 `brew install jdtls`(JDK 필요). 미설치면 install 끝에 NOTE로 안내된다.
-- 설치 끝에 `/harness-audit` 자동 실행 — 42 PASS면 전 게이트 활성.
+- 설치 끝에 `/harness-audit` 자동 실행 — 46 PASS면 전 게이트 활성.
 
 **전체 설치면**(맞춤 구축 `[1]` · `curl | bash`·env 비대화형 · 수동에서 전부 선택) 설치 끝에 아래 배너가 출력된다 — 세션에서 `/carve-harness-create` 실행을 안내한다(자연어 요청이 아니라 **슬래시 커맨드로만** 발동):
 
@@ -124,7 +123,7 @@ bash uninstall.sh --yes    # 실제 제거 (manifest 범위만, 원래 있던 �
 
 | 명령 | 용도 |
 |------|------|
-| `/harness-audit` | 하네스 구성 42체크 PASS/FAIL |
+| `/harness-audit` | 하네스 구성 46체크 PASS/FAIL |
 | `/plan` `/verify` `/review` `/commit` | SC 분해 · SC 검증 · 코드 검토 · 인자 메시지로 commit→pull→push |
 | `bash .claude/hooks/logs-report.sh [days]` | 훅 판정 로그 요약 (`--rotate N` 회전 · `--tokens N` 세션별 토큰 사용량) |
 | `npm test` / `npm run test:install` | 전체 훅 테스트 19 스위트 / 설치 구성 선택 스위트 |
@@ -240,7 +239,7 @@ Score  pass@k(능력)·pass^k(일관성) 산출 → suiteScore를 specs/eval-sco
 
 | 커맨드 | 용도 |
 |------|------|
-| `/harness-audit` | 하네스 구성 42체크 PASS/FAIL |
+| `/harness-audit` | 하네스 구성 46체크 PASS/FAIL |
 | `/commit-branch` | 현재 브랜치에 Conventional Commits로 커밋 + 푸시(`main` 직접 금지) |
 | `/plan` | 작업을 완료 기준(SC) 단위로 분해 → `specs/` |
 | `/verify` | 현재 변경을 SC·빌드·타입·테스트로 검증 |
@@ -254,16 +253,16 @@ Score  pass@k(능력)·pass^k(일관성) 산출 → suiteScore를 specs/eval-sco
 
 | 훅 | 트리거 (언제 작동) | 역할 |
 |------|------|------|
-| `pretool-guard` | PreToolUse — Write·Edit·Bash 실행 **직전마다** | 보호 경로·시크릿·위험 명령(force push·`reset --hard`·`curl\|sh`·파괴적 SQL) 차단 + 동일 툴콜 5연속 루프 브레이크(exit 2), fail-closed |
+| `pretool-guard` | PreToolUse — Write·Edit·Bash 실행 **직전마다** | 보호 경로(쓰기·삭제 모두)·시크릿·위험 명령(force push·`reset --hard`·`curl\|sh`·파괴적 SQL·루트/홈 재귀 삭제) 차단 + 하네스 자기보호(GUARD-07, 설치본) + 동일 툴콜 5연속 루프 브레이크(exit 2), fail-closed |
 | `posttool-format` | PostToolUse — 파일 쓰기·수정 성공 **직후** | 확장자 언어 감지 후 포맷(후처리, exit 0) |
 | `stop-verify` | Stop — 응답 종료(완료 선언) **직전** | 변경 스택 빌드·타입·테스트 게이트(실패 exit 2) |
-| `checklist-gate` | Stop — 응답 종료 **직전**(`stop-verify` 뒤) | `specs/checklist.json` 미달(<95)·미채점 항목 남으면 완료 차단(exit 2). 파일 없으면 무동작 |
+| `checklist-gate` | Stop — 응답 종료 **직전**(`stop-verify` 뒤) | `specs/checklist.json` 미달(<95)·미채점 항목 남으면 완료 차단(exit 2). 루프 미개시면 무동작. **자가 우회 차단** — 채점 파일을 지워도 tombstone(`specs/.checklist-active`)이 남아 계속 차단, threshold 하향은 하한 95로 무효화 |
 | `session-handoff` | 세션 **시작·압축·종료** 시점(SessionStart·PreCompact·SessionEnd) | 핸드오프 복원·저장 + 구성 배너 |
 | `log-event` | 다른 훅이 판정을 기록할 때(내부 서브프로세스 호출) | JSONL 관측 append — 스키마·PII 마스킹 단일 출처 |
 | `lib-protected` | 훅 로드 시 `source`로 참조(직접 실행 안 함) | 보호 경로·시크릿·위험 명령 정규식 단일 정의(순수 데이터) |
 | `lib-stop-guard` | Stop 훅 로드 시 `source`로 참조 | Stop 루프 가드 공유 라이브러리 |
 | `config-doctor` | 설정 점검 시(수동/설치기) | settings·구성 파일 정합 진단 |
-| `harness-audit` | `/harness-audit` 실행 시(수동) | 42 체크 read-only PASS/FAIL |
+| `harness-audit` | `/harness-audit` 실행 시(수동) | 46 체크 read-only PASS/FAIL |
 | `logs-report` | `logs-report.sh` 실행 시(수동 CLI) | JSONL 판정 요약 + N일 회전 + `--tokens` 세션별 토큰 회계 |
 | `eval-java` | Java/Spring 품질 스코어가 필요할 때(수동 스코어러) | Java/Spring 결정적 품질 확률 `P∈[0,1]`, LLM 없음 |
 | `eval-state` | carve-eval 상태 assert 채점 시(헬퍼) | 골든셋 상태 assert(파일·명령·diff)를 실상태로 결정적 채점 — 자기 보고 불신 |
@@ -274,29 +273,38 @@ Score  pass@k(능력)·pass^k(일관성) 산출 → suiteScore를 specs/eval-sco
 ├── CLAUDE.md / AGENTS.md    # 규칙 정본 (Claude / 크로스 에이전트)
 ├── VERSION · CHANGELOG.md · RELEASE.md
 ├── install.sh / uninstall.sh   # 설치·update·rollback·setup / 제거
-├── vendor/bin/              # 내장 jq·shellcheck (+ SHA256SUMS)
+├── vendor/ponytail/         # ponytail 모드 벤더링
 ├── .githooks/              # pre-commit·commit-msg (에이전트 무관 커밋 게이트)
 ├── specs/                   # 상태: 핸드오프·결정 기록
 └── .claude/
     ├── settings.json        # 훅 6이벤트 등록
     ├── hooks/  (13종 + tests 19 스위트)
     ├── workflows/ (fable-team-pipeline · carve-verify-loop · carve-eval)
-    ├── commands/ (14종) · agents/ (12종) · skills/ (9종) · rules/ (10종)
+    ├── commands/ (14종) · agents/ (7종) · skills/ (9종) · rules/ (8종)
 # docs/rules/code-convention/   # 스택 상세본 8종 (자동 로드 아님 — 필요 시 참조)
 ```
 
 ## 한계
 
+> 실측 기준이다 — 아래 항목은 적대적 감사(우회 시도 34종 실행)에서 **실제로 뚫린 것만** 적었다.
+
 - 훅 차단은 Claude Code 전용 — 타 에이전트는 pre-commit이 커밋 시점 차단.
-- Bash 쓰기 가드는 best-effort: 파이프·heredoc 간접 우회 미탐 (pre-commit이 2차 차단).
-- Stop 게이트 스택: Java/Node/Python/bash — 그 외는 미검증 통과.
+- Bash 쓰기 가드는 명령 표면만 본다. **변수 간접(`F=.env; echo x > $F`)·인터프리터 경유(`python3 -c "open('.env','w')"`)는 미탐** (pre-commit이 2차 차단). 리다이렉트·`tee`·`cp`/`mv`·`sed -i`·`rm`/`touch`는 차단됨.
+- 시크릿 스캔은 **리터럴 매칭**이다. base64 인코딩·문자열 분할 조립(`"sk-"+"..."`)은 미탐 — 사람이 리뷰해야 한다.
+- 위험 명령 차단은 명령 위치 기준. `env`/`sudo`/`VAR=` 접두는 커버하지만, **셸 alias·함수로 감싸면 미탐**, `curl -o file && bash file`(2단계 다운로드 실행)도 미탐.
+- Stop 게이트 스택: Java·Node/TS·Python·Go·Rust·bash — 그 외(Ruby·PHP·C#·Swift·Dart 등)는 미검증 통과. **각 스택은 툴체인이 설치돼 있을 때만 문다**(`go`·`cargo`·`ruff`/`pytest` 부재 시 best-effort 스킵).
+- 게이트 자기보호(GUARD-07)는 **설치본에서만** 활성(`.claude/harness-manifest.txt` 기준) — 하네스 소스 레포는 자기 훅을 편집해야 하므로 예외.
+- 검증 루프 게이트는 checklist.json 삭제·threshold 하향을 막지만, **채점 내용 자체가 거짓이면** 막지 못한다(evaluator 분리로 완화).
 - `rules/` 슬림본만 상시 로드(스택 상세본은 `docs/rules/`로 분리 — 필요 시 참조).
 
 ## 로드맵
 
-- [ ] 스택 게이트 확장: Go·Rust (감지→gofmt/vet/test, cargo)
-- [ ] Bash 간접 쓰기(파이프·heredoc) 탐지 강화
-- [ ] deny 패턴 변형 커버 (`rm -r -f` 등)
+- [x] 스택 게이트 확장: Go(build·vet·test)·Rust(cargo check·test) · Python 감지 확대(requirements.txt·setup.py)
+- [x] 게이트 자기보호 — 훅·settings.json·manifest 수정/삭제 차단(GUARD-07)
+- [x] deny 패턴 변형 커버 — `rm -r -f`·`--recursive`·`env`/`sudo`/`VAR=` 접두(GUARD-08)
+- [ ] 스택 게이트 확장 2차: Ruby·PHP·C#·Swift·Dart
+- [ ] Bash 간접 쓰기(변수·인터프리터 경유) 탐지 강화
+- [ ] 시크릿 스캔 인코딩 변형(base64·분할 조립) 대응
 - [ ] rollback 시 신규 추가 파일 정리 (manifest diff)
 - [ ] 시맨틱 버전 비교 (다운그레이드 방지)
 - [ ] 스킬 트리거 문구(description) 수준 중복 검사
