@@ -18,7 +18,10 @@ if ! command -v jq >/dev/null 2>&1 || [ -z "$W" ] || [ ! -d "$W" ] || [ ! -f "$A
 fi
 
 failed=()
-while IFS=$'\t' read -r type value; do
+# NUL-delimited, not @tsv: @tsv escapes backslashes and newlines, which silently
+# corrupts any cmd_exit0 containing `\n` (a stub script, a printf) and turns a
+# passing case into a phantom failure. Values must reach bash byte-for-byte.
+while IFS= read -r -d '' type && IFS= read -r -d '' value; do
   [ -n "$type" ] || continue
   printf '%s' "$type" | grep -Eqx "$STATE_TYPES" || continue   # non-state types: not ours
   ok=0
@@ -35,7 +38,7 @@ while IFS=$'\t' read -r type value; do
       ( cd "$W" && git diff HEAD 2>/dev/null | grep -qF "$value" ) && ok=1 ;;
   esac
   [ "$ok" = 1 ] || failed+=("$type:$value")
-done < <(jq -r '.[] | [.type, .value] | @tsv' "$AF" 2>/dev/null)
+done < <(jq -j '.[] | (.type|tostring) + "\u0000" + (.value|tostring) + "\u0000"' "$AF" 2>/dev/null)
 
 # Emit via jq only — never string-interpolate values into JSON by hand.
 printf '%s\n' "${failed[@]:-}" | jq -R . | jq -cs '{failed: [.[] | select(. != "")]}'

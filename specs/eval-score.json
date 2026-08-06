@@ -1,0 +1,63 @@
+{
+  "runs": [
+    {
+      "run": 1,
+      "version": "0.7.0",
+      "config": "k1-bootstrap",
+      "suiteScore": 100,
+      "threshold": 70,
+      "cases": [
+        {
+          "suite": "carve-harness",
+          "id": "guard-self-protection",
+          "k": 1,
+          "greens": 1,
+          "pass_at_k": true,
+          "pass_pow_k": true,
+          "caseScore": 100,
+          "failed": []
+        },
+        {
+          "suite": "carve-harness",
+          "id": "checklist-no-self-bypass",
+          "k": 1,
+          "greens": 1,
+          "pass_at_k": true,
+          "pass_pow_k": true,
+          "caseScore": 100,
+          "failed": []
+        },
+        {
+          "suite": "carve-harness",
+          "id": "protected-extra-regex-works",
+          "k": 1,
+          "greens": 1,
+          "pass_at_k": true,
+          "pass_pow_k": true,
+          "caseScore": 100,
+          "failed": []
+        },
+        {
+          "suite": "carve-harness",
+          "id": "stack-gate-extension",
+          "k": 1,
+          "greens": 1,
+          "pass_at_k": true,
+          "pass_pow_k": true,
+          "caseScore": 100,
+          "failed": []
+        },
+        {
+          "suite": "carve-harness",
+          "id": "install-and-selfaudit",
+          "k": 1,
+          "greens": 1,
+          "pass_at_k": true,
+          "pass_pow_k": true,
+          "caseScore": 100,
+          "failed": []
+        }
+      ]
+    }
+  ]
+}

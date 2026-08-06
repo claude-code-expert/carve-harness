@@ -64,6 +64,33 @@ out=$(bash "$HOOK" "$W" "$AF")
 [ "$(printf '%s' "$out" | jq '.failed | length')" = "0" ] \
   && ok "cmd_exit0 cwd is the workdir" || no "cmd cwd ($out)"
 
+# (6) REGRESSION: assert values must reach bash byte-for-byte. The reader used to
+# go through @tsv, which escapes backslashes — a command building a stub script
+# with `\n` arrived mangled, so a case that passes when run by hand was scored as
+# a failure. Found by running the harness's own golden set against itself.
+STUB_CMD=$(cat <<'EOF'
+mkdir -p stubdir && printf '#!/bin/sh\nexit 7\n' > stubdir/tool && chmod +x stubdir/tool && stubdir/tool; [ $? -eq 7 ]
+EOF
+)
+jq -n --arg v "$STUB_CMD" '[{type:"cmd_exit0", value:$v}]' > "$AF"
+out=$(bash "$HOOK" "$W" "$AF")
+if [ "$(printf '%s' "$out" | jq '.failed | length')" = "0" ]; then
+  ok "backslash escapes survive the reader (no @tsv mangling)"
+else
+  no "backslash in cmd_exit0 corrupted ($out)"
+fi
+# The stub must be a real 2-line script — proves \n became a newline, not literal.
+[ "$(wc -l < "$W/stubdir/tool" 2>/dev/null | tr -d ' ')" = "2" ] \
+  && ok "printf newline escape produced a real newline" \
+  || no "stub script not written as multi-line"
+
+# (7) a value carrying a literal tab must not split the record.
+TAB_CMD=$(printf 'printf "a\tb\\n" | grep -q "b"')
+jq -n --arg v "$TAB_CMD" '[{type:"cmd_exit0", value:$v}]' > "$AF"
+out=$(bash "$HOOK" "$W" "$AF")
+[ "$(printf '%s' "$out" | jq '.failed | length')" = "0" ] \
+  && ok "tab inside an assert value survives" || no "tab in value split the record ($out)"
+
 rm -rf "$W" "$AF"
 printf -- '---\n%s passed, %s failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]

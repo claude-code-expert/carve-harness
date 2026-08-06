@@ -1,0 +1,33 @@
+# carve-harness 골든셋 회귀 게이트 — /eval-init 이 배치한 템플릿.
+# 채점(carve-eval)은 로컬/에이전트 세션에서 돌고 specs/eval-score.json 에 추이가 쌓인다.
+# CI는 그 추이만 읽어 결정론적으로 판정한다 — 모델이 CI 통과 여부를 정하지 않는다.
+#
+# MODE=report  회귀를 코멘트로만 알린다(항상 통과).
+# MODE=block   허용 하락폭 초과 시 잡을 실패시킨다.
+name: eval-gate
+
+on:
+  pull_request:
+    paths:
+      - 'specs/eval-score.json'
+      - 'specs/goldenset/**'
+  workflow_dispatch:
+
+jobs:
+  eval-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install jq
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq jq
+
+      - name: Golden-set regression gate
+        env:
+          MODE: __MODE__     # /eval-init 이 report 또는 block 으로 치환한다
+          DELTA: __DELTA__   # 허용 하락폭(점)
+        run: |
+          bash .claude/hooks/eval-gate.sh --mode "$MODE" --delta "$DELTA" | tee gate.json
+          echo "### 골든셋 회귀 게이트" >> "$GITHUB_STEP_SUMMARY"
+          jq -r '"- 판정: \(.verdict)\n- 점수: \(.suiteScore // "없음") (baseline \(.baseline // "없음"))\n- 하락: \(.delta // "-")pt / 허용 \(.allowed // "-")pt"' \
+            gate.json >> "$GITHUB_STEP_SUMMARY"
