@@ -22,7 +22,7 @@
 | **자가감사** | `/harness-audit` — 47개 기계 체크로 하네스 오구성 PASS/FAIL |
 | **검증 루프** | `/verify-loop` — 구현 주장을 항목별로 코드 대조 0~100 채점, 95점 미만은 gap 되먹여 재작업, 전 항목 95점까지 루프. 미달 잔존 시 Stop 훅이 완료 차단 → [검증 루프 가이드](docs/md/verify-loop-guide.md) |
 
-**구성 요소**: 훅 14종(이벤트 게이트 5 · 라이브러리 2 · CLI·헬퍼 7) · 슬래시 커맨드 14종 · 에이전트 7종 · 스킬 10종 · 규칙 8종(+스택 상세본 8, `docs/rules/`) · 워크플로 3종 · 테스트 20 스위트(280건) — 전체 목록은 [전체 구성](#전체-구성-스킬커맨드훅) 표 참고
+**구성 요소**: 훅 14종(이벤트 게이트 5 · 라이브러리 2 · CLI·헬퍼 7) · 슬래시 커맨드 14종 · 에이전트 7종 · 스킬 10종 · 규칙 8종(+스택 상세본 8, `docs/rules/`) · 워크플로 3종 · 테스트 20 스위트(283건) — 전체 목록은 [전체 구성](#전체-구성-스킬커맨드훅) 표 참고
 
 **크로스 에이전트**: 훅 차단은 Claude Code 전용. Cursor/Codex 등은 `AGENTS.md` 정본 + `.githooks/pre-commit`이 커밋 시점에 최종 차단.
 
@@ -125,8 +125,14 @@ bash uninstall.sh --yes    # 실제 제거 (manifest 범위만, 원래 있던 �
 |------|------|
 | `/harness-audit` | 하네스 구성 47체크 PASS/FAIL |
 | `/plan` `/verify` `/review` `/commit` | SC 분해 · SC 검증 · 코드 검토 · 인자 메시지로 commit→pull→push |
+| `/verify-loop <목표>` | 요구가 여러 개일 때 — 항목별 0~100 채점, 전 항목 95점까지 재작업 반복 |
+| `/eval-init` | **설치 후 1회** — 프로젝트 분석 + 인터뷰로 평가·품질 게이트를 확정하고 골든셋을 만든다 |
+| `/eval` | 골든셋 재채점 → pass@k/pass^k · 점수 추이 append · baseline 대비 회귀 판정 |
+| `bash .claude/hooks/eval-gate.sh --mode report\|block [--delta N]` | 추이 파일만 읽어 회귀 판정(LLM 없음). `block`은 허용 하락폭 초과 시 exit 1 — CI가 이걸 호출한다 |
 | `bash .claude/hooks/logs-report.sh [days]` | 훅 판정 로그 요약 (`--rotate N` 회전 · `--tokens N` 세션별 토큰 사용량) |
 | `npm test` / `npm run test:install` | 전체 훅 테스트 20 스위트 / 설치 구성 선택 스위트 |
+
+> **설치 직후 순서**: `/carve-harness-create`(스택 맞춤 정리) → `CLAUDE.md`에 도메인 불변식 3줄 → 1~2주 그냥 사용 → `/eval-init`(실패 소재가 쌓인 뒤라야 골든셋이 의미 있다).
 
 커스터마이징(보호 경로·포맷터·검증 명령·새 스택)·전체 레퍼런스는 **`GUIDE.md`** 참고.
 

@@ -22,7 +22,7 @@ Drop it into your project root and it works immediately.
 | **Self-audit** | `/harness-audit` — 47 mechanical checks PASS/FAIL the harness configuration itself |
 | **Verify loop** | `/verify-loop` — grades each claimed implementation 0–100 against real code, feeds gaps back to rework anything under 95, loops until every item passes. Stop hook blocks "done" while any item is unresolved → [verify-loop guide](docs/md/verify-loop-guide.md) |
 
-**Inventory**: 14 hooks (5 event gates · 2 libraries · 7 CLI/helpers) · 14 slash commands · 7 agents · 10 skills · 8 rule files (+8 stack references in `docs/rules/`) · 3 workflows · 20 test suites (280 cases) — full lists in the [component tables](#full-component-list-skills--commands--hooks) below
+**Inventory**: 14 hooks (5 event gates · 2 libraries · 7 CLI/helpers) · 14 slash commands · 7 agents · 10 skills · 8 rule files (+8 stack references in `docs/rules/`) · 3 workflows · 20 test suites (283 cases) — full lists in the [component tables](#full-component-list-skills--commands--hooks) below
 
 **Cross-agent**: hook blocking is Claude Code-only. Cursor/Codex/etc. follow `AGENTS.md` as the canonical rules, with `.githooks/pre-commit` as the final gate at commit time.
 
@@ -125,8 +125,14 @@ Once installed, the gates are automatic — protected-path writes are blocked, o
 |---------|---------|
 | `/harness-audit` | 47-check PASS/FAIL of the harness configuration |
 | `/plan` `/verify` `/review` `/commit` | SC breakdown · SC verification · code review · commit→pull→push with your message |
-| `bash .claude/hooks/logs-report.sh [days]` | hook verdict log summary (`--rotate N` to rotate) |
-| `npm test` / `npm run test:install` | all 18 hook test suites / installer component-selection suite |
+| `/verify-loop <goal>` | For multi-requirement work — grades each item 0–100 and reworks until all pass 95 |
+| `/eval-init` | **Once, after install** — analyzes the project and fixes the eval/quality gates through an interview, then builds the golden set |
+| `/eval` | Re-score the golden set → pass@k/pass^k · append to the score trend · regression vs baseline |
+| `bash .claude/hooks/eval-gate.sh --mode report\|block [--delta N]` | Judge regression from the score trend alone (no LLM). `block` exits 1 past the tolerance — this is what CI calls |
+| `bash .claude/hooks/logs-report.sh [days]` | hook verdict log summary (`--rotate N` to rotate · `--tokens N` per-session token usage) |
+| `npm test` / `npm run test:install` | all 20 hook test suites / installer component-selection suite |
+
+> **Order right after install**: `/carve-harness-create` (trim to your stack) → three domain invariants in `CLAUDE.md` → use it normally for a week or two → `/eval-init` (a golden set only means something once real failures exist).
 
 For customization (protected paths, formatters, verify commands, new stacks) and the full reference, see **`GUIDE.md`**.
 
