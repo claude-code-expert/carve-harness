@@ -4,6 +4,14 @@
 
 > **규칙**: `VERSION` 파일이 바뀌는 커밋에는 반드시 해당 버전 항목(`[X.Y.Z]`)이 이 파일에 함께 스테이징되어야 한다 — `.githooks/pre-commit`이 기계적으로 차단, 작성은 `/version-changelog` 스킬. 배포 절차는 `RELEASE.md`.
 
+## [0.8.0] - 2026-08-06
+
+### Added
+- feat(eval): interactive eval-init setup + deterministic regression gate
+
+### Fixed
+- fix(tests): isolate hook side effects from the repo's observability log
+
 ## [0.7.0] - 2026-08-03
 
 ### Added
