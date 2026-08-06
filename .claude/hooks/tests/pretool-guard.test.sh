@@ -6,6 +6,11 @@
 
 GUARD="$(dirname "$0")/../pretool-guard.sh"
 BASH_BIN="$(command -v bash)"
+# Isolate hook side effects (JSONL log + loop ring) from the repo: without this the
+# suite appends synthetic verdicts to the real logs/ and trace mining later reads
+# its own fixtures. Cases that need a specific root override this per call.
+export CLAUDE_PROJECT_DIR="${CLAUDE_PROJECT_DIR:-$(mktemp -d)}"
+
 fail=0
 pass=0
 

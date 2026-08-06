@@ -3,6 +3,17 @@
 # Usage: bash .claude/hooks/tests/run-all.sh   (or: npm test)
 set -u
 HERE="$(cd "$(dirname "$0")" && pwd)"
+
+# Test runs must not write into the repo's own logs/. Hooks resolve their log dir
+# from CLAUDE_PROJECT_DIR (falling back to the repo root), so a suite that invokes
+# a hook without it appends synthetic verdicts to the real observability log — and
+# then trace mining reads its own fixtures instead of real sessions. Suites that
+# need a specific root still set CLAUDE_PROJECT_DIR per case; this is only the
+# default for the ones that don't.
+export CARVE_TEST_LOGDIR="${CARVE_TEST_LOGDIR:-$(mktemp -d)}"
+export CLAUDE_PROJECT_DIR="${CLAUDE_PROJECT_DIR:-$CARVE_TEST_LOGDIR}"
+trap 'rm -rf "$CARVE_TEST_LOGDIR"' EXIT
+
 total_fail=0
 for f in "$HERE"/*.test.sh; do
   out=$(bash "$f" 2>&1); rc=$?
