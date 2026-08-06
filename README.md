@@ -19,10 +19,10 @@
 | **피드백** | Stop 훅이 빌드·타입·린트·테스트 실패 시 완료 선언 차단 — 변경된 스택만 증분 검증(Java·Node/TS·Python·Go·Rust·bash. 각 스택 툴체인이 있을 때만 실행, CI의 `npm run lint`를 로컬로 앞당김) |
 | **상태** | 세션 종료·압축 시 핸드오프 자동 저장(실제 TODO·결정 수집), 시작 시 복원 |
 | **관측** | 모든 훅 판정을 `logs/*.jsonl`에 기록 (PII 마스킹), 리포트·회전 지원. 세션 시작 배너가 로드된 전 구성을 표시하고, 훅 메시지는 `[carve-harness:<hook>]` 프리픽스로 통일 |
-| **자가감사** | `/harness-audit` — 46개 기계 체크로 하네스 오구성 PASS/FAIL |
+| **자가감사** | `/harness-audit` — 47개 기계 체크로 하네스 오구성 PASS/FAIL |
 | **검증 루프** | `/verify-loop` — 구현 주장을 항목별로 코드 대조 0~100 채점, 95점 미만은 gap 되먹여 재작업, 전 항목 95점까지 루프. 미달 잔존 시 Stop 훅이 완료 차단 → [검증 루프 가이드](docs/md/verify-loop-guide.md) |
 
-**구성 요소**: 훅 13종(이벤트 게이트 5 · 라이브러리 2 · CLI·헬퍼 6) · 슬래시 커맨드 14종 · 에이전트 7종 · 스킬 9종 · 규칙 8종(+스택 상세본 8, `docs/rules/`) · 워크플로 3종 · 테스트 19 스위트(260건) — 전체 목록은 [전체 구성](#전체-구성-스킬커맨드훅) 표 참고
+**구성 요소**: 훅 14종(이벤트 게이트 5 · 라이브러리 2 · CLI·헬퍼 7) · 슬래시 커맨드 14종 · 에이전트 7종 · 스킬 10종 · 규칙 8종(+스택 상세본 8, `docs/rules/`) · 워크플로 3종 · 테스트 20 스위트(280건) — 전체 목록은 [전체 구성](#전체-구성-스킬커맨드훅) 표 참고
 
 **크로스 에이전트**: 훅 차단은 Claude Code 전용. Cursor/Codex 등은 `AGENTS.md` 정본 + `.githooks/pre-commit`이 커밋 시점에 최종 차단.
 
@@ -41,7 +41,7 @@ curl -fsSL https://raw.githubusercontent.com/claude-code-expert/carve-harness/ma
 - 기존 파일은 건드리지 않는다(SKIP 보고) — 설치 목록은 `.claude/harness-manifest.txt`에 기록.
 - **예외: `.claude/settings.json`은 스킵이 아니라 병합**한다 — 기존 설정(`permissions`·`model`·자체 훅)을 보존하며 하네스 훅 6이벤트 + LSP/플러그인 선언을 jq로 등록(멱등). 이걸 스킵하면 훅이 미등록돼 배너·가드·검증이 전부 무력화되기 때문.
 - **LSP·플러그인 자동 선언**: settings.json이 `vtsls`(TypeScript·React·JavaScript LSP)·`jdtls`(Java LSP)·`ponytail`·`frontend-design`(디자인 방향 스킬) 플러그인과 각 마켓플레이스(`claude-code-lsps`·`ponytail`·`claude-code-plugins`)를 선언한다 — 세션 시작 시 Claude Code가 신뢰 승인 후 자동 설치. 서버 실행 파일은 별도: vtsls는 `bash install.sh setup`에서 npm 전역 설치 제안, jdtls는 `brew install jdtls`(JDK 필요). 미설치면 install 끝에 NOTE로 안내된다.
-- 설치 끝에 `/harness-audit` 자동 실행 — 46 PASS면 전 게이트 활성.
+- 설치 끝에 `/harness-audit` 자동 실행 — 47 PASS면 전 게이트 활성.
 
 **전체 설치면**(맞춤 구축 `[1]` · `curl | bash`·env 비대화형 · 수동에서 전부 선택) 설치 끝에 아래 배너가 출력된다 — 세션에서 `/carve-harness-create` 실행을 안내한다(자연어 요청이 아니라 **슬래시 커맨드로만** 발동):
 
@@ -123,10 +123,10 @@ bash uninstall.sh --yes    # 실제 제거 (manifest 범위만, 원래 있던 �
 
 | 명령 | 용도 |
 |------|------|
-| `/harness-audit` | 하네스 구성 46체크 PASS/FAIL |
+| `/harness-audit` | 하네스 구성 47체크 PASS/FAIL |
 | `/plan` `/verify` `/review` `/commit` | SC 분해 · SC 검증 · 코드 검토 · 인자 메시지로 commit→pull→push |
 | `bash .claude/hooks/logs-report.sh [days]` | 훅 판정 로그 요약 (`--rotate N` 회전 · `--tokens N` 세션별 토큰 사용량) |
-| `npm test` / `npm run test:install` | 전체 훅 테스트 19 스위트 / 설치 구성 선택 스위트 |
+| `npm test` / `npm run test:install` | 전체 훅 테스트 20 스위트 / 설치 구성 선택 스위트 |
 
 커스터마이징(보호 경로·포맷터·검증 명령·새 스택)·전체 레퍼런스는 **`GUIDE.md`** 참고.
 
@@ -211,13 +211,15 @@ Score  pass@k(능력)·pass^k(일관성) 산출 → suiteScore를 specs/eval-sco
        → 직전 baseline 대비 delta(기본 3pt) 초과 하락 시 [REGRESSION] 보고
 ```
 
-**어떻게 쓰나** — `/eval`(또는 발화에 `carve-eval 실행`). 골든셋이 없으면 `eval-goldenset` 스킬로 실제 실패 20~50건부터 케이스를 만든다.
+**어떻게 시작하나** — 설치 직후엔 골든셋이 비어 있어 `/eval`이 돌 게 없다. **`/eval-init`을 한 번 실행**하면 프로젝트를 분석해(진입점·수정 빈도 상위·차단 이력·커버리지 실측) 7문항 인터뷰로 평가·품질 게이트를 확정하고, 골든셋 초안을 만들어 **케이스마다 궤적을 검사한 뒤 승인분만 편입**한다. 이후 재채점은 `/eval`(또는 발화에 `carve-eval 실행`), 케이스 증설은 `eval-goldenset`의 트레이스 마이닝 절차로 한다.
 
-**효과** — 채점이 "느낌"이 아니라 재현 가능한 숫자가 되고, 프롬프트/루브릭 변경도 회귀로 잡힌다. pass@k(한 번이라도 통과)와 pass^k(매번 통과)를 분리해 "가끔 되는 시스템"을 드러낸다. 회귀 게이트는 리포트-온리(옵트인 CI 배선) — 골든셋을 유지하는 팀만 강제한다.
+> 케이스 자동 확정은 의도적으로 막아뒀다 — 에이전트가 혼자 만든 골든셋은 **자기가 이미 통과하는 것만** 담아(자기강화) 지표를 무의미하게 만든다. 크리티컬 경로·실패 소재·엄격도는 사람이 정한다.
+
+**효과** — 채점이 "느낌"이 아니라 재현 가능한 숫자가 되고, 프롬프트/루브릭 변경도 회귀로 잡힌다. pass@k(한 번이라도 통과)와 pass^k(매번 통과)를 분리해 "가끔 되는 시스템"을 드러낸다. CI 강제는 옵트인 — `/eval-init`이 `eval-gate.sh`(추이만 읽는 결정론 게이트)를 리포트/차단 모드로 배선한다. **차단 모드는 골든셋을 유지할 사람이 있을 때만** 권한다.
 
 ## 전체 구성 (스킬·커맨드·훅)
 
-### 스킬 (9종)
+### 스킬 (10종)
 
 > **발동 시점** = 스킬이 자동 트리거되는 상황(설명 매칭) 또는 `/스킬명`으로 수동 호출하는 시점. 코어 게이트(anti-ai-slop·carve-guide)는 조건 충족 시 자동, 나머지는 대개 해당 작업 신호에서 발동한다.
 
@@ -231,6 +233,7 @@ Score  pass@k(능력)·pass^k(일관성) 산출 → suiteScore를 specs/eval-sco
 | `carve-harness-create` | 코어 | 전체 설치 후 스택 맞춤 정리 시(`/carve-harness-create`) | 스택 감지 후 불필요 구성 prune → 맞춤 하네스 |
 | `checklist-loop` | 검증·오케스트레이션 | 구현 주장을 코드 대조 채점하는 루프를 손으로 돌릴 때(워크플로 없이) | 스펙→개발→체크리스트→95점 채점→재작업 루프 SOP + checklist.json 스키마 |
 | `eval-goldenset` | 검증·오케스트레이션 | 프롬프트·규칙 변경 후 골든셋으로 회귀 확인·pass@k/pass^k 측정 시 | 골든셋(입력→루브릭) 정량 채점·점수 추이·회귀 판정 SOP + 케이스 형식 |
+| `eval-init` | 검증·오케스트레이션 | 설치 후 `/eval`을 쓸 수 있게 만드는 1회성 셋업(`/eval-init`) | 프로젝트 분석 → 대화형 인터뷰 7문항으로 평가·품질 게이트 확정 → 골든셋 초안 → **궤적 검사 후 승인분만 편입** → CI 배선 → baseline 기록 |
 | `theme-factory` | 외부(벤더) | 산출물에 색·폰트 테마를 적용할 때 | 산출물에 테마(색·폰트) 적용 — anti-slop 게이트 여전히 적용 |
 
 > 벤더 스킬(`theme-factory`)은 `composiohq/awesome-claude-plugins`에서 SKILL.md만 벤더링. 플러그인 `frontend-design`(디자인 방향)·`ponytail`(간결화)은 스킬이 아니라 settings.json 선언으로 배포된다.
@@ -239,7 +242,7 @@ Score  pass@k(능력)·pass^k(일관성) 산출 → suiteScore를 specs/eval-sco
 
 | 커맨드 | 용도 |
 |------|------|
-| `/harness-audit` | 하네스 구성 46체크 PASS/FAIL |
+| `/harness-audit` | 하네스 구성 47체크 PASS/FAIL |
 | `/commit-branch` | 현재 브랜치에 Conventional Commits로 커밋 + 푸시(`main` 직접 금지) |
 | `/plan` | 작업을 완료 기준(SC) 단위로 분해 → `specs/` |
 | `/verify` | 현재 변경을 SC·빌드·타입·테스트로 검증 |
@@ -249,7 +252,7 @@ Score  pass@k(능력)·pass^k(일관성) 산출 → suiteScore를 specs/eval-sco
 | `/commit` | 인자를 메시지로 현재 브랜치에 commit→pull→push (문제 시 해결책 제시) |
 | `/ponytail*` (6) | ponytail 모드 제어·audit·debt·gain·review·help |
 
-### 훅 (13종 — 이벤트 게이트 5 · 라이브러리 2 · CLI·헬퍼 6)
+### 훅 (14종 — 이벤트 게이트 5 · 라이브러리 2 · CLI·헬퍼 7)
 
 | 훅 | 트리거 (언제 작동) | 역할 |
 |------|------|------|
@@ -262,10 +265,11 @@ Score  pass@k(능력)·pass^k(일관성) 산출 → suiteScore를 specs/eval-sco
 | `lib-protected` | 훅 로드 시 `source`로 참조(직접 실행 안 함) | 보호 경로·시크릿·위험 명령 정규식 단일 정의(순수 데이터) |
 | `lib-stop-guard` | Stop 훅 로드 시 `source`로 참조 | Stop 루프 가드 공유 라이브러리 |
 | `config-doctor` | 설정 점검 시(수동/설치기) | settings·구성 파일 정합 진단 |
-| `harness-audit` | `/harness-audit` 실행 시(수동) | 46 체크 read-only PASS/FAIL |
+| `harness-audit` | `/harness-audit` 실행 시(수동) | 47 체크 read-only PASS/FAIL |
 | `logs-report` | `logs-report.sh` 실행 시(수동 CLI) | JSONL 판정 요약 + N일 회전 + `--tokens` 세션별 토큰 회계 |
 | `eval-java` | Java/Spring 품질 스코어가 필요할 때(수동 스코어러) | Java/Spring 결정적 품질 확률 `P∈[0,1]`, LLM 없음 |
 | `eval-state` | carve-eval 상태 assert 채점 시(헬퍼) | 골든셋 상태 assert(파일·명령·diff)를 실상태로 결정적 채점 — 자기 보고 불신 |
+| `eval-gate` | CI·로컬에서 골든셋 회귀 판정 시(수동 CLI) | `specs/eval-score.json` 추이만 읽어 직전 대비 하락폭 판정 — LLM 없음. `--mode block`이면 회귀 시 exit 1, 추이 없음·손상은 fail-closed |
 
 ## 구조
 
@@ -278,9 +282,9 @@ Score  pass@k(능력)·pass^k(일관성) 산출 → suiteScore를 specs/eval-sco
 ├── specs/                   # 상태: 핸드오프·결정 기록
 └── .claude/
     ├── settings.json        # 훅 6이벤트 등록
-    ├── hooks/  (13종 + tests 19 스위트)
+    ├── hooks/  (14종 + tests 20 스위트)
     ├── workflows/ (fable-team-pipeline · carve-verify-loop · carve-eval)
-    ├── commands/ (14종) · agents/ (7종) · skills/ (9종) · rules/ (8종)
+    ├── commands/ (14종) · agents/ (7종) · skills/ (10종) · rules/ (8종)
 # docs/rules/code-convention/   # 스택 상세본 8종 (자동 로드 아님 — 필요 시 참조)
 ```
 

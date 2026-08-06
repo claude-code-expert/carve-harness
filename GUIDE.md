@@ -2,7 +2,7 @@
 
 > Claude Code 드롭인 하네스 — 전체 사용 설명 + 설치 내역.
 > 대상: 이 하네스를 쓰거나 다른 프로젝트에 이식하려는 사용자.
-> 기준: 릴리스 **v0.6.0** (v1 하드닝 + 크로스에이전트 + update/rollback/setup + 게이트웨이 검증 v2 + Java/Spring 결정적 evaluator v3 + 설치 구성 선택·fable 오케스트레이터 팀 + verify-loop·carve-eval + 강한 모델 기준 감량). `/harness-audit` = 46 PASS.
+> 기준: 릴리스 **v0.6.0** (v1 하드닝 + 크로스에이전트 + update/rollback/setup + 게이트웨이 검증 v2 + Java/Spring 결정적 evaluator v3 + 설치 구성 선택·fable 오케스트레이터 팀 + verify-loop·carve-eval + 강한 모델 기준 감량). `/harness-audit` = 47 PASS.
 > 최종 갱신: 2026-08-03.
 
 초기 뼈대 매뉴얼·외부 도구 설치 리스트(구 `docs/md/`)는 v0.6.x에서 제거됐다(git 히스토리 보존). **현재 상태는 이 GUIDE를 정본으로 본다.**
@@ -78,10 +78,11 @@ harness/
     │   ├── harness-audit.sh      # 기계적 자가감사
     │   ├── eval-java.sh          # Java/Spring 결정적 출력검증 스코어러 (P±오차)
     │   ├── eval-state.sh         # 골든셋 상태 assert 채점기 (carve-eval 헬퍼)
-    │   └── tests/*.test.sh       # 훅별 어서션 (19 스위트)
+    │   ├── eval-gate.sh          # 골든셋 회귀 게이트 (추이 비교, CI용 결정론)
+    │   └── tests/*.test.sh       # 훅별 어서션 (20 스위트)
     ├── commands/             # /plan /verify /review /commit /harness-audit /eval /verify-loop /ponytail*
     ├── agents/               # evaluator·security-reviewer·pr-test-analyzer + fable 4종 (7)
-    ├── skills/               # handoff · changelog · version-changelog · anti-ai-slop · carve* · checklist-loop · eval-goldenset · theme-factory (9)
+    ├── skills/               # handoff · changelog · version-changelog · anti-ai-slop · carve* · checklist-loop · eval-goldenset · eval-init · theme-factory (10)
     └── rules/
         ├── common/           # security·testing·git-workflow (항상 적용)
         ├── java-spring/      # patterns (**/*.java) · gateway-testing (게이트웨이 파일)
@@ -105,9 +106,10 @@ harness/
 | `log-event.sh` | (서브프로세스 헬퍼) | 6훅 진입점의 이벤트를 `logs/*.jsonl`에 1줄 append; 보호경로/PII는 `<masked>` | 항상 0 |
 | `lib-protected.sh` | (데이터) | `PROTECTED_RE`(보호경로) + `SECRETS_RE`(시크릿) 단일 정의 — 재정의 금지. `protected-extra.regex`/`secrets-extra.regex` OR-병합(업데이트 보존) | — |
 | `logs-report.sh` | (수동 CLI) | `logs/*.jsonl` 요약 리포트; `--rotate N` N일 이전 로그 삭제; `--tokens [N]` 세션별 토큰 사용량(트랜스크립트 usage 합산 — 비용 폭주 사후 인지 방지) | 0 |
-| `harness-audit.sh` | (수동 CLI / `/harness-audit`) | 하네스 구성 46체크 PASS/FAIL (§7) | 실패 시 비영 |
+| `harness-audit.sh` | (수동 CLI / `/harness-audit`) | 하네스 구성 47체크 PASS/FAIL (§7) | 실패 시 비영 |
 | `eval-java.sh` | (수동 CLI) | Java/Spring 결정적 출력검증 — gradle grader(compile·pass^k·JaCoCo·정적분석·ArchUnit·N+1) 파싱 → 재현 가능한 `P±오차` JSON emit. LLM 없음, jq/gradle 부재 시 "unable"(fail-closed) | 0 (unable=1) |
 | `eval-state.sh` | (carve-eval 헬퍼) | 골든셋 **상태 assert**(`file_exists`·`file_contains`·`cmd_exit0`·`git_diff_contains`)를 워크디렉토리 실상태로 결정적 채점 — 에이전트 자기 보고 불신(리워드 해킹 방지). 불능 입력 fail-closed | 0 (unusable=1) |
+| `eval-gate.sh` | (수동 CLI / CI) | 골든셋 **회귀 판정** — `specs/eval-score.json` 추이만 읽어 직전 대비 하락폭을 본다. 채점은 carve-eval, 강제는 이 스크립트로 분리해 **CI가 모델 판단에 의존하지 않는다**. 추이 없음·손상·미채점은 `unable`(조용한 통과 금지) | report=항상 0 / block=회귀·unable 시 1 |
 
 **게이트웨이 확장** (게이트웨이 파일 변경 시): `stop-verify.sh`가 `*Gateway*/*Filter*/*Auth*/*RateLimit*.java` 변경을 감지하면 전체 대신 `*GatewayIntegration*` 통합 테스트만 증분 실행(GATE-04), 실패 시 exit 2(GATE-05).
 
@@ -136,7 +138,7 @@ harness/
 | `review.md` | `/review` | 변경분을 타입·보안·예외·상태관리 관점 검토. 예: `/review` |
 | `commit.md` | `/commit` | commitlint 준수 커밋 메시지 준비. **자동호출 비활성**(`disable-model-invocation`) — 사용자만. 예: `/commit` |
 | `commit-branch.md` | `/commit-branch` | 현재 브랜치에 Conventional Commits로 커밋 + 푸시. `main` 직접·`--no-verify` 금지. 자동호출 비활성. 예: `/commit-branch` |
-| `harness-audit.md` | `/harness-audit` | 하네스 구성 46체크 PASS/FAIL(§7). 예: `/harness-audit` |
+| `harness-audit.md` | `/harness-audit` | 하네스 구성 47체크 PASS/FAIL(§7). 예: `/harness-audit` |
 | `eval.md` | `/eval` | carve-eval 워크플로 실행(골든셋 채점). 예: `/eval` |
 | `verify-loop.md` | `/verify-loop` | carve-verify-loop 워크플로(수정→검증 반복). 예: `/verify-loop` |
 | `ponytail*.md` (6) | `/ponytail…` | ponytail 모드 제어·audit·debt·gain·review·help |
@@ -263,11 +265,11 @@ bash .claude/hooks/harness-audit.sh      # 또는 슬래시 /harness-audit
 - **AUDIT-05**: 규칙 위생 — 빈 파일 · ' copy' 파일 · 바이트 동일 중복.
 - **AUDIT-06**: 스킬 — 프런트매터 검증 · repo↔전역 이름 충돌.
 
-Claude Code 업그레이드마다 재실행해 게이트가 여전히 작동하는지 증명. 현재: **46 PASS, 0 FAIL**.
+Claude Code 업그레이드마다 재실행해 게이트가 여전히 작동하는지 증명. 현재: **47 PASS, 0 FAIL**.
 
 테스트 스위트도 함께:
 ```bash
-npm test   # 19 스위트 전부 green (= bash .claude/hooks/tests/run-all.sh)
+npm test   # 20 스위트 전부 green (= bash .claude/hooks/tests/run-all.sh)
 ```
 
 ---
@@ -344,7 +346,7 @@ S=$(mktemp -d); printf '#!/bin/sh\nexit 1\n' > "$S/rubocop"; chmod +x "$S/ruboco
 W=$(mktemp -d); (cd "$W" && git init -q && touch Gemfile app.rb && git add -A \
   && git -c user.email=t@t -c user.name=t commit -qm i && printf 'x\n' >> app.rb \
   && printf '{}' | PATH="$S:$PATH" bash "$OLDPWD/.claude/hooks/stop-verify.sh"; echo "exit=$?")  # 2면 성공
-bash .claude/hooks/harness-audit.sh                        # 46 PASS 유지 확인
+bash .claude/hooks/harness-audit.sh                        # 47 PASS 유지 확인
 ```
 
 > 주의: `stop-verify.sh`는 manifest 파일 — 하네스 `update` 시 덮이고 백업(`logs/harness-backup/`)에 남는다. 업데이트 후 커스텀 case를 백업에서 재적용하라 (UPDATED 로그에 표시됨).
@@ -365,7 +367,7 @@ Slack/위키에 그대로:
   .claude/hooks/protected-extra.regex 수정 PR로 올려주세요.
 ```
 
-신규 입장 확인법: `bash .claude/hooks/harness-audit.sh` 가 46 PASS면 정상 세팅.
+신규 입장 확인법: `bash .claude/hooks/harness-audit.sh` 가 47 PASS면 정상 세팅.
 
 ---
 
@@ -410,7 +412,7 @@ Slack/위키에 그대로:
 
 ## 10. 검증 / 한계
 
-- 훅 13개 `bash -n` clean · 테스트 19 스위트(260건) 전부 통과(`npm test`) · `/harness-audit` 46 PASS. (2026-08-03 실검증)
+- 훅 14개 `bash -n` clean · 테스트 20 스위트(280건) 전부 통과(`npm test`) · `/harness-audit` 47 PASS. (2026-08-03 실검증)
 - **한계(적대적 감사로 실측한 천장, 2026-08-03)**: ① Bash 쓰기 가드는 명령 표면만 — 변수 간접(`F=.env; … > $F`)·인터프리터 경유(`python3 -c`) 미탐 ② 시크릿 스캔은 리터럴 매칭 — base64·분할 조립 미탐 ③ 위험 명령은 셸 alias/함수로 감싸면 미탐, `curl -o f && bash f` 미탐 ④ Stop 게이트는 6스택(Java·Node·Python·Go·Rust·bash)만, 각 스택 툴체인 설치 시에만 작동 ⑤ checklist 게이트는 삭제·threshold 하향은 막지만 **거짓 채점 내용**은 못 막음 ⑥ 코드 `TODO/FIXME` 스캔 범위 밖 ⑦ `LICENSE` 미추가(보류). 재현: 우회 프로브 34종(`redteam-probe.sh`), 추적: `specs/HANDOFF.md`.
 - 훅/스킬 규약은 Claude Code 버전에 따라 바뀔 수 있음 — 도입 전 `/hooks`·`/plugins`로 현행 확인, `code.claude.com/docs` 대조.
 
