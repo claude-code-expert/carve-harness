@@ -30,6 +30,38 @@ CLAUDE_PROJECT_DIR="$REPO" bash "$AUDIT" >/dev/null 2>&1
 _livesnap() { cat "$REPO/.claude/settings.json" "$REPO/.claude/hooks/pretool-guard.sh" 2>/dev/null | cksum; }
 PRE_SNAP=$(_livesnap)
 
+# (1b) AUDIT-04 hooksPath branches. The copy needs a .git for the check to run at
+# all. An absolute path activates the gate exactly as well as the relative one —
+# rejecting it reported a live, working config as "unset" and blocked a Stop gate.
+r=$(mkroot); git -C "$r" init -q >/dev/null 2>&1
+git -C "$r" config core.hooksPath ".githooks"
+CLAUDE_PROJECT_DIR="$r" bash "$AUDIT" >/dev/null 2>&1
+[ $? -eq 0 ] && ok "hooksPath relative .githooks accepted (AUDIT-04)" || no "relative hooksPath rejected"
+git -C "$r" config core.hooksPath "$r/.githooks"
+CLAUDE_PROJECT_DIR="$r" bash "$AUDIT" >/dev/null 2>&1
+[ $? -eq 0 ] && ok "hooksPath absolute path accepted (AUDIT-04)" || no "absolute hooksPath rejected"
+git -C "$r" config core.hooksPath "/tmp/not-our-hooks"
+out=$(CLAUDE_PROJECT_DIR="$r" bash "$AUDIT" 2>&1); rc=$?
+[ "$rc" -ne 0 ] && printf '%s' "$out" | grep -q 'points outside .githooks' \
+  && ok "hooksPath pointing elsewhere -> non-zero, named as such (AUDIT-04)" || no "foreign hooksPath ($rc)"
+git -C "$r" config --unset core.hooksPath
+out=$(CLAUDE_PROJECT_DIR="$r" bash "$AUDIT" 2>&1); rc=$?
+[ "$rc" -ne 0 ] && printf '%s' "$out" | grep -q 'core.hooksPath unset' \
+  && ok "hooksPath unset -> non-zero, reported as unset (AUDIT-04)" || no "unset hooksPath ($rc)"
+rm -rf "$r"
+
+# (1c) AUDIT-03 PII masking: the audit's own masking check had no mutation test,
+# so deleting it from the audit reported PASS while log masking silently died.
+r=$(mkroot)
+for h in log-event.sh lib-protected.sh; do
+  [ -f "$r/.claude/hooks/$h" ] && { sed 's/<masked>/<plain>/g' "$r/.claude/hooks/$h" > "$r/x" \
+    && mv "$r/x" "$r/.claude/hooks/$h"; }
+done
+out=$(CLAUDE_PROJECT_DIR="$r" bash "$AUDIT" 2>&1); rc=$?
+[ "$rc" -ne 0 ] && printf '%s' "$out" | grep -q 'PII masking' \
+  && ok "PII masking removed -> non-zero (AUDIT-03)" || no "PII masking mutation ($rc)"
+rm -rf "$r"
+
 # (2) jq absent -> non-zero (PATH holds bash but not jq).
 r=$(mkroot); nob=$(mktemp -d); ln -s "$(command -v bash)" "$nob/bash"
 ( PATH="$nob" CLAUDE_PROJECT_DIR="$r" bash "$AUDIT" ) >/dev/null 2>&1
@@ -106,6 +138,36 @@ rm -rf "$r"
 r=$(mkroot); mkdir -p "$r/.claude/skills/broken-skill"; echo "# no frontmatter" > "$r/.claude/skills/broken-skill/SKILL.md"
 CLAUDE_PROJECT_DIR="$r" bash "$AUDIT" >/dev/null 2>&1
 [ $? -ne 0 ] && ok "skill w/o frontmatter -> non-zero (AUDIT-06)" || no "skill frontmatter non-zero"
+rm -rf "$r"
+
+# (15) AUDIT-09: an installed pack with a missing path -> non-zero; complete -> zero; LSP off -> non-zero.
+#      The copy gets packs/ + a harness-packs record naming python, and python's paths.
+mkpackroot() {
+  local r; r=$(mkroot)
+  cp -r "$REPO/packs" "$r/packs"
+  mkdir -p "$r/docs/rules/code-convention" "$r/docs/evaluator" "$r/specs/goldenset/starters"
+  cp "$REPO/docs/rules/code-convention/dev-stack-python.md" "$REPO/docs/rules/code-convention/dev-stack-fastapi.md" "$r/docs/rules/code-convention/"
+  cp -r "$REPO/docs/evaluator/python-example" "$r/docs/evaluator/python-example"
+  cp "$REPO/specs/goldenset/starters/python.json" "$r/specs/goldenset/starters/python.json"
+  printf 'python\n' > "$r/.claude/harness-packs"
+  jq '.enabledPlugins["pyright@claude-code-lsps"] = true' "$r/.claude/settings.json" > "$r/s.tmp" && mv "$r/s.tmp" "$r/.claude/settings.json"
+  printf '%s' "$r"
+}
+r=$(mkpackroot)
+out=$(CLAUDE_PROJECT_DIR="$r" bash "$AUDIT" 2>&1); rc=$?
+[ "$rc" -eq 0 ] && printf '%s' "$out" | grep -q 'pack python: every path present' \
+  && ok "complete python pack -> audit passes (AUDIT-09)" || no "complete pack audit (rc $rc): $(printf '%s' "$out" | grep FAIL | head -2)"
+printf '%s' "$out" | grep -q 'INFO: eval maturity LV' && ok "eval maturity readout printed (AUDIT-09)" || no "maturity readout missing"
+rm -rf "$r/.claude/stacks/python.sh"
+out=$(CLAUDE_PROJECT_DIR="$r" bash "$AUDIT" 2>&1); rc=$?
+[ "$rc" -ne 0 ] && printf '%s' "$out" | grep -q 'pack python: missing paths' \
+  && ok "pack path removed -> non-zero, names the path (AUDIT-09)" || no "missing pack path not caught ($rc)"
+rm -rf "$r"
+r=$(mkpackroot)
+jq '.enabledPlugins["pyright@claude-code-lsps"] = false' "$r/.claude/settings.json" > "$r/s.tmp" && mv "$r/s.tmp" "$r/.claude/settings.json"
+out=$(CLAUDE_PROJECT_DIR="$r" bash "$AUDIT" 2>&1); rc=$?
+[ "$rc" -ne 0 ] && printf '%s' "$out" | grep -q 'LSP pyright@claude-code-lsps not enabled' \
+  && ok "installed pack with LSP off -> non-zero (AUDIT-09)" || no "LSP mismatch not caught ($rc)"
 rm -rf "$r"
 
 # (10) isolation: live files unchanged after all mutations (hash compare — commit-independent).

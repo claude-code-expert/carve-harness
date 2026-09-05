@@ -72,8 +72,9 @@ const SCORE_SCHEMA = {
   required: ['axes', 'gaps', 'evidence'],
 }
 
-// 항목 점수 = 5축 합(0~100). 축 결측→0(누락은 감점), 각 축 0..max 클램프.
-// 정본 상수 — tests/eval-score.test.sh가 이 리터럴을 검증(드리프트 가드).
+// <score-helper> — 항목 점수 = 5축 합(0~100). 축 결측→0(누락은 감점), 각 축 0..max 클램프.
+// tests/eval-score.test.sh가 이 블록을 추출해 **그대로 실행**한다 — 테스트가 로직을
+// 재구현하면 여기서 클램프를 지워도 초록으로 남는다(실제로 그런 위장 상태였다).
 const AXIS_MAX = { exists: 25, match: 25, test: 25, contract: 15, no_regress: 10 }
 const scoreFromAxes = (axes) => {
   if (!axes || typeof axes !== 'object') return 0
@@ -83,6 +84,7 @@ const scoreFromAxes = (axes) => {
   }
   return sum
 }
+// </score-helper>
 
 const VERDICT_SCHEMA = {
   type: 'object',

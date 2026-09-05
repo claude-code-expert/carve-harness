@@ -41,7 +41,7 @@ argument-hint: "[--dry-run]"
 
 | 축 | 방법 | 쓰임 |
 |---|---|---|
-| 스택·테스트 러너·커버리지 도구 | `package.json`·`pyproject.toml`·`go.mod`·`build.gradle` 등 | 케이스의 `cmd_exit0` 형태 |
+| 스택·테스트 러너·커버리지 도구 | 설치 팩(`.claude/harness-packs`)의 `.claude/stacks/<pack>.sh`에서 `STACK_TEST_CMD_HINT`·`STACK_COVERAGE_MIN`을 읽는다. 팩 없으면 `package.json`·`pyproject.toml`·`go.mod`·`build.gradle` 직접 감지 | 케이스의 `cmd_exit0` 형태 · Q4 기본값 |
 | 진입점 목록 | 라우트·핸들러·CLI 서브커맨드·public API 스캔 | 크리티컬 경로 **후보** |
 | 수정 빈도 상위 | `git log --since=3.months --name-only --pretty=format: \| sort \| uniq -c \| sort -rn \| head -15` | 자주 깨지는 곳 = 1순위 후보 |
 | 하네스 차단 이력 | `cat logs/*.jsonl \| jq -r 'select(.decision=="block") \| [.tool,.reason//"-"] \| @tsv' \| sort \| uniq -c \| sort -rn` | 실제 막아낸 실수 패턴 |
@@ -106,6 +106,10 @@ argument-hint: "[--dry-run]"
 }
 ```
 
+- **시드는 설치 팩의 스타터에서 복사한다**: `specs/goldenset/starters/<lang>.json`(팩당 4건, 전부 상태 assert,
+  `--red`·정답 green 양방향 검증 완료). 케이스 `id`에 프로젝트 접두를 붙이고 `version: "1.0"`으로 편입 후보에
+  넣는다. 스타터 파일 자체는 하네스 자산이라 **수정하지 않는다**(update로 덮인다). 프로젝트 고유 케이스(Q1·Q2)는
+  스타터 형식을 복제해 만든다.
 - assert 타입·`setup` 규약은 `eval-goldenset` 스킬의 "골든셋 형식" 절이 정본이다.
 - **respondent 셸에는 세션 환경변수가 전달되지 않는다**(`CLAUDE_PROJECT_DIR`조차 없다). `setup`이 리포
   바깥 파일을 참조해야 하면(하네스 자신을 평가하는 스위트 등) **생성 시점의 절대경로를 박고 env 오버라이드를

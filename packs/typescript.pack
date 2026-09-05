@@ -1,0 +1,15 @@
+# typescript.pack — TypeScript / React / Next.js language pack
+name: typescript
+label: TypeScript / React / Next
+summary: rules react-next · Stop tsc/lint/test · LSP vtsls
+detect: package.json tsconfig.json
+lsp: vtsls@claude-code-lsps
+# ── install paths (one per line; unit of manifest/prune) ──
+.claude/rules/react-next
+docs/rules/code-convention/dev-stack-typescript.md
+docs/rules/code-convention/dev-stack-react.md
+docs/rules/code-convention/dev-stack-nextjs.md
+docs/rules/code-convention/dev-stack-javascript.md
+.claude/stacks/typescript.sh
+specs/goldenset/starters/typescript.json
+docs/evaluator/typescript-example

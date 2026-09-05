@@ -91,6 +91,68 @@ out=$(bash "$HOOK" "$W" "$AF")
 [ "$(printf '%s' "$out" | jq '.failed | length')" = "0" ] \
   && ok "tab inside an assert value survives" || no "tab in value split the record ($out)"
 
+# ── --case mode: read asserts straight out of the golden-set file ───────────
+GS=$(mktemp)
+cat > "$GS" <<'EOF'
+{"cases":[
+  {"id":"alpha","version":"1.0","prompt":"p","assert":[
+    {"type":"cmd_exit0","value":"grep -qE 'n ?\\+ ?n' code.js"},
+    {"type":"file_exists","value":"out.txt"}]},
+  {"id":"beta","version":"1.0","prompt":"p","assert":[
+    {"type":"cmd_exit0","value":"test -f never-here.txt"}]}
+]}
+EOF
+printf 'const double = (n) => n + n;\n' > "$W/code.js"
+
+# (8) REGRESSION GUARD — a backslash in an assert must reach grep intact.
+# Relaying assert values through an LLM prompt doubled `\+` into `\\+`, which
+# matches nothing; three golden-set cases scored 0 for that reason alone.
+out=$(bash "$HOOK" "$W" "$GS" --case alpha)
+[ "$(printf '%s' "$out" | jq '.failed | length')" = "0" ] \
+  && ok "--case: backslash in regex survives to the grader (no double-escape)" \
+  || no "backslash regression ($out)"
+
+# (9) --case selects only that case's asserts
+out=$(bash "$HOOK" "$W" "$GS" --case beta)
+printf '%s' "$out" | jq -e '.failed | length == 1 and (.[0] | test("never-here"))' >/dev/null \
+  && ok "--case grades only the named case" || no "case selection ($out)"
+
+# (10) unknown case id is fail-closed, never an empty pass
+out=$(bash "$HOOK" "$W" "$GS" --case nope); rc=$?
+[ "$rc" -ne 0 ] && printf '%s' "$out" | grep -q 'eval-state:unusable' \
+  && ok "unknown --case id fails closed" || no "unknown case ($rc, $out)"
+
+# (11) a duplicated id must not silently grade the first match
+cat > "$GS" <<'EOF'
+{"cases":[
+  {"id":"dup","version":"1.0","prompt":"p","assert":[{"type":"cmd_exit0","value":"true"}]},
+  {"id":"dup","version":"1.0","prompt":"p","assert":[{"type":"cmd_exit0","value":"false"}]}
+]}
+EOF
+out=$(bash "$HOOK" "$W" "$GS" --case dup); rc=$?
+[ "$rc" -ne 0 ] && printf '%s' "$out" | grep -q 'eval-state:unusable' \
+  && ok "duplicated --case id fails closed" || no "duplicate case ($rc, $out)"
+
+# (12) an empty assert value must fail, never pass. `file_exists` with "" would
+# probe "$W/" — a directory that always exists — and score green for nothing.
+cat > "$GS" <<'EOF'
+{"cases":[{"id":"empty","version":"1.0","prompt":"p","assert":[
+  {"type":"file_exists","value":""},
+  {"type":"cmd_exit0","value":""}
+]}]}
+EOF
+out=$(bash "$HOOK" "$W" "$GS" --case empty)
+printf '%s' "$out" | jq -e '.failed | length == 2 and all(.[]; test("<empty>"))' >/dev/null \
+  && ok "empty assert value fails closed (both types)" || no "empty value ($out)"
+
+# same contract in the bare-array mode
+printf '[{"type":"file_exists","value":""}]' > "$AF"
+out=$(bash "$HOOK" "$W" "$AF")
+[ "$(printf '%s' "$out" | jq '.failed | length')" = "1" ] \
+  && ok "empty value fails closed in array mode too" || no "empty value array mode ($out)"
+
+rm -f "$GS"
+
 rm -rf "$W" "$AF"
 printf -- '---\n%s passed, %s failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]

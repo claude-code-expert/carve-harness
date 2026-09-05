@@ -29,13 +29,13 @@
 
 ## P1 — 게이트 신뢰성
 
-### 1. 2렌즈 5축 루브릭 채점 (`carve-verify-loop` 보강) `[~]`
+### 1. 2렌즈 5축 루브릭 채점 (`carve-verify-loop` 보강) `[x]`
 - **덱 근거**: §4 "5축 100점, 2렌즈 min" — `exists 25 / match 25 / test 25 / contract 15 / no-regress 10`, `min(code-match, test-pass)`.
-- **현재**: `carve-verify-loop.js`의 `SCORE_SCHEMA`는 단일 `score`(0~100) + `gaps` + `evidence`. 축 분해·2렌즈 min 없음 → 낙관 편향 차단 장치 부재.
+- **완료**(2026-07-26 확인): `carve-verify-loop.js:77` `AXIS_MAX` 5축 + 축별 클램프, `test` 축 미실행 0점 → 최대 75점.
 - **SC**:
-  - [ ] `SCORE_SCHEMA`에 5축 배점 필드 추가, 항목 점수 = `min(codeMatchLens, testPassLens)`.
-  - [ ] `test` 축 미실행 시 항목 최대 75점(95 게이트 자동 미달)임을 테스트로 증명.
-  - [ ] `checklist-loop` SKILL의 수동 SOP도 동일 루브릭으로 갱신(도구·수동 정합).
+  - [x] `SCORE_SCHEMA`에 5축 배점 필드 추가, 항목 점수 = `min(codeMatchLens, testPassLens)`.
+  - [x] `test` 축 미실행 시 항목 최대 75점(95 게이트 자동 미달)임을 테스트로 증명.
+  - [x] `checklist-loop` SKILL의 수동 SOP도 동일 루브릭으로 갱신(도구·수동 정합).
 
 ### 2. 유형별 허용 실패율 게이트 `[ ]`
 - **덱 근거**: §4 3계층 게이트 — `convention 5% / correctness 3% / domain_safety 0%`(불변식 위반 무조건 차단).
@@ -49,13 +49,17 @@
 
 ## P2 — 성숙도(EDD Lv1→Lv3)
 
-### 3. 골든셋 + 점수 시계열 `[ ]`
+### 3. 골든셋 + 점수 시계열 `[~]`
 - **덱 근거**: §4 "골든셋 고정 + 재채점 → 점수 시계열", §5 Step 0 "실패 20~50건으로 골든셋 v1".
-- **현재**: 없음. `verify-loop`은 이번 변경만 채점(추이 부재). `golden`은 theme-factory에서 무관하게만 등장.
+- **현재**(2026-09-06 동기): 하네스 자체 골든셋 20건(`carve-harness` 5 · `harness-guard` 5 · `harness-craft` 5 · `harness-hard` 5), `specs/eval-score.json` 4 run(최근 93). 언어팩 스타터 20건 추가(`specs/goldenset/starters/`, 5언어×4 — `/eval-init` 시드용, 하네스 `/eval` 글롭 밖). 범용 채점기 `eval-score.sh`(블루프린트 §5.7)·언어팩 체계는 `docs/md/language-packs/LP0~LP5-*.md`.
 - **SC**:
-  - [ ] `specs/goldenset/`에 실패 케이스(입력+기대) 20~50건 스키마 정의 + 예시 5건.
-  - [ ] 재채점 커맨드/스킬: 골든셋 전수 실행 → 케이스별 점수 기록(append-only 시계열 파일).
-  - [ ] 케이스 추가는 인간 검수 필수임을 절차에 명시(자기강화 방지).
+  - [x] `specs/goldenset/`에 실패 케이스(입력+기대) 20~50건 스키마 정의 + 예시 5건 → 하네스 20건 + 팩 스타터 20건.
+  - [x] 재채점 커맨드/스킬: 골든셋 전수 실행 → 케이스별 점수 기록(append-only 시계열 파일).
+  - [x] 케이스 추가는 인간 검수 필수임을 절차에 명시(자기강화 방지).
+  - [x] 프리플라이트 검증기(`carve-validate.sh`) — 설정 오류를 런 전에 분리, `--red`로 NO-SIGNAL 케이스 탐지.
+  - [x] 케이스 `version` 필수화 + 추이에 `caseVersion` 기록 + 직전 run과 다르면 `[VERSION CHANGED]` 경고.
+  - [x] 첫 실측 run(`/eval`) 수행 → baseline 확보. run#1 60점(채점기 결함값, 기준 부적합) → run#2 **100점**(채점기 수정 후, 실질 baseline). `specs/eval-score.json` 2 run 기록.
+  - [x] **골든셋 난이도 보강** — `harness-hard.json` 5건 추가. 소재는 실제 관측된 실패: 이스케이프 파손 전송 · 소스 grep 위장 테스트 · `mv`로 실행권한 소실 · 비멱등 스크립트 · 빈 입력 처리. 전건 양방향 검증 통과. run#4 실측 93점(2건 부분 실패) — 회귀 탐지 여지 확보.
 
 ### 4. LLM-as-Judge 루브릭 그레이더 `[ ]`
 - **덱 근거**: §4 채점기 3종 — 모델형(G-Eval 루브릭, `guided_json` 스키마 강제, temperature 0, 다중 Judge 합의).
@@ -65,12 +69,12 @@
   - [ ] Judge-인간 일치율 측정 절차 문서화(κ≥0.6 통과 지표에만 단계 도입).
   - [ ] "경로가 아니라 결과를 채점" 원칙 반영(유효 변형에 감점 금지, 다구성 태스크 부분점수).
 
-### 5. pass@k / pass^k 일관성 측정 `[ ]`
+### 5. pass@k / pass^k 일관성 측정 `[x]`
 - **덱 근거**: §4 "능력과 일관성을 분리" — `pass@k = 1−(1−p)^k`(상한), `pass^k = p^k`(하한).
-- **현재**: 없음(단일 실행 채점). 데모는 통과, 프로덕션 반복 신뢰도 미측정.
+- **완료**: `carve-eval.js`가 케이스별 k회(상한 10) 독립 실행 → `pass_at_k`·`pass_pow_k`·`caseScore`(green/k) 동시 산출, 리포트에 `passAtK`/`passPowK` 집계.
 - **SC**:
-  - [ ] 지정 케이스를 k회 반복 실행 → pass@k·pass^k 동시 산출하는 스크립트/커맨드.
-  - [ ] 두 곡선 간극을 리포트("가끔 되는 시스템" 탐지).
+  - [x] 지정 케이스를 k회 반복 실행 → pass@k·pass^k 동시 산출하는 스크립트/커맨드.
+  - [x] 두 곡선 간극을 리포트("가끔 되는 시스템" 탐지).
 
 ---
 

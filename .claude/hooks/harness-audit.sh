@@ -64,6 +64,14 @@ for f in "$HOOKS_DIR"/*.sh; do
     no "bash -n $(basename "$f") FAILED (AUDIT-01)"
   fi
 done
+# Stack definitions are sourced by stop-verify/posttool-format — a syntax error
+# there breaks BOTH gates at once. One aggregated verdict (files vary per pack set).
+stacks_bad=0
+for f in "$AUDIT_ROOT/.claude/stacks"/*.sh; do
+  [ -e "$f" ] || continue
+  bash -n "$f" 2>/dev/null || { no "bash -n stacks/$(basename "$f") FAILED (AUDIT-01)"; stacks_bad=1; }
+done
+[ "$stacks_bad" -eq 0 ] && ok "bash -n every .claude/stacks/*.sh (AUDIT-01)"
 
 # ── AUDIT-02 ────────────────────────────────────────────────────────────────
 # Write-tool matcher covers all write tools + Bash.
@@ -154,9 +162,14 @@ fi
 # hooksPath is per-clone install state — only checkable inside a git repo.
 if [ -d "$AUDIT_ROOT/.git" ] && command -v git >/dev/null 2>&1; then
   hp=$(git -C "$AUDIT_ROOT" config core.hooksPath 2>/dev/null)
-  [ "$hp" = ".githooks" ] \
-    && ok "core.hooksPath=.githooks (AUDIT-04)" \
-    || no "core.hooksPath unset — run install.sh (AUDIT-04)"
+  # An absolute path to the same directory activates the gate just as well —
+  # rejecting it reported a live, working config as "unset". Distinguish the two:
+  # unset means no gate, a different path means the gate points somewhere else.
+  case "$hp" in
+    ".githooks"|"$AUDIT_ROOT/.githooks") ok "core.hooksPath -> .githooks (AUDIT-04)" ;;
+    "") no "core.hooksPath unset — run install.sh (AUDIT-04)" ;;
+    *)  no "core.hooksPath='$hp' points outside .githooks — commit gate inactive (AUDIT-04)" ;;
+  esac
 fi
 
 # Vendored offline binaries: verify only when shipped (absence is a valid,
@@ -212,15 +225,16 @@ fi
 
 # ── AUDIT-07 ────────────────────────────────────────────────────────────────
 # Gateway policy→gate (GWV-01 → GATE-04): if the gateway-testing rule ships, the
-# Stop gate must carry the gateway-targeted trigger — else the rule is an orphan
-# policy (documented but unenforced). Absent rule = not a gateway harness, skip.
+# java-spring stack definition (which stop-verify sources) must carry the
+# gateway-targeted trigger — else the rule is an orphan policy (documented but
+# unenforced). Absent rule = not a gateway harness, skip.
 GWR="$AUDIT_ROOT/.claude/rules/java-spring/gateway-testing.md"
-SV="$HOOKS_DIR/stop-verify.sh"
+SV="$AUDIT_ROOT/.claude/stacks/java-spring.sh"
 if [ -f "$GWR" ]; then
   if grep -q 'GatewayIntegration' "$SV" 2>/dev/null; then
-    ok "policy->gate: gateway rule -> stop-verify GATE-04 trigger (AUDIT-07)"
+    ok "policy->gate: gateway rule -> stacks/java-spring.sh GATE-04 trigger (AUDIT-07)"
   else
-    no "orphan policy: gateway-testing.md ships but stop-verify has no GATE-04 trigger (AUDIT-07)"
+    no "orphan policy: gateway-testing.md ships but stacks/java-spring.sh has no GATE-04 trigger (AUDIT-07)"
   fi
 fi
 
@@ -236,6 +250,60 @@ if [ -f "$EJ" ]; then
   else
     no "orphan tool: eval-java.sh ships but ArchUnit template/build snippet missing or not +x (AUDIT-08)"
   fi
+fi
+
+# ── AUDIT-09 ────────────────────────────────────────────────────────────────
+# Language-pack integrity: an installed pack must be complete (every manifest path
+# present, its stack file sourced by the gates, its golden-set starter structurally
+# valid) and its LSP toggle must agree with the install record. A half-installed
+# pack is an orphan gate — rules without a stack file, or a stack file without
+# rules. Source repo (no harness-packs record) audits every pack. No packs/ dir =
+# pre-pack install, section self-skips.
+if [ -d "$AUDIT_ROOT/packs" ] && [ -f "$HOOKS_DIR/lib-packs.sh" ]; then
+  PACKS_DIR="$AUDIT_ROOT/packs"
+  # shellcheck source=/dev/null
+  source "$HOOKS_DIR/lib-packs.sh"
+  if [ -f "$AUDIT_ROOT/.claude/harness-packs" ]; then
+    audit_packs=$(tr '\n' ' ' < "$AUDIT_ROOT/.claude/harness-packs")
+  else
+    audit_packs=$(pack_list | tr '\n' ' ')
+  fi
+  for pk in $audit_packs; do
+    [ -f "$(pack_file "$pk")" ] || { no "pack '$pk' recorded but packs/$pk.pack missing (AUDIT-09)"; continue; }
+    missing=$(pack_check "$pk" "$AUDIT_ROOT" 2>/dev/null | tr '\n' ' ')
+    if [ -z "$missing" ]; then
+      ok "pack $pk: every path present (AUDIT-09)"
+    else
+      no "pack $pk: missing paths — $missing(install.sh pack add $pk) (AUDIT-09)"
+    fi
+    st=$(pack_paths "$pk" | grep -E '^\.claude/stacks/.*\.sh$' | head -1)
+    if [ -n "$st" ]; then
+      bash -n "$AUDIT_ROOT/$st" 2>/dev/null && grep -q 'stack_gate' "$AUDIT_ROOT/$st" 2>/dev/null \
+        && ok "pack $pk: stack file defines stack_gate (AUDIT-09)" \
+        || no "pack $pk: $st unparsable or lacks stack_gate — Stop gate inert (AUDIT-09)"
+    fi
+    starter=$(pack_paths "$pk" | grep -E '^specs/goldenset/starters/.*\.json$' | head -1)
+    if [ -n "$starter" ] && [ -f "$AUDIT_ROOT/$starter" ]; then
+      ( cd "$AUDIT_ROOT" && bash "$HOOKS_DIR/carve-validate.sh" "$starter" ) >/dev/null 2>&1 \
+        && ok "pack $pk: golden-set starter validates (AUDIT-09)" \
+        || no "pack $pk: starter $starter fails carve-validate (AUDIT-09)"
+    fi
+    lsp=$(pack_meta "$pk" lsp)
+    if [ -n "$lsp" ] && [ -f "$AUDIT_ROOT/.claude/harness-packs" ] && [ -f "$S" ] \
+       && jq -e '.enabledPlugins' "$S" >/dev/null 2>&1; then
+      [ "$(jq -r --arg k "$lsp" '.enabledPlugins[$k] // false' "$S")" = "true" ] \
+        && ok "pack $pk: LSP $lsp enabled (AUDIT-09)" \
+        || no "pack $pk installed but LSP $lsp not enabled in settings.json (AUDIT-09)"
+    fi
+  done
+  # Eval maturity readout (blueprint §5.12) — informational, never a FAIL.
+  gs=$(ls "$AUDIT_ROOT"/specs/goldenset/*.json 2>/dev/null | wc -l | tr -d ' ')
+  runs=$(jq '[.runs[]? | select(.suiteScore != null)] | length' "$AUDIT_ROOT/specs/eval-score.json" 2>/dev/null || echo 0)
+  if [ "$gs" = 0 ]; then lv="LV0 — 골든셋 없음. 다음 한 단: /eval-init (설치 팩의 스타터를 시드로)"
+  elif [ "${runs:-0}" = 0 ]; then lv="LV1 — 골든셋 ${gs}파일, 실측 run 없음. 다음 한 단: /eval 로 baseline"
+  elif [ -f "$AUDIT_ROOT/.github/workflows/eval-gate.yml" ]; then lv="LV3 — 골든셋·추이 ${runs}run·CI 게이트 배선. 다음 한 단: block 모드 + required 태그"
+  else lv="LV2 — 골든셋·추이 ${runs}run, CI 게이트 없음. 다음 한 단: /eval-init 로 eval-gate.yml 배선"; fi
+  printf 'INFO: eval maturity %s (AUDIT-09)\n' "$lv"
 fi
 
 printf -- '---\n%s passed, %s failed\n' "$pass" "$fail"
