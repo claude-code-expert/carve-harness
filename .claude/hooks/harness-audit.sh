@@ -64,6 +64,14 @@ for f in "$HOOKS_DIR"/*.sh; do
     no "bash -n $(basename "$f") FAILED (AUDIT-01)"
   fi
 done
+# Stack definitions are sourced by stop-verify/posttool-format — a syntax error
+# there breaks BOTH gates at once. One aggregated verdict (files vary per pack set).
+stacks_bad=0
+for f in "$AUDIT_ROOT/.claude/stacks"/*.sh; do
+  [ -e "$f" ] || continue
+  bash -n "$f" 2>/dev/null || { no "bash -n stacks/$(basename "$f") FAILED (AUDIT-01)"; stacks_bad=1; }
+done
+[ "$stacks_bad" -eq 0 ] && ok "bash -n every .claude/stacks/*.sh (AUDIT-01)"
 
 # ── AUDIT-02 ────────────────────────────────────────────────────────────────
 # Write-tool matcher covers all write tools + Bash.
@@ -217,15 +225,16 @@ fi
 
 # ── AUDIT-07 ────────────────────────────────────────────────────────────────
 # Gateway policy→gate (GWV-01 → GATE-04): if the gateway-testing rule ships, the
-# Stop gate must carry the gateway-targeted trigger — else the rule is an orphan
-# policy (documented but unenforced). Absent rule = not a gateway harness, skip.
+# java-spring stack definition (which stop-verify sources) must carry the
+# gateway-targeted trigger — else the rule is an orphan policy (documented but
+# unenforced). Absent rule = not a gateway harness, skip.
 GWR="$AUDIT_ROOT/.claude/rules/java-spring/gateway-testing.md"
-SV="$HOOKS_DIR/stop-verify.sh"
+SV="$AUDIT_ROOT/.claude/stacks/java-spring.sh"
 if [ -f "$GWR" ]; then
   if grep -q 'GatewayIntegration' "$SV" 2>/dev/null; then
-    ok "policy->gate: gateway rule -> stop-verify GATE-04 trigger (AUDIT-07)"
+    ok "policy->gate: gateway rule -> stacks/java-spring.sh GATE-04 trigger (AUDIT-07)"
   else
-    no "orphan policy: gateway-testing.md ships but stop-verify has no GATE-04 trigger (AUDIT-07)"
+    no "orphan policy: gateway-testing.md ships but stacks/java-spring.sh has no GATE-04 trigger (AUDIT-07)"
   fi
 fi
 

@@ -10,3 +10,4 @@ docs/rules/code-convention/dev-stack-typescript.md
 docs/rules/code-convention/dev-stack-react.md
 docs/rules/code-convention/dev-stack-nextjs.md
 docs/rules/code-convention/dev-stack-javascript.md
+.claude/stacks/typescript.sh

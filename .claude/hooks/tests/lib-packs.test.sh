@@ -29,7 +29,10 @@ pack_meta nope lsp >/dev/null 2>&1 && no "pack_meta unknown pack should rc 1" ||
 p=$(pack_paths typescript | head -1)
 [ "$p" = ".claude/rules/react-next" ] && ok "pack_paths first path" || no "pack_paths first: $p"
 pack_paths typescript | grep -Eq '^(name|lsp|detect):' && no "pack_paths leaks headers" || ok "pack_paths excludes headers"
-[ -z "$(pack_paths go)" ] && ok "pack with no paths -> empty, rc 0" || no "empty pack paths"
+E=$(mktemp -d); printf 'name: empty\ndetect: nothing\n' > "$E/empty.pack"
+[ -z "$(PACKS_DIR="$E" bash -c "source '$LIB'; pack_paths empty; echo rc=\$?" | grep -v '^rc=0$')" ] \
+  && ok "pack with no paths -> empty, rc 0" || no "empty pack paths"
+rm -rf "$E"
 
 # (4) every listed path exists in the source tree — a dangling path would be a
 #     silent SKIP at install and an orphan in the manifest.

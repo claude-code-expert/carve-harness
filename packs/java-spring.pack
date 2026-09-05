@@ -9,3 +9,4 @@ lsp: jdtls@claude-code-lsps
 .claude/hooks/eval-java.sh
 docs/rules/code-convention/dev-stack-java-spring.md
 docs/evaluator/java-example
+.claude/stacks/java-spring.sh

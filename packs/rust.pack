@@ -5,3 +5,4 @@ summary: cargo check/test gate · LSP rust-analyzer
 detect: Cargo.toml
 lsp: rust-analyzer@claude-code-lsps
 # ── install paths (filled in LP1/LP3) ──
+.claude/stacks/rust.sh

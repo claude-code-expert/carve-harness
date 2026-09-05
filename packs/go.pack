@@ -5,3 +5,4 @@ summary: go build/vet/test gate · LSP gopls
 detect: go.mod
 lsp: gopls@claude-code-lsps
 # ── install paths (filled in LP1/LP3) ──
+.claude/stacks/go.sh

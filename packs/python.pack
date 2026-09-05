@@ -8,3 +8,4 @@ lsp: pyright@claude-code-lsps
 docs/rules/code-convention/dev-stack-python.md
 docs/rules/code-convention/dev-stack-fastapi.md
 docs/evaluator/python-example
+.claude/stacks/python.sh

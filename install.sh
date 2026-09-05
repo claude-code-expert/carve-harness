@@ -216,7 +216,7 @@ run_setup() {
 # 설치 대상 목록 — uninstall.sh는 설치 시 기록되는 manifest만 신뢰한다.
 # 구성(component) 5종 + core. 설치 시 선택 가능, core는 항상 설치.
 MD_PATHS=( CLAUDE.md AGENTS.md .cursorrules codex.md .claude/CLAUDE.md .claude/rules docs/rules specs/README.md )
-HOOK_PATHS=( .claude/settings.json .claude/hooks .githooks )
+HOOK_PATHS=( .claude/settings.json .claude/hooks .claude/stacks .githooks )   # stacks: 게이트 스택 정의(팩 단위 prune)
 SKILL_PATHS=( .claude/skills )
 DEV_SKILLS=""   # 배포 제외 스킬 목록(공백 구분). 현재 없음 — carve-guide는 v0.0.13부터 배포 포함. 훅과 build_items·strip이 이 목록을 참조
 CMD_PATHS=( .claude/commands )
@@ -232,7 +232,7 @@ COMPFILE="$HERE/.claude/harness-components"   # 선택 기록 — update가 신�
 
 comp_of() { # $1=경로 → 구성 이름
   case "$1" in
-    .claude/hooks*|.githooks*|.claude/settings.json) echo hooks ;;
+    .claude/hooks*|.claude/stacks*|.githooks*|.claude/settings.json) echo hooks ;;
     .claude/skills*)   echo skills ;;
     .claude/commands*) echo commands ;;
     .claude/agents*|.claude/workflows*|docs/md/*) echo orchestrator ;;
@@ -461,7 +461,7 @@ prune_expand_manifest() {
   while IFS= read -r p; do
     [ -n "$p" ] || continue
     case "$p" in
-      .claude/skills|.claude/commands|.claude/agents|.claude/hooks)
+      .claude/skills|.claude/commands|.claude/agents|.claude/hooks|.claude/stacks)
         if [ -d "$HERE/$p" ]; then
           for f in "$HERE/$p"/*; do [ -e "$f" ] && printf '%s\n' "$p/${f##*/}"; done
         else printf '%s\n' "$p"; fi ;;
@@ -682,7 +682,7 @@ if [ "$NEED_FETCH" -eq 1 ]; then
         # file and fail-closed EVERY commit. Fill only MISSING children instead.
         # ponytail: one-level heal — nested partial hook subdirs are not a real case.
         case "$p" in
-          .claude/hooks | .githooks)
+          .claude/hooks | .claude/stacks | .githooks)
             if [ -d "$SRC/$p" ] && [ -d "$HERE/$p" ]; then
               healed=0
               for hc in "$SRC/$p"/*; do

@@ -285,9 +285,9 @@ npm test   # 20 스위트 전부 green (= bash .claude/hooks/tests/run-all.sh)
 |-------------|-----------|
 | 도메인 금지 규칙 추가 | `CLAUDE.md` "절대 금지" / `.claude/rules/*` |
 | 보호 경로·시크릿 패턴 추가 | `.claude/hooks/protected-extra.regex` / `secrets-extra.regex` (1줄 1정규식, 업데이트에도 보존 — lib 직접 수정은 update 시 덮임) 또는 `install.sh setup` |
-| 포맷터 변경 | `.claude/hooks/posttool-format.sh` case |
-| 검증 명령 변경 | `.claude/hooks/stop-verify.sh` (증분 스코프 유지) |
-| 새 스택 추가(예: Python) | `.claude/rules/<stack>/` + 훅 case |
+| 포맷터 변경 | `.claude/stacks/<pack>.sh`의 `stack_format`·`STACK_FORMAT_RE` |
+| 검증 명령 변경 | `.claude/stacks/<pack>.sh`의 `stack_gate` (증분 스코프는 `STACK_CHANGE_RE`) |
+| 새 스택 추가(예: Ruby) | `.claude/stacks/<stack>.sh` 1파일 + `.claude/rules/<stack>/` (§8.2) |
 | settings.json 변경 | **safety.md 승인 게이트** — 임의 변경 금지 |
 
 ### 8.1 도메인 규칙 보강 — 어떻게 쌓나
@@ -316,7 +316,7 @@ npm test   # 20 스위트 전부 green (= bash .claude/hooks/tests/run-all.sh)
 
 ### 8.2 미지원 스택 게이트 추가 — Ruby 예시 (그대로 복붙 후 치환)
 
-Java·Node/TS·Python·Go·Rust·bash는 내장이다. 그 외(Ruby·PHP·C#·Swift·Dart)는 3파일 수정이면 붙는다.
+Java·TS·Python·Go·Rust·bash는 내장 스택 파일이 있다(`.claude/stacks/`). 그 외(Ruby·PHP·C#·Swift·Dart)는 **스택 파일 1개**로 붙는다 — `stop-verify.sh`·`posttool-format.sh`는 손대지 않는다.
 
 **① 규칙 파일** — `.claude/rules/ruby/conventions.md` 생성 (`paths` glob이 자동 로드 트리거):
 
@@ -329,32 +329,35 @@ paths: ["**/*.rb"]
 - 메서드는 한 가지 일만. 파일당 클래스 1개.
 ```
 
-**② Stop 게이트** — `.claude/hooks/stop-verify.sh`의 변경 감지부와 게이트부에 각각 추가:
+**② 스택 파일** — `.claude/stacks/ruby.sh` (소싱 전용: 변수·함수만, 부작용 없음. 계약은 `java-spring.sh` 머리 주석):
 
 ```bash
-# 감지부 — 기존 java/node/py/go/rs/sh 라인 아래에:
-rb_changed=1
-[ -n "$CHANGED" ] && { printf '%s\n' "$CHANGED" | grep -Eq '\.rb$|Gemfile' && rb_changed=1 || rb_changed=0; }
-
-# 게이트부 — 기존 스택 블록들 아래에 (도구 없으면 skip = 기존 관례):
-if [ "$rb_changed" -eq 1 ] && [ -f Gemfile ]; then
-  command -v rubocop >/dev/null 2>&1 && { rubocop 2>&1 | tail -20 || fail=1; }
-  command -v rspec   >/dev/null 2>&1 && { rspec   2>&1 | tail -20 || fail=1; }
-fi
+#!/usr/bin/env bash
+STACK_ID=ruby
+STACK_CHANGE_RE='\.rb$|Gemfile'          # 이 정규식이 git 변경에 맞을 때만 게이트 실행(증분)
+STACK_FORMAT_RE='\.rb$'                  # PostToolUse 포맷 대상('' = 없음)
+STACK_FORMAT_TOOL=rubocop
+stack_format() { command -v rubocop >/dev/null 2>&1 || return 2; rubocop -a "$1"; }   # 2 = 도구 없음
+stack_gate() {                           # 0 = 통과, 1 = 실패(exit 2로 차단). 도구 없으면 skip = 기존 관례
+  [ -f Gemfile ] || return 0
+  command -v rubocop >/dev/null 2>&1 && { rubocop 2>&1 | tail -20 || return 1; }
+  command -v rspec   >/dev/null 2>&1 && { rspec   2>&1 | tail -20 || return 1; }
+  return 0
+}
 ```
 
-**③ 검증** — 게이트가 진짜 무는지 확인하고 끝. 툴체인이 없는 머신에서도 증명하려면 스텁을 PATH에 얹는다(내장 스택 테스트가 쓰는 방식):
+**③ 검증** — 게이트가 진짜 무는지 확인하고 끝. 툴체인이 없는 머신에서도 증명하려면 스텁을 PATH에 얹는다(`tests/stacks.test.sh`가 쓰는 방식):
 
 ```bash
-bash -n .claude/hooks/stop-verify.sh                       # 문법
+bash -n .claude/stacks/ruby.sh                             # 문법
 S=$(mktemp -d); printf '#!/bin/sh\nexit 1\n' > "$S/rubocop"; chmod +x "$S/rubocop"
 W=$(mktemp -d); (cd "$W" && git init -q && touch Gemfile app.rb && git add -A \
   && git -c user.email=t@t -c user.name=t commit -qm i && printf 'x\n' >> app.rb \
   && printf '{}' | PATH="$S:$PATH" bash "$OLDPWD/.claude/hooks/stop-verify.sh"; echo "exit=$?")  # 2면 성공
-bash .claude/hooks/harness-audit.sh                        # 47 PASS 유지 확인
+bash .claude/hooks/harness-audit.sh                        # PASS 유지 확인(스택 파일 bash -n 포함)
 ```
 
-> 주의: `stop-verify.sh`는 manifest 파일 — 하네스 `update` 시 덮이고 백업(`logs/harness-backup/`)에 남는다. 업데이트 후 커스텀 case를 백업에서 재적용하라 (UPDATED 로그에 표시됨).
+> `.claude/stacks/`는 설치본에서 훅과 같이 자기보호(GUARD-07) 대상이다 — 에이전트가 `stack_gate`를 `return 0`으로 바꿔 게이트를 무력화할 수 없다. 스택 파일은 manifest 범위라 `update` 시 덮이고 백업(`logs/harness-backup/`)에 남는다. 언어팩으로 배포하려면 `packs/<name>.pack`에 경로 1줄을 추가한다(LP2 이후 설치 대화창에 노출).
 
 ### 8.3 팀 공지 — 복붙용
 

@@ -1,14 +1,18 @@
 #!/usr/bin/env bash
 # Stop: 스택 감지 후 빌드/타입/테스트 게이트 (실패 시 exit 2)
+# 스택별 판정은 .claude/stacks/<pack>.sh 가 정의한다(언어팩 단위로 설치·제거). 이 파일은
+# 공통 골격만: 루프가드 → jq → 변경 감지 → 스택 순회 → 판정 로그.
 # pipefail 필수: `cmd | tail`의 종료코드는 tail(항상 0) 것이므로,
 # 이게 없으면 실제 명령이 실패해도 fail이 set되지 않아 게이트가 무력화된다.
 set -o pipefail
 
-LOG_EVENT="$(dirname "${BASH_SOURCE[0]}")/log-event.sh"
+HOOKS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+STACKS_DIR="$HOOKS_DIR/../stacks"
+LOG_EVENT="$HOOKS_DIR/log-event.sh"
 
 # GATE-01: forced-continuation guard, single-sourced with checklist-gate so the
 # wedge-prevention invariant cannot drift (lib-stop-guard.sh). Reads stdin once.
-source "$(dirname "${BASH_SOURCE[0]}")/lib-stop-guard.sh"
+source "$HOOKS_DIR/lib-stop-guard.sh"
 stop_loop_yield verify "$LOG_EVENT"
 # D-02: jq-absent is best-effort (non-blocking) here — asymmetric with the write guard,
 # which fails closed. Hard-failing verification on a jq-less box would block completion.
@@ -23,135 +27,28 @@ fail=0
 # verify all (never skip when change-detection is impossible).
 have_git=0
 command -v git >/dev/null 2>&1 && git rev-parse --is-inside-work-tree >/dev/null 2>&1 && have_git=1
-java_changed=1; node_changed=1; py_changed=1; sh_changed=1; go_changed=1; rs_changed=1
-# GATE-04 defaults: git 없으면 full(java_other=1, gw off) — 회피는 변경 식별 가능할 때만.
-gw_changed=0; java_other=1
-# 게이트웨이 파일 판별 단일 소스 — audit(AUDIT-07)이 같은 개념을 참조.
-GW_RE='([Gg]ateway|[Ff]ilter|[Aa]uth|[Rr]ate[Ll]imit)[^/]*\.java$|/gateway/.*\.java$'
-if [ "$have_git" -eq 1 ]; then
-  CHANGED=$(git status --porcelain 2>/dev/null | sed 's/^...//')
-  printf '%s\n' "$CHANGED" | grep -Eq '\.(java|kt|gradle)'    && java_changed=1 || java_changed=0
-  printf '%s\n' "$CHANGED" | grep -Eq '\.(ts|tsx)$|package\.json' && node_changed=1 || node_changed=0
-  printf '%s\n' "$CHANGED" | grep -Eq '\.py$|pyproject\.toml|requirements[^/]*\.txt|setup\.(py|cfg)' && py_changed=1 || py_changed=0
-  printf '%s\n' "$CHANGED" | grep -Eq '\.sh$|^\.githooks/'     && sh_changed=1 || sh_changed=0
-  printf '%s\n' "$CHANGED" | grep -Eq '\.go$|go\.(mod|sum)'    && go_changed=1 || go_changed=0
-  printf '%s\n' "$CHANGED" | grep -Eq '\.rs$|Cargo\.(toml|lock)' && rs_changed=1 || rs_changed=0
-  # GATE-04: 게이트웨이 관련 java 변경 여부 + 그 외 java 변경 여부(섞이면 full).
-  printf '%s\n' "$CHANGED" | grep -Eq "$GW_RE" && gw_changed=1 || gw_changed=0
-  printf '%s\n' "$CHANGED" | grep -E '\.(java|kt|gradle)$' | grep -Ev "$GW_RE" | grep -q . && java_other=1 || java_other=0
-fi
+CHANGED=""
+[ "$have_git" -eq 1 ] && CHANGED=$(git status --porcelain 2>/dev/null | sed 's/^...//')
+export have_git CHANGED HOOKS_DIR
 
-# --- Java/Spring: 컴파일 + 테스트 (변경 시에만) ---
-# 커버리지 80%는 build.gradle의 jacocoTestCoverageVerification으로 강제 → test 태스크가 실패한다.
-# GATE-04: 게이트웨이 파일만 변경 → *GatewayIntegration* 타깃만(전체 빌드 회피).
-#          다른 java가 섞이면 full test(게이트웨이 통합 테스트 포함)로 안전하게 간다.
-if [ "$java_changed" -eq 1 ]; then
-  GDIR=""
-  [ -f gradlew ] && GDIR="."
-  [ -z "$GDIR" ] && [ -f backend/gradlew ] && GDIR="backend"
-  if [ -n "$GDIR" ]; then
-    if [ "$java_other" -eq 0 ] && [ "$gw_changed" -eq 1 ]; then
-      gw_out=$( cd "$GDIR" && ./gradlew compileJava test --tests '*GatewayIntegration*' -q 2>&1 ); gw_rc=$?
-      printf '%s\n' "$gw_out" | tail -20
-      if [ "$gw_rc" -ne 0 ]; then
-        # gradle는 --tests 매칭 0개면 실패 → 컨벤션 미채택 프로젝트의 false-fail 방지(best-effort skip).
-        printf '%s\n' "$gw_out" | grep -qiE 'no tests found|does not match' \
-          && echo "[carve-harness:verify] *GatewayIntegration* 매칭 테스트 없음 — 스킵(best-effort)" >&2 \
-          || fail=1
-      fi
-    else
-      ( cd "$GDIR" && ./gradlew compileJava test -q ) 2>&1 | tail -20 || fail=1
-    fi
-  fi
-fi
-
-# --- React/Next/TS: 타입체크 + 테스트 ---
-# 커버리지 80%는 vitest/jest --coverage 임계값(package.json)으로 강제.
-run_node() {  # $1 = 프로젝트 디렉토리
-  local PM=pnpm; command -v pnpm >/dev/null 2>&1 || PM=npm   # 단일 PM 감지(tsc·lint·test 공유)
-  # package.json 존재 ≠ TS 프로젝트 — tsconfig 있을 때만 타입체크 (셸 전용 리포 false fail 방지)
-  if [ -f "$1/tsconfig.json" ]; then
-    ( cd "$1" && "$PM" exec tsc --noEmit 2>&1 | tail -20 ) || return 1
-  fi
-  # lint 스크립트가 있을 때만 실행 — CI의 `npm run lint`를 로컬 Stop으로 앞당긴다(shift-left).
-  # 타입체크가 못 잡는 정적 규칙(react-hooks·set-state-in-effect 등)의 CI 유출 방지.
-  # 없으면 스킵 — lint를 안 쓰는 프로젝트의 false fail 방지.
-  if jq -e '.scripts.lint' "$1/package.json" >/dev/null 2>&1; then
-    ( cd "$1" && "$PM" run lint 2>&1 | tail -20 ) || return 1
-  fi
-  # test 스크립트가 있을 때만 실행 (없는데 test → 오류로 false fail 방지)
-  if jq -e '.scripts.test' "$1/package.json" >/dev/null 2>&1; then
-    ( cd "$1" && "$PM" test 2>&1 | tail -20 ) || return 1
-  fi
-}
-if [ "$node_changed" -eq 1 ]; then
-  if   [ -f package.json ];          then run_node . || fail=1
-  elif [ -f frontend/package.json ]; then run_node frontend || fail=1; fi
-fi
-
-# --- Python: 린트 + 테스트 (변경 시에만, 도구 있을 때만 — best-effort).
-# pytest exit 5 = "no tests collected" — 테스트 없는 프로젝트의 false fail 방지.
-# GATE-06: 프로젝트 판별은 pyproject.toml 하나가 아니다 — requirements.txt/setup.py만
-# 쓰는 프로젝트가 통째로 스킵되던 갭(적대적 감사 G7)을 막는다.
-if [ "$py_changed" -eq 1 ] && { [ -f pyproject.toml ] || [ -f requirements.txt ] \
-     || [ -f setup.py ] || [ -f setup.cfg ]; }; then
-  if command -v ruff >/dev/null 2>&1; then
-    ruff check . 2>&1 | tail -20 || fail=1
-  fi
-  if command -v pytest >/dev/null 2>&1; then
-    py_out=$(pytest -q 2>&1); py_rc=$?
-    printf '%s\n' "$py_out" | tail -20
-    [ "$py_rc" -ne 0 ] && [ "$py_rc" -ne 5 ] && fail=1
-  fi
-fi
-
-# --- Go: 빌드(=타입체크) + vet + 테스트 (변경 시에만, 툴체인 있을 때만).
-# GATE-07: CLI·서버 프로젝트의 주력 스택인데 게이트가 없어 깨진 코드가 통과하던 갭.
-# `go build`가 컴파일 게이트, `go vet`이 정적 게이트, `go test ./...`가 테스트 게이트.
-if [ "$go_changed" -eq 1 ] && [ -f go.mod ] && command -v go >/dev/null 2>&1; then
-  go build ./... 2>&1 | tail -20 || fail=1
-  go vet ./... 2>&1 | tail -20 || fail=1
-  go_out=$(go test ./... 2>&1); go_rc=$?
-  printf '%s\n' "$go_out" | tail -20
-  # "no test files"만 있는 리포는 실패 아님 — 테스트 없는 프로젝트의 false fail 방지.
-  [ "$go_rc" -ne 0 ] && ! printf '%s\n' "$go_out" | grep -qi 'no test files' && fail=1
-fi
-
-# --- Rust: cargo check(=컴파일) + test (변경 시에만, 툴체인 있을 때만).
-# check는 코드 생성 없이 타입·차용 검사만 — 게이트 목적엔 build보다 빠르고 충분하다.
-if [ "$rs_changed" -eq 1 ] && [ -f Cargo.toml ] && command -v cargo >/dev/null 2>&1; then
-  cargo check --quiet 2>&1 | tail -20 || fail=1
-  cargo test --quiet 2>&1 | tail -20 || fail=1
-fi
-
-# --- Bash: 훅/스크립트 정적분석 + 훅 자가 테스트 (변경 시에만).
-# 분석기는 .claude/bin(vendor 설치본, 오프라인) 우선 → PATH 순. 없으면 스킵(best-effort).
-# -S error만 게이트 — 경고는 비차단.
-if [ "$sh_changed" -eq 1 ]; then
+# 스택 순회 — 파일 하나 = 스택 하나. 변경 정규식이 맞을 때만(또는 git 없으면 항상) 게이트 실행.
+# 각 스택은 stack_gate 를 재정의하므로 소싱 직후 바로 실행하고 다음으로 넘어간다.
+for stack in "$STACKS_DIR"/*.sh; do
+  [ -f "$stack" ] || continue
+  unset -f stack_gate stack_format
+  STACK_CHANGE_RE=''
+  # shellcheck source=/dev/null
+  source "$stack"
+  changed=1
   if [ "$have_git" -eq 1 ]; then
-    sh_files=$(printf '%s\n' "$CHANGED" | grep -E '\.sh$|^\.githooks/' | while read -r f; do [ -f "$f" ] && echo "$f"; done)
-    hooks_changed=0
-    printf '%s\n' "$CHANGED" | grep -Eq '^\.claude/hooks/|^\.githooks/' && hooks_changed=1
-  else
-    # git 없음 → 전체 검사 (change-detection 불가 시 skip 금지 — GATE-03과 동일 원칙)
-    sh_files=$(ls .claude/hooks/*.sh .githooks/* 2>/dev/null)
-    hooks_changed=1
+    printf '%s\n' "$CHANGED" | grep -Eq "${STACK_CHANGE_RE:-^$}" && changed=1 || changed=0
   fi
-  SC="$(dirname "${BASH_SOURCE[0]}")/../bin/shellcheck"
-  command -v "$SC" >/dev/null 2>&1 || SC=$(command -v shellcheck)
-  if [ -n "$SC" ] && [ -n "$sh_files" ]; then
-    # shellcheck disable=SC2086
-    "$SC" -S error $sh_files 2>&1 | tail -20 || fail=1
-  fi
-  if [ "$hooks_changed" -eq 1 ]; then
-    for t in "$(dirname "${BASH_SOURCE[0]}")"/tests/*.test.sh; do
-      [ -e "$t" ] || continue
-      bash "$t" >/dev/null 2>&1 || { echo "[carve-harness:verify] 훅 테스트 실패: $(basename "$t")" >&2; fail=1; }
-    done
-  fi
-fi
+  [ "$changed" -eq 1 ] || continue
+  declare -f stack_gate >/dev/null 2>&1 || continue
+  stack_gate || fail=1
+done
 
-# GATE-03: verification is now change-scoped — only stacks whose files changed run above.
+# GATE-03: verification is change-scoped — only stacks whose files changed ran above.
 [ "$fail" -eq 0 ] || { echo "[carve-harness:verify] 검증 실패(빌드/타입/테스트) — 완료 전 수정 필요" >&2; bash "$LOG_EVENT" Stop verify fail ""; exit 2; }
 bash "$LOG_EVENT" Stop verify pass ""
 exit 0

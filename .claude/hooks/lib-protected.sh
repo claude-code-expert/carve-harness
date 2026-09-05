@@ -17,7 +17,7 @@ PROTECTED_RE='(\.env($|[./])|application-prod|secret|db/migration/)'
 # it as `...${PROTECTED_RE}` in a larger regex, so a top-level `|` would leak out
 # and match the bare path anywhere in the command.
 if [ -f "$(dirname "${BASH_SOURCE[0]}")/../harness-manifest.txt" ]; then
-  PROTECTED_RE="(${PROTECTED_RE}|\.claude/(hooks/|settings\.json|harness-manifest\.txt))"
+  PROTECTED_RE="(${PROTECTED_RE}|\.claude/(hooks/|stacks/|settings\.json|harness-manifest\.txt))"
 fi
 PROTECTED_RE="(${PROTECTED_RE}|specs/\.checklist-active)"
 
