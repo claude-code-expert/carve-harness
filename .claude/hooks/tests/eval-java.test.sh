@@ -77,7 +77,33 @@ else
   no "tool-absent skip ($out)"
 fi
 
-# (7) bash -n + syntax clean (self-guard).
+# (7) composite P: run the REAL awk formula with the REAL weights on known metrics.
+# The fixtures above only assert parsed metric values and the verdict label, so any
+# weight could be changed without a single test failing. Both the weights line and
+# the <composite-p> block come from the source — nothing is re-implemented here.
+eval "$(grep -m1 '^w_compile=' "$HOOK")"
+PROG="$(sed -n '/# <composite-p>/,/# <\/composite-p>/p' "$HOOK")"
+runp() { # runp <compile> <passk> <coverage> <violations> <archrules> <nplus1>
+  awk -v compile="$1" -v passk="$2" -v coverage="$3" -v violations="$4" \
+      -v archrules="$5" -v nplus1="$6" \
+      -v wc="$w_compile" -v wp="$w_passk" -v wv="$w_coverage" -v wl="$w_violations" \
+      -v wa="$w_archrules" -v wn="$w_nplus1" "$PROG" </dev/null
+}
+[ -n "$PROG" ] && ok "<composite-p> block extractable" || no "<composite-p> block missing"
+[ "$(printf '%s\n' "$w_compile $w_passk $w_coverage $w_violations $w_archrules $w_nplus1" \
+     | awk '{printf "%.2f", $1+$2+$3+$4+$5+$6}')" = "1.00" ] \
+  && ok "weights sum to 1.00" || no "weights do not sum to 1.00"
+# 0.15·1 + 0.25·0.5 + 0.20·0.8 + 0.15·1 + 0.20·0.875 + 0.05·1 = 0.8100 ; err = 0.25·0.5
+[ "$(runp 1 0.5 0.8 1 0.875 1)" = "0.8100 0.1250 -" ] \
+  && ok "P weighted sum on known metrics = 0.8100 (err 0.1250)" || no "P sum ($(runp 1 0.5 0.8 1 0.875 1))"
+# a skipped metric renormalizes the divisor instead of counting as zero.
+# Only P and the skip list are asserted — the err digit rounds differently across awks.
+[ "$(runp 1 0.5 skip 1 0.875 1 | awk '{print $1, $3}')" = "0.8125 coverage" ] \
+  && ok "skipped metric renormalizes weights" || no "renormalize ($(runp 1 0.5 skip 1 0.875 1))"
+[ "$(runp 0 0 0 0 0 0)" = "0.0000 0.0000 -" ] \
+  && ok "all-zero metrics -> P=0" || no "zero floor ($(runp 0 0 0 0 0 0))"
+
+# (8) bash -n + syntax clean (self-guard).
 bash -n "$HOOK" 2>/dev/null && ok "bash -n clean" || no "bash -n"
 
 rm -rf "$T"

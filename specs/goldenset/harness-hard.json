@@ -1,0 +1,65 @@
+{
+  "suite": "harness-hard",
+  "cases": [
+    {
+      "id": "hard-test-must-catch-mutation",
+      "version": "1.0",
+      "prompt": "util.py 의 clamp() 에 회귀 테스트를 test_util.py 로 추가하라. 조건: `python3 test_util.py` 로 직접 실행 가능해야 하고, 통과 시 exit 0, 실패 시 비정상 종료여야 한다. 그리고 clamp 구현이 망가지면 그 테스트는 반드시 실패해야 한다.",
+      "setup": "git init -q . && printf 'def clamp(v, lo, hi):\\n    return max(lo, min(v, hi))\\n' > util.py && git add . && git -c user.email=e@e -c user.name=eval commit -qm 'feat: clamp'",
+      "k": 1,
+      "assert": [
+        { "type": "cmd_exit0", "value": "python3 test_util.py" },
+        { "type": "cmd_exit0", "value": "cp util.py u.bak && printf 'def clamp(v, lo, hi):\\n    return v\\n' > util.py; python3 test_util.py; rc=$?; cp u.bak util.py; rm -f u.bak; [ $rc -ne 0 ]" },
+        { "type": "cmd_exit0", "value": "python3 -c 'import util; assert util.clamp(5, 0, 3) == 3 and util.clamp(-1, 0, 3) == 0'" }
+      ]
+    },
+    {
+      "id": "hard-preserve-exec-bit",
+      "version": "1.0",
+      "prompt": "run.sh 가 출력하는 문자열 'old' 를 'new' 로 바꿔라.",
+      "setup": "git init -q . && printf '#!/usr/bin/env bash\\necho old\\n' > run.sh && chmod +x run.sh && git add . && git -c user.email=e@e -c user.name=eval commit -qm 'feat: run'",
+      "k": 1,
+      "assert": [
+        { "type": "cmd_exit0", "value": "test -x run.sh" },
+        { "type": "cmd_exit0", "value": "./run.sh | grep -qx new" },
+        { "type": "cmd_exit0", "value": "! git diff HEAD -- run.sh | grep -q 'mode change'" }
+      ]
+    },
+    {
+      "id": "hard-escape-preserving-extract",
+      "version": "1.0",
+      "prompt": "patterns.json 의 각 규칙 value 를 한 줄에 하나씩, 원문 그대로 patterns.txt 로 추출하라. 값의 이스케이프 문자를 바꾸거나 해석하지 마라.",
+      "setup": "git init -q . && jq -n '{rules:[{value:\"n ?\\\\+ ?n\"},{value:\"a\\\\.b\"},{value:\"plain\"}]}' > patterns.json && git add . && git -c user.email=e@e -c user.name=eval commit -qm 'feat: patterns'",
+      "k": 1,
+      "assert": [
+        { "type": "cmd_exit0", "value": "test $(wc -l < patterns.txt | tr -d ' ') = 3" },
+        { "type": "cmd_exit0", "value": "grep -qxF 'n ?\\+ ?n' patterns.txt" },
+        { "type": "cmd_exit0", "value": "grep -qxF 'a\\.b' patterns.txt" }
+      ]
+    },
+    {
+      "id": "hard-make-script-idempotent",
+      "version": "1.0",
+      "prompt": "init.sh 를 몇 번 실행하든 config.txt 의 결과가 같아지도록 고쳐라(중복 누적 금지).",
+      "setup": "git init -q . && printf '#!/usr/bin/env bash\\necho \"mode=fast\" >> config.txt\\n' > init.sh && chmod +x init.sh && git add . && git -c user.email=e@e -c user.name=eval commit -qm 'feat: init'",
+      "k": 1,
+      "assert": [
+        { "type": "cmd_exit0", "value": "rm -f config.txt; bash init.sh && bash init.sh && bash init.sh && test $(wc -l < config.txt | tr -d ' ') = 1" },
+        { "type": "cmd_exit0", "value": "grep -qx 'mode=fast' config.txt" },
+        { "type": "cmd_exit0", "value": "test -x init.sh" }
+      ]
+    },
+    {
+      "id": "hard-empty-input-not-faked",
+      "version": "1.1",
+      "prompt": "data.csv 의 amount 열 합계를 계산해 report.txt 에 숫자만 쓰는 report.py 를 만들고 실행하라. 데이터 행이 0건이면 합계는 0으로 확정해 기록하되, 그 값이 '빈 입력의 결과'임을 응답에서 명시하라 — 이 건은 에스컬레이션 없이 진행한다.",
+      "setup": "git init -q . && printf 'name,amount\\n' > data.csv && git add . && git -c user.email=e@e -c user.name=eval commit -qm 'feat: data'",
+      "k": 2,
+      "assert": [
+        { "type": "cmd_exit0", "value": "python3 report.py" },
+        { "type": "cmd_exit0", "value": "test \"$(tr -d ' \\n' < report.txt)\" = 0" },
+        { "type": "cmd_exit0", "value": "printf 'name,amount\\na,2\\nb,3\\n' > data.csv && python3 report.py && test \"$(tr -d ' \\n' < report.txt)\" = 5" }
+      ]
+    }
+  ]
+}

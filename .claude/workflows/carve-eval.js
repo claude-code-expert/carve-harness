@@ -3,6 +3,7 @@ export const meta = {
   description: 'Golden-set quantitative eval: run fixed (prompt->rubric) cases k times, score pass@k/pass^k, append a score trend, flag regression vs baseline',
   whenToUse: 'When you have a golden set of eval cases (specs/goldenset/*.json) and want a repeatable quantitative quality score tracked over time, with regression detection when a prompt/rubric/harness component changes',
   phases: [
+    { title: 'Validate', detail: 'carve-validate.sh preflight — 설정 오류를 비싼 런 전에 분리(에이전트 0회)' },
     { title: 'Load', detail: 'read specs/goldenset/*.json into cases (via Read agent — workflow has no fs)' },
     { title: 'Run', detail: 'each case: respondent x k, grade deterministic asserts + llm-rubric' },
     { title: 'Score', detail: 'aggregate suite score, compare baseline, persist trend, flag regression' },
@@ -52,6 +53,8 @@ const GOLDENSET_SCHEMA = {
         properties: {
           suite: { type: 'string' },
           id: { type: 'string' },
+          file: { type: 'string' },
+          version: { type: 'string' },
           prompt: { type: 'string' },
           setup: { type: 'string' },
           k: { type: 'number' },
@@ -71,14 +74,56 @@ const GOLDENSET_SCHEMA = {
   required: ['cases'],
 }
 const RUBRIC_SCHEMA = { type: 'object', properties: { pass: { type: 'boolean' }, reason: { type: 'string' } }, required: ['pass', 'reason'] }
-const PRIOR_SCHEMA = { type: 'object', properties: { runs: { type: 'number' }, lastSuiteScore: { type: ['number', 'null'] }, version: { type: ['string', 'null'] } }, required: ['runs', 'lastSuiteScore'] }
-const WORKDIR_SCHEMA = { type: 'object', properties: { dir: { type: 'string' } }, required: ['dir'] }
+const PRIOR_SCHEMA = {
+  type: 'object',
+  properties: {
+    runs: { type: 'number' },
+    lastSuiteScore: { type: ['number', 'null'] },
+    version: { type: ['string', 'null'] },
+    lastCaseVersions: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          id: { type: 'string' },
+          caseVersion: { type: ['string', 'null'] },
+          caseScore: { type: ['number', 'null'] },
+        },
+        required: ['id'],
+      },
+    },
+  },
+  required: ['runs', 'lastSuiteScore'],
+}
+const WORKDIR_SCHEMA = {
+  type: 'object',
+  properties: { dir: { type: 'string' }, setupExit: { type: 'number' } },
+  required: ['dir'],
+}
 const STATE_SCHEMA = { type: 'object', properties: { failed: { type: 'array', items: { type: 'string' } } }, required: ['failed'] }
+const VALIDATE_SCHEMA = {
+  type: 'object',
+  properties: { exitCode: { type: 'number' }, output: { type: 'string' } },
+  required: ['exitCode', 'output'],
+}
+
+// ── Phase 0: Preflight — separate "골든셋이 깨졌다" from "에이전트가 못했다" ──
+// 채점기는 전부 fail-closed라 assert 타입 오타 하나가 조용히 0점이 된다. 검증은
+// 에이전트 0회이므로 k×N 런을 태우기 전에 항상 먼저 돌린다.
+phase('Validate')
+const preflight = await agent(
+  `Bash로 \`bash .claude/hooks/carve-validate.sh ${GLOB}\` 를 실행하고, 종료코드를 exitCode에, stdout 전문을 output에 담아 반환하라. 판단을 보태거나 지어내지 마라.`,
+  { agentType: 'general-purpose', label: 'preflight', phase: 'Validate', effort: 'low', schema: VALIDATE_SCHEMA }
+)
+if (!preflight || preflight.exitCode !== 0) {
+  log(`[PREFLIGHT FAIL] 골든셋 설정 오류 — 런을 시작하지 않는다(비용 보호).\n${preflight?.output ?? 'validator 실행 실패'}`)
+  return { suiteScore: null, cases: [], preflight: preflight?.output ?? 'validator 실행 실패', note: 'preflight failed' }
+}
 
 // ── Phase 1: Load golden set (workflow has no fs → Read via agent) ──
 phase('Load')
 const loaded = await agent(
-  `${GLOB} 파일들을 Read로 열어 JSON을 파싱하고, 모든 케이스를 하나의 배열로 병합해 반환하라. 각 케이스: {suite, id, prompt, k, assert:[{type,value}]}. 파일이 하나도 없으면 cases:[] 로 반환하라. 파일에 실재하는 내용만 — 지어내지 마라.`,
+  `${GLOB} 파일들을 Read로 열어 JSON을 파싱하고, 모든 케이스를 하나의 배열로 병합해 반환하라. 각 케이스: {suite, id, file, version, prompt, setup, k, assert:[{type,value}]}. file은 그 케이스가 정의된 파일의 리포 기준 상대경로다(상태 채점기가 원본에서 직접 읽는다). version은 케이스 정의의 버전 문자열이며 그대로 옮겨라. 파일이 하나도 없으면 cases:[] 로 반환하라. 파일에 실재하는 내용만 — 지어내지 마라.`,
   { agentType: 'general-purpose', label: 'load-goldenset', phase: 'Load', schema: GOLDENSET_SCHEMA }
 )
 const cases = (loaded?.cases ?? []).filter((c) => c && c.prompt && c.id)
@@ -103,11 +148,17 @@ const runCase = async (c) => {
     let dir = null
     if (needsEnv) {
       const env = await agent(
-        `Bash로 'mktemp -d'를 실행해 새 임시 작업 디렉토리를 만들어라.${c.setup ? ` 이어서 그 디렉토리 안(cd)에서 아래 setup 스크립트를 실행하라:\n\`\`\`bash\n${c.setup}\n\`\`\`` : ''}\n생성된 절대경로를 dir로 반환하라. 실재 결과만 — 지어내지 마라.`,
+        `Bash로 'mktemp -d'를 실행해 새 임시 작업 디렉토리를 만들어라.${c.setup ? ` 이어서 그 디렉토리 안(cd)에서 아래 setup 스크립트를 실행하고, 그 스크립트의 종료코드를 setupExit로 보고하라(성공 0). 실패해도 고치려 들지 말고 코드를 그대로 보고하라 — 실패 자체가 결과다:\n\`\`\`bash\n${c.setup}\n\`\`\`` : ''}\n생성된 절대경로를 dir로 반환하라. 실재 결과만 — 지어내지 마라.`,
         { agentType: 'general-purpose', label: `env:${c.id}#${i + 1}`, phase: 'Run', schema: WORKDIR_SCHEMA }
       )
       dir = env?.dir || null
-      if (!dir) return { text: '', stateFailed: allStateFailed.length ? allStateFailed : ['env:setup-failed'] }
+      // setup 실패를 그냥 두면 픽스처 없는 워크디렉토리에서 assert가 우수수 실패해
+      // "에이전트가 못했다"로 위장된다. 원인을 원인으로 보고한다.
+      if (!dir) return { text: '', stateFailed: ['env:mktemp-failed'] }
+      if (c.setup && env?.setupExit !== 0) {
+        // 워크디렉토리는 일부러 지우지 않는다 — setup이 왜 깨졌는지 볼 수 있어야 한다.
+        return { text: '', stateFailed: [`env:setup-failed(exit ${env?.setupExit ?? '?'}) at ${dir}`] }
+      }
     }
     const prompt = dir
       ? `작업 디렉토리는 ${dir} 이다. 모든 파일 작업은 그 디렉토리 안에서만 하라. 이 저장소의 specs/ 와 .claude/ 는 읽지 마라(평가 기준 비노출).\n\n${c.prompt}`
@@ -115,11 +166,18 @@ const runCase = async (c) => {
     const out = await agent(prompt, { agentType: 'general-purpose', label: `run:${c.id}#${i + 1}`, phase: 'Run' })
     let stateFailed = []
     if (stateAsserts.length && dir) {
-      const v = await agent(
-        `다음을 순서대로 수행하라: (1) 아래 JSON 배열을 임시 파일에 그대로 저장 (2) Bash로 \`bash .claude/hooks/eval-state.sh '${dir}' <저장한 파일 경로>\` 실행 (3) stdout의 JSON을 파싱해 failed 배열을 그대로 반환 (4) \`rm -rf '${dir}'\` 로 작업 디렉토리 정리. 스크립트 출력 외의 판단을 보태거나 지어내지 마라.\n\n${JSON.stringify(stateAsserts)}`,
-        { agentType: 'general-purpose', label: `state:${c.id}#${i + 1}`, phase: 'Run', schema: STATE_SCHEMA }
-      )
-      stateFailed = Array.isArray(v?.failed) ? v.failed : allStateFailed
+      // assert 값을 프롬프트로 릴레이하지 않는다 — LLM을 한 번 경유할 때마다 JSON 재직렬화로
+      // 백슬래시가 두 배가 되어(`\+`→`\\+`) 정규식이 영구 미매칭된다. 채점기가 원본 파일에서
+      // 직접 읽게 하고, 여기서는 파일 경로와 id만 넘긴다.
+      if (!c.file) {
+        stateFailed = allStateFailed.length ? allStateFailed : ['state:file-unknown']
+      } else {
+        const v = await agent(
+          `다음을 순서대로 수행하라: (1) Bash로 \`bash .claude/hooks/eval-state.sh '${dir}' '${c.file}' --case '${c.id}'\` 실행 (2) stdout의 JSON을 파싱해 failed 배열을 그대로 반환 (3) \`rm -rf '${dir}'\` 로 작업 디렉토리 정리. 스크립트 출력 외의 판단을 보태거나 지어내지 마라.`,
+          { agentType: 'general-purpose', label: `state:${c.id}#${i + 1}`, phase: 'Run', schema: STATE_SCHEMA }
+        )
+        stateFailed = Array.isArray(v?.failed) ? v.failed : allStateFailed
+      }
     } else if (dir) {
       await agent(`Bash로 \`rm -rf '${dir}'\` 를 실행해 임시 작업 디렉토리를 정리하고 done만 반환하라.`,
         { agentType: 'general-purpose', label: `clean:${c.id}#${i + 1}`, phase: 'Run', effort: 'low' })
@@ -150,8 +208,10 @@ const runCase = async (c) => {
     }
   }
   const caseScore = Math.round((greens / k) * 100)   // 일관성률(green/k)
+  // caseVersion — 케이스 정의가 바뀌면 과거 run과 같은 문제를 푼 점수가 아니다.
+  // 이 값 없이 점수만 쌓으면 추이 비교가 조용히 무의미해진다.
   return {
-    suite: c.suite || 'default', id: c.id, k, greens,
+    suite: c.suite || 'default', id: c.id, caseVersion: c.version ?? null, k, greens,
     pass_at_k: greens >= 1, pass_pow_k: greens === k,
     caseScore, failed: failSamples,
   }
@@ -166,13 +226,30 @@ const suiteScore = graded.length
 
 // 직전 baseline 읽기(없으면 runs:0). 워크플로는 Date 사용 불가 → run 서수는 기존 엔트리 수 +1.
 const prior = await agent(
-  `(1) specs/eval-score.json 을 Read로 열어라. 없으면 runs:0, lastSuiteScore:null. 있으면 .runs 배열 길이를 runs로, 마지막 원소의 suiteScore를 lastSuiteScore로. (2) VERSION 파일을 Read로 열어 내용(trim)을 version으로. 없으면 null. 지어내지 마라.`,
+  `(1) specs/eval-score.json 을 Read로 열어라. 없으면 runs:0, lastSuiteScore:null, lastCaseVersions:[]. 있으면 .runs 배열 길이를 runs로, 마지막 원소의 suiteScore를 lastSuiteScore로, 마지막 원소의 cases[]에서 {id, caseVersion, caseScore}만 뽑아 lastCaseVersions로. (2) VERSION 파일을 Read로 열어 내용(trim)을 version으로. 없으면 null. 지어내지 마라.`,
   { agentType: 'general-purpose', label: 'read-baseline', phase: 'Score', schema: PRIOR_SCHEMA }
 )
 const prev = prior?.lastSuiteScore ?? null
 const runOrdinal = (prior?.runs ?? 0) + 1
-const regressed = prev != null && suiteScore < prev - DELTA
 const belowThreshold = graded.filter((r) => r.caseScore < THRESHOLD).map((r) => `${r.id}(${r.caseScore})`)
+
+// suiteScore는 케이스를 추가·제거·수정하면 곧바로 비교 불가가 된다(평균의 모집단이 바뀐다).
+// 회귀는 **양쪽 run에 같은 버전으로 존재하는 케이스**만으로 판정한다 — 그게 유일한 동일 조건 비교.
+const priorCases = new Map((prior?.lastCaseVersions ?? []).map((c) => [c.id, c]))
+const versionChanged = graded
+  .filter((r) => priorCases.has(r.id) && (priorCases.get(r.id).caseVersion ?? null) !== (r.caseVersion ?? null))
+  .map((r) => `${r.id}(${priorCases.get(r.id).caseVersion}→${r.caseVersion ?? 'null'})`)
+const added = graded.filter((r) => !priorCases.has(r.id)).map((r) => r.id)
+const removed = [...priorCases.keys()].filter((id) => !graded.some((r) => r.id === id))
+
+const comparable = graded.filter((r) => {
+  const p = priorCases.get(r.id)
+  return p && (p.caseVersion ?? null) === (r.caseVersion ?? null) && typeof p.caseScore === 'number'
+})
+const mean = (xs) => (xs.length ? Math.round(xs.reduce((s, x) => s + x, 0) / xs.length) : null)
+const comparableNow = mean(comparable.map((r) => r.caseScore))
+const comparablePrev = mean(comparable.map((r) => priorCases.get(r.id).caseScore))
+const regressed = comparablePrev != null && comparableNow < comparablePrev - DELTA
 
 // 구성 기록 — 같은 골든셋으로 하네스 버전/구성 간 비교하는 축(환경·태스크 고정, 구성만 교체).
 const entry = {
@@ -184,12 +261,22 @@ await agent(
   { agentType: 'general-purpose', label: `persist-trend#${runOrdinal}`, phase: 'Score' }
 )
 
-log(`suite ${suiteScore}/100 (run #${runOrdinal}${prev != null ? `, baseline ${prev}` : ', baseline 없음'}) — ${regressed ? '⚠ 회귀' : 'OK'}`)
-if (regressed) log(`[REGRESSION] suite ${prev}→${suiteScore} (>${DELTA}pt 하락). 임계 미달: ${belowThreshold.join(', ') || '없음'}`)
+log(`suite ${suiteScore}/100 (run #${runOrdinal}, 케이스 ${graded.length}건)`)
+if (comparable.length) {
+  log(`동일 케이스 ${comparable.length}건 기준: ${comparablePrev}→${comparableNow} — ${regressed ? '⚠ 회귀' : 'OK'}`)
+} else {
+  log('직전 run과 겹치는 케이스가 없다 — 회귀 판정 불가(비교 기준 없음).')
+}
+if (regressed) log(`[REGRESSION] 동일 케이스 ${comparablePrev}→${comparableNow} (>${DELTA}pt 하락). 임계 미달: ${belowThreshold.join(', ') || '없음'}`)
+if (added.length || removed.length) {
+  log(`[CASE SET CHANGED] 추가 ${added.join(', ') || '없음'} / 제거 ${removed.join(', ') || '없음'} — suite ${prev}→${suiteScore} 비교는 모집단이 달라 무의미하다. 위 동일 케이스 기준만 보라.`)
+}
+if (versionChanged.length) log(`[VERSION CHANGED] ${versionChanged.join(', ')} — 이 케이스들은 직전 run과 같은 문제가 아니라 비교에서 제외했다.`)
 
 return {
   suiteScore, threshold: THRESHOLD, run: runOrdinal, baseline: prev,
-  regressed, belowThreshold,
+  comparableNow, comparablePrev, comparableCount: comparable.length,
+  regressed, belowThreshold, versionChanged, added, removed,
   passAtK: graded.filter((r) => r.pass_at_k).length,
   passPowK: graded.filter((r) => r.pass_pow_k).length,
   total: graded.length,

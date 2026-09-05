@@ -73,8 +73,21 @@ else
 fi
 rm -rf "$cwd" "$logd"
 
-# (5) source: formatter stdout still silenced; no exit 2; bash -n clean.
-grep -q '2>/dev/null' "$HOOK" && ok "formatter stdout silenced (2>/dev/null retained)" || bad "2>/dev/null retained"
+# (5) behavioral: formatter chatter must not reach the hook's own stdout/stderr.
+# This used to be `grep -q '2>/dev/null' "$HOOK"` — a file-wide grep that the jq
+# line satisfied on its own, so it stayed green while the formatter invocations
+# leaked stdout for real. Assert the observable behavior, never the source text.
+cwd=$(mktemp -d); logd=$(mktemp -d)
+printf '#!/usr/bin/env bash\necho NOISE_OUT\necho NOISE_ERR >&2\nexit 0\n' > "$cwd/gradlew"
+chmod +x "$cwd/gradlew"
+leak=$( ( cd "$cwd" && printf '%s' '{"tool_input":{"file_path":"Foo.java"}}' \
+          | CLAUDE_PROJECT_DIR="$logd" bash "$HOOK" ) 2>&1 )
+printf '%s' "$leak" | grep -q 'NOISE_' \
+  && bad "formatter output leaked into the hook stream: $leak" \
+  || ok "formatter stdout+stderr silenced (behavioral)"
+rm -rf "$cwd" "$logd"
+
+# (6) source guards: no exit 2; bash -n clean.
 grep -q 'exit 2' "$HOOK" && bad "unexpected exit 2 present (must stay non-blocking)" || ok "no exit 2 (PostToolUse non-blocking)"
 bash -n "$HOOK" 2>/dev/null && ok "bash -n clean" || bad "bash -n"
 

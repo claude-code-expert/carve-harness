@@ -51,6 +51,12 @@ check 2 "NotebookEdit notebook_path"  '{"tool_name":"NotebookEdit","tool_input":
 
 # --- GUARD-03: Bash write operator -> protected target blocks (exit 2) ---
 check 2 "Bash redirect to .env.production" '{"tool_name":"Bash","tool_input":{"command":"echo secret > x/.env.production"}}'
+# Quoting the redirect target is the obvious way to slip past a naive matcher.
+# The optional-quote branch of the write-operator regex had no test at all.
+check 2 "Bash redirect single-quoted .env" '{"tool_name":"Bash","tool_input":{"command":"echo secret > '"'"'x/.env.production'"'"'"}}'
+check 2 "Bash redirect double-quoted .env" '{"tool_name":"Bash","tool_input":{"command":"echo secret > \"x/.env.production\""}}'
+check 2 "Bash tee quoted .env"             '{"tool_name":"Bash","tool_input":{"command":"echo secret | tee \"x/.env.production\""}}'
+check 2 "Bash append >> quoted .env"       '{"tool_name":"Bash","tool_input":{"command":"echo s >> '"'"'db/migration/V1__x.sql'"'"'"}}'
 check 2 "Bash sed -i on migration"         '{"tool_name":"Bash","tool_input":{"command":"sed -i s/a/b/ db/migration/001.sql"}}'
 check 2 "Bash cp to application-prod"       '{"tool_name":"Bash","tool_input":{"command":"cp a application-prod.yml"}}'
 
@@ -73,6 +79,10 @@ check 2 "Bash wget pipe sudo bash"         '{"tool_name":"Bash","tool_input":{"c
 check 2 "Bash psql DROP TABLE"             '{"tool_name":"Bash","tool_input":{"command":"psql -c \"DROP TABLE users\""}}'
 check 2 "Bash mysql TRUNCATE"              '{"tool_name":"Bash","tool_input":{"command":"mysql -e \"TRUNCATE orders\""}}'
 check 2 "Bash psql DELETE no WHERE"        '{"tool_name":"Bash","tool_input":{"command":"psql -c \"DELETE FROM users\""}}'
+# SQL keywords match case-insensitively. Dropping the -i flag left every test green,
+# so lowercase `drop table` would have walked straight through the gate.
+check 2 "Bash psql lowercase drop table"   '{"tool_name":"Bash","tool_input":{"command":"psql -c \"drop table users\""}}'
+check 2 "Bash mysql MiXeD TrUnCaTe"        '{"tool_name":"Bash","tool_input":{"command":"mysql -e \"TrUnCaTe orders\""}}'
 
 # --- GUARD-05: benign lookalikes allow (exit 0) ---
 check 0 "Bash git push plain"              '{"tool_name":"Bash","tool_input":{"command":"git push origin develop"}}'
@@ -100,6 +110,11 @@ check 2 "Edit new_string OpenAI key"       "{\"tool_name\":\"Edit\",\"tool_input
 check 2 "Write content PEM header"         "{\"tool_name\":\"Write\",\"tool_input\":{\"file_path\":\"k.pem\",\"content\":\"$pem\"}}"
 check 0 "Write benign content"             '{"tool_name":"Write","tool_input":{"file_path":"a.txt","content":"hello world const x = 1"}}'
 check 0 "Write short sk- (no false pos)"   '{"tool_name":"Write","tool_input":{"file_path":"a.txt","content":"key sk-shortkey here"}}'
+# MultiEdit carries its content in edits[].new_string — a separate extraction branch
+# from Write/Edit. Deleting that branch used to leave every test green, so a secret
+# smuggled in as one edit of a batch would have shipped.
+check 2 "MultiEdit edits[] AWS key"        "{\"tool_name\":\"MultiEdit\",\"tool_input\":{\"file_path\":\"a.txt\",\"edits\":[{\"new_string\":\"const a = 1\"},{\"new_string\":\"$akia\"}]}}"
+check 0 "MultiEdit edits[] benign"         '{"tool_name":"MultiEdit","tool_input":{"file_path":"a.txt","edits":[{"new_string":"const a = 1"},{"new_string":"const b = 2"}]}}'
 
 # --- GUARD-06: loop brake — 5th consecutive identical call blocks; any different call resets ---
 # ── GUARD-07/08 (adversarial-audit patches) ─────────────────────────────────
