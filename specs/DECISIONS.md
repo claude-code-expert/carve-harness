@@ -124,3 +124,24 @@
 - **이유**: 강한 모델에서 줄어드는 건 설득 기둥(프로즈 지침·세분화 에이전트·수동 SOP)이지 강제 기둥이 아니다. 결정적 훅·게이트는 전부 유지. 단일 관점 리뷰어는 /review 1회가 다관점 커버.
 - **대안**: 오프라인 설치 유지(vendor/bin 존치) — 온라인 환경 전제로 기각. install.sh는 바이너리 부재 시 WARN 후 시스템 PATH 사용(기존 폴백 경로).
 - **영향**: 약 9,000줄+19MB 순삭. install.sh(MD_PATHS·comp_of·PROTECTED)·session-handoff 배너·review 커맨드·carve-harness-create 스킬/테스트·remote-install 테스트·GUIDE/HARNESS_GUIDE/README 인벤토리 동기화. AGENTS.md 섹션 번호는 참조 유지 위해 재부여 안 함(§0·1·4·6~10 잔존). 오프라인(에어갭) 설치 기능 소멸 — 필요 시 git 히스토리에서 vendor/bin 복구. 전 테스트 스위트 통과·harness-audit 46 PASS 확인.
+
+## 2026-09-06 — 언어팩 체계: 스택 정의 파일 + 선택 설치 (v0.9.0, PR #71/#72)
+
+- **결정**: 스택별 검증 게이트·포맷·채점 어댑터를 `.claude/stacks/<pack>.sh` 한 파일로 분리하고, 규칙·스택 파일·골든셋 스타터·judge 예시·LSP 토글을 `packs/<name>.pack`(평문 경로 목록)이 한 세트로 묶는다. 설치 시 감지된 팩만 깔리고(`HARNESS_PACKS`, tty 없으면 auto), 미선택 팩 경로는 복사 직후 `prune_run`으로 제거한다. 팩 6종: typescript · java-spring · python · go · rust · database.
+- **이유**: 라이트웨이트 목표 — 내 스택과 무관한 규칙·게이트·문서·감사 항목이 없어야 한다. `stop-verify.sh` 하드코딩 블록은 update에 덮여 사용자 커스텀이 사라지는 문제도 있었다(GUIDE §8.2가 경고하던 것). 파일 1개 = 스택 1개면 추가·제거·보호(GUARD-07)·감사(AUDIT-09)가 전부 파일 단위로 정리된다.
+- **대안**: (a) Claude Code 플러그인으로 팩 배포 — `.claude/rules`·CLAUDE.md를 실을 수 없어 기각. (b) 전체 설치 후 절단(기존 모델) 유지 — 절단은 경로 단위라 반쪽 팩(규칙만 남고 스택 파일 없음)을 만든다. 팩 단위 add/remove로 교체하고 절단은 팩 밖 구성에만 남겼다. (c) 소스 레이아웃을 `packs/<lang>/`로 옮기기 — 회귀 면적이 커서 기각, 경로 목록 파일로 대신.
+- **영향**: 설치기 6번째 선택 축·`install.sh pack list|add|remove`·`.claude/harness-packs`·update 팩 필터·rollback이 manifest까지 복원·uninstall 빈 디렉토리 정리. 훅 15→17, 스택 6, 규칙 8→11, 스위트 21→26(419건), 감사 48→67. `HARNESS_COMPONENTS`만 준 기존 스크립트는 전체 설치 유지(회귀 가드). Go·Rust는 팩으로 승격(사용자 결정 2026-09-05).
+
+## 2026-09-06 — 범용 채점기 `eval-score.sh`: 블루프린트 §5.7 채점표를 정본으로 (v0.9.0)
+
+- **결정**: 언어 무관 빌드 건강도 점수는 블루프린트 §5.7 채점표(G1 빌드 25·G2 테스트 25·G3 안전 15 거부권·lint 10·회귀 10·커버리지 5·antislop 10) 그대로 `specs/SCORE.json`에 낸다. 점수는 명령 종료코드·리포트 파일에서만 나오고(LLM 0), 못 잰 항목은 `skipped`로 분모에서 뺀다. 다중 스택은 AND/min. `eval-java.sh`는 Java 어댑터 내부에서 커버리지 파서로 재사용한다.
+- **이유**: 기존엔 Java만 정량 점수(P 0..1, 가중 평균)가 있고 타 스택은 pass/fail뿐이었다(블루프린트 §5.1 "정도를 모른다"). 어휘를 하나 더 만들지 않고 블루프린트 표를 쓰면 문서·게이트·팀 합의가 한 표에 모인다. 숨은 통과를 없애려고 skipped를 명시한다.
+- **대안**: promptfoo 채택 — Node 22 의존·API 키 과금·외부 채점자 의존으로 기각(`specs/promptfoo-eval-analysis.md`). target 어댑터·`tags`/`metric` 필드·assert별 결과 보존 등 설계만 이식(후속 P1a).
+- **영향**: 스택 파일에 `stack_detect/build/test/lint/coverage`·`STACK_COVERAGE_MIN` 계약 추가. antislop은 결정론 검사기가 없어 항상 skipped(활성화는 후속). Java 커버리지는 compile+test 재실행(중복, `# ponytail:` 표기).
+
+## 2026-09-06 — 추이 파일 수동 정정 1회 + 추이 쓰기를 스크립트로 이관
+
+- **결정**: `specs/eval-score.json`에서 패치로 유실된 run1(v0.7.0, 100점, 5케이스)을 바이트 동일하게 복원하고 신규 run 2~4의 `version` 태그를 0.6.0→0.8.0으로 정정했다(브랜치 기준 VERSION 실측). append-only 규칙의 유일한 예외로 기록한다. 이후 추이 읽기·append는 LLM 에이전트가 아니라 `eval-trend.sh`(P0)가 담당한다.
+- **이유**: 워크플로가 추이 파일 읽기/쓰기를 에이전트에게 맡겨 다른 워크스페이스 파일로 덮어쓰기와 version 오기록이 실제로 발생했다(블루프린트 R5·R10 위반). 사람 정정은 근거가 있으니 기록으로 남기고, 재발은 스크립트 강제로 막는다.
+- **대안**: 파일을 패치 전 상태로 되돌리기 — 신규 run 3개를 잃어 기각. 정정 없이 두기 — 회귀 판정 기준이 틀린 버전에 묶여 기각.
+- **영향**: 4 run(1: 0.7.0 100 / 2: 0.8.0 60 / 3: 0.8.0 100 / 4: 0.8.0 93). 다음 `/eval`부터 `eval-trend.sh append`가 run 서수·VERSION·이전 run 해시를 강제한다.
