@@ -26,3 +26,18 @@ stack_gate() {
   fi
   return 0
 }
+
+# ── eval-score.sh 어댑터 (LP4): rc 0 ok · 1 fail · 2 도구 없음/해당 없음. stack_coverage 는 0..1 또는 skip 출력.
+STACK_COVERAGE_MIN=80
+STACK_TEST_CMD_HINT='pytest -q'
+stack_detect()   { [ -f pyproject.toml ] || [ -f requirements.txt ] || [ -f setup.py ] || [ -f setup.cfg ]; }
+stack_build()    { python3 -m compileall -q . >/dev/null 2>&1; }   # 컴파일 단계 = 문법 검사
+stack_test()     { command -v pytest >/dev/null 2>&1 || return 2; pytest -q >/dev/null 2>&1; local rc=$?; [ "$rc" -eq 5 ] && rc=0; return $rc; }
+stack_lint()     { command -v ruff >/dev/null 2>&1 || return 2; ruff check . >/dev/null 2>&1; }
+stack_coverage() {
+  command -v pytest >/dev/null 2>&1 && python3 -c 'import pytest_cov' >/dev/null 2>&1 || { echo skip; return; }
+  local t; t=$(mktemp -d)
+  pytest -q --cov=. --cov-report="json:$t/cov.json" >/dev/null 2>&1
+  [ -f "$t/cov.json" ] && jq -r '(.totals.percent_covered // empty) / 100' "$t/cov.json" 2>/dev/null || echo skip
+  rm -rf "$t"
+}

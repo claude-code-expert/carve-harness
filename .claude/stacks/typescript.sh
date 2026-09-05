@@ -33,3 +33,14 @@ stack_gate() {
   elif [ -f frontend/package.json ]; then ts_verify_dir frontend || return 1; fi
   return 0
 }
+
+# ── eval-score.sh 어댑터 (LP4): rc 0 ok · 1 fail · 2 도구 없음/해당 없음. stack_coverage 는 0..1 또는 skip 출력.
+STACK_COVERAGE_MIN=80
+STACK_TEST_CMD_HINT='npm test'
+ts_pm() { command -v pnpm >/dev/null 2>&1 && echo pnpm || echo npm; }
+stack_detect()   { [ -f package.json ]; }
+stack_build()    { [ -f tsconfig.json ] || return 2; "$(ts_pm)" exec tsc --noEmit >/dev/null 2>&1; }
+stack_test()     { jq -e '.scripts.test' package.json >/dev/null 2>&1 || return 2; "$(ts_pm)" test >/dev/null 2>&1; }
+stack_lint()     { jq -e '.scripts.lint' package.json >/dev/null 2>&1 || return 2; "$(ts_pm)" run lint >/dev/null 2>&1; }
+# 커버리지는 직접 돌리지 않는다(설정 의존·느림) — 프로젝트가 남긴 summary 리포트가 있을 때만 읽는다.
+stack_coverage() { [ -f coverage/coverage-summary.json ] && jq -r '(.total.lines.pct // empty) / 100' coverage/coverage-summary.json 2>/dev/null || echo skip; }

@@ -48,3 +48,19 @@ stack_gate() {
   fi
   return 0
 }
+
+# ── eval-score.sh 어댑터 (LP4): rc 0 ok · 1 fail · 2 도구 없음/해당 없음. stack_coverage 는 0..1 또는 skip 출력.
+STACK_COVERAGE_MIN=80
+STACK_TEST_CMD_HINT='./gradlew test -q'
+java_gdir() { [ -f gradlew ] && echo . || { [ -f backend/gradlew ] && echo backend; }; }
+stack_detect()   { [ -n "$(java_gdir)" ]; }
+stack_build()    { local d; d=$(java_gdir) || return 2; ( cd "$d" && ./gradlew compileJava -q ) >/dev/null 2>&1; }
+stack_test()     { local d; d=$(java_gdir) || return 2; ( cd "$d" && ./gradlew test -q ) >/dev/null 2>&1; }
+stack_lint()     { local d out; d=$(java_gdir) || return 2; out=$( cd "$d" && ./gradlew spotlessCheck -q 2>&1 ); local rc=$?
+                   [ "$rc" -ne 0 ] && printf '%s' "$out" | grep -qi 'not found in' && return 2; return $rc; }
+# 커버리지는 eval-java.sh(JaCoCo XML 파서)에 위임 — 파싱을 두 번 구현하지 않는다.
+# ponytail: eval-java 가 compile+test 를 다시 돌린다(중복 실행). 느리면 XML 직접 파싱으로 교체.
+stack_coverage() {
+  [ -f "$HOOKS_DIR/eval-java.sh" ] || { echo skip; return; }
+  CLAUDE_PROJECT_DIR="$PWD" bash "$HOOKS_DIR/eval-java.sh" --k 1 --json 2>/dev/null | jq -r '.metrics.coverage // "skip"' 2>/dev/null || echo skip
+}
