@@ -78,6 +78,7 @@ harness/
     │   ├── harness-audit.sh      # 기계적 자가감사
     │   ├── eval-java.sh          # Java/Spring 결정적 출력검증 스코어러 (P±오차)
     │   ├── eval-state.sh         # 골든셋 상태 assert 채점기 (carve-eval 헬퍼)
+    │   ├── carve-validate.sh     # 골든셋 프리플라이트 검증기 (--red 신호 검사)
     │   ├── eval-gate.sh          # 골든셋 회귀 게이트 (추이 비교, CI용 결정론)
     │   └── tests/*.test.sh       # 훅별 어서션 (20 스위트)
     ├── commands/             # /plan /verify /review /commit /harness-audit /eval /verify-loop /ponytail*
@@ -104,11 +105,14 @@ harness/
 | `checklist-gate.sh` | Stop (`stop-verify` 뒤) | `specs/checklist.json` 미달(<임계)·미채점 잔존 시 완료 차단. 루프 미개시면 무동작. **자가 우회 차단**: 채점 파일 삭제 시 tombstone(`specs/.checklist-active`)이 계속 차단, threshold는 하한 95로 클램프(`CARVE_CHECKLIST_FLOOR`로만 변경) | 미완 **exit 2** / 완료 0 |
 | `session-handoff.sh` | SessionStart / PreCompact / SessionEnd | start=핸드오프 복원, save=**실제 수집**(STATE.md TODO·미완료 플랜·git 카운트·DECISIONS 최근5) → `specs/HANDOFF.md` | 0 |
 | `log-event.sh` | (서브프로세스 헬퍼) | 6훅 진입점의 이벤트를 `logs/*.jsonl`에 1줄 append; 보호경로/PII는 `<masked>` | 항상 0 |
+| `lib-stop-guard.sh` | (Stop 훅 라이브러리) | `stop_hook_active` 판정 단일 정의 — `stop-verify.sh`·`checklist-gate.sh`가 `source`로 공유. Stop 훅이 자기 자신을 재귀 호출하는 것을 막는다 | — |
+| `config-doctor.sh` | (수동 CLI / 설치기) | `settings.json`·`@참조`·하네스 경로 정합 진단(권고형) | 0 (advisory) |
 | `lib-protected.sh` | (데이터) | `PROTECTED_RE`(보호경로) + `SECRETS_RE`(시크릿) 단일 정의 — 재정의 금지. `protected-extra.regex`/`secrets-extra.regex` OR-병합(업데이트 보존) | — |
 | `logs-report.sh` | (수동 CLI) | `logs/*.jsonl` 요약 리포트; `--rotate N` N일 이전 로그 삭제; `--tokens [N]` 세션별 토큰 사용량(트랜스크립트 usage 합산 — 비용 폭주 사후 인지 방지) | 0 |
-| `harness-audit.sh` | (수동 CLI / `/harness-audit`) | 하네스 구성 47체크 PASS/FAIL (§7) | 실패 시 비영 |
+| `harness-audit.sh` | (수동 CLI / `/harness-audit`) | 하네스 구성 48체크 PASS/FAIL (§7) | 실패 시 비영 |
 | `eval-java.sh` | (수동 CLI) | Java/Spring 결정적 출력검증 — gradle grader(compile·pass^k·JaCoCo·정적분석·ArchUnit·N+1) 파싱 → 재현 가능한 `P±오차` JSON emit. LLM 없음, jq/gradle 부재 시 "unable"(fail-closed) | 0 (unable=1) |
-| `eval-state.sh` | (carve-eval 헬퍼) | 골든셋 **상태 assert**(`file_exists`·`file_contains`·`cmd_exit0`·`git_diff_contains`)를 워크디렉토리 실상태로 결정적 채점 — 에이전트 자기 보고 불신(리워드 해킹 방지). 불능 입력 fail-closed | 0 (unusable=1) |
+| `eval-state.sh` | (carve-eval 헬퍼) | 골든셋 **상태 assert**(`file_exists`·`file_contains`·`cmd_exit0`·`git_diff_contains`)를 워크디렉토리 실상태로 결정적 채점 — 에이전트 자기 보고 불신(리워드 해킹 방지). `--case <id>`로 골든셋 원본에서 직접 읽어 이스케이프 훼손 차단. 불능 입력 fail-closed | 0 (unusable=1) |
+| `carve-validate.sh` | (수동 CLI / `/eval` Phase 0) | 골든셋 **프리플라이트** — 필수 필드(`id`·`prompt`·`version`·`assert`)·id 중복·미지 assert 타입·정규식 컴파일·`k` 범위 검증(에이전트 0회). `--red`는 setup을 실행해 "에이전트 작업 없이 이미 green"인 NO-SIGNAL 케이스와 보호경로 픽스처를 탐지 | 오류 시 1 |
 | `eval-gate.sh` | (수동 CLI / CI) | 골든셋 **회귀 판정** — `specs/eval-score.json` 추이만 읽어 직전 대비 하락폭을 본다. 채점은 carve-eval, 강제는 이 스크립트로 분리해 **CI가 모델 판단에 의존하지 않는다**. 추이 없음·손상·미채점은 `unable`(조용한 통과 금지) | report=항상 0 / block=회귀·unable 시 1 |
 
 **게이트웨이 확장** (게이트웨이 파일 변경 시): `stop-verify.sh`가 `*Gateway*/*Filter*/*Auth*/*RateLimit*.java` 변경을 감지하면 전체 대신 `*GatewayIntegration*` 통합 테스트만 증분 실행(GATE-04), 실패 시 exit 2(GATE-05).
@@ -138,7 +142,7 @@ harness/
 | `review.md` | `/review` | 변경분을 타입·보안·예외·상태관리 관점 검토. 예: `/review` |
 | `commit.md` | `/commit` | commitlint 준수 커밋 메시지 준비. **자동호출 비활성**(`disable-model-invocation`) — 사용자만. 예: `/commit` |
 | `commit-branch.md` | `/commit-branch` | 현재 브랜치에 Conventional Commits로 커밋 + 푸시. `main` 직접·`--no-verify` 금지. 자동호출 비활성. 예: `/commit-branch` |
-| `harness-audit.md` | `/harness-audit` | 하네스 구성 47체크 PASS/FAIL(§7). 예: `/harness-audit` |
+| `harness-audit.md` | `/harness-audit` | 하네스 구성 48체크 PASS/FAIL(§7). 예: `/harness-audit` |
 | `eval.md` | `/eval` | carve-eval 워크플로 실행(골든셋 채점). 예: `/eval` |
 | `verify-loop.md` | `/verify-loop` | carve-verify-loop 워크플로(수정→검증 반복). 예: `/verify-loop` |
 | `ponytail*.md` (6) | `/ponytail…` | ponytail 모드 제어·audit·debt·gain·review·help |

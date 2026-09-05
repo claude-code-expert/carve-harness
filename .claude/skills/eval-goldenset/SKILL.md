@@ -26,6 +26,7 @@ description: 골든셋(고정 입력→루브릭 케이스)으로 산출물 품�
   "cases": [
     {
       "id": "refund-policy",
+      "version": "1.0",
       "prompt": "고객: 어제 산 제품 환불돼요? 규정대로만 답하라.",
       "k": 3,
       "assert": [
@@ -47,10 +48,19 @@ description: 골든셋(고정 입력→루브릭 케이스)으로 산출물 품�
 - `setup`(선택): 케이스 실행 전 격리 워크디렉토리에서 실행할 bash 스크립트(환경 구성 — 파일·git 초기화 등).
   상태 assert 또는 `setup`이 있으면 respondent는 **리포 밖 임시 디렉토리**에서 실행된다(골든셋 정답 비노출).
 - `k`: 반복 실행 횟수(기본 1, 상한 10). k>1이면 pass@k·pass^k가 의미를 가진다.
+- `version`(필수): 케이스 정의의 버전. **케이스를 고치면 반드시 올린다.** 버전 없이 점수만 쌓으면
+  run #3과 run #7이 서로 다른 문제를 푼 점수인데도 같은 축에 그려져 추이가 조용히 무의미해진다.
+  추이 엔트리에 `caseVersion`으로 함께 기록되고, 직전 run과 다르면 `[VERSION CHANGED]`로 경고한다.
 - 알 수 없는 assert 타입·잘못된 정규식·상태 채점 불능은 전부 **fail-closed**(통과로 새지 않음).
 
 **원칙: verifier는 에이전트의 말이 아니라 환경의 상태를 채점한다.** "파일을 만들었다"는 응답 텍스트가
 아니라 `file_exists`로, "테스트가 통과한다"는 주장이 아니라 `cmd_exit0`로 확인하라.
+
+**assert 값은 원본 파일에서만 읽는다.** 상태 채점기는 `eval-state.sh <workdir> <골든셋파일> --case <id>`
+형태로 호출되어 jq로 직접 값을 뽑는다. assert를 프롬프트에 실어 에이전트에게 옮기게 하거나 `@tsv`로
+꺼내면 백슬래시가 두 배가 되어(`\+` → `\\+`) 정규식이 영구 미매칭된다 — 실제로 이 결함으로 골든셋
+3건이 0점으로 오채점됐다. **setup을 보호 경로(`db/migration/`·`.env` 등)에 두지 마라** — 하네스가
+픽스처 생성 자체를 차단해 케이스가 자기 전제를 세울 수 없다(`--red`가 잡아준다).
 
 ## 채점 규칙
 
@@ -64,10 +74,32 @@ description: 골든셋(고정 입력→루브릭 케이스)으로 산출물 품�
 - `specs/eval-score.json`은 append-only 추이(`{"runs":[{run, suiteScore, cases[]}]}`) — 기존 원소 수정 금지.
 - 강제(CI/pre-push 차단)는 옵트인 — 팀이 골든셋을 유지할 때만 배선한다(과잉 차단 방지).
 
+## 프리플라이트 — 돌리기 전에 검증한다 (`carve-validate`)
+
+채점기는 전부 fail-closed다. assert 타입 오타 하나, 컴파일 안 되는 정규식 하나가 **조용히 0점**이 되고,
+그건 "에이전트가 못했다"와 구별되지 않는다. 그래서 비싼 런 전에 설정 오류를 먼저 분리한다 — 에이전트 0회.
+
+```bash
+bash .claude/hooks/carve-validate.sh              # specs/goldenset/*.json 구조 검증
+bash .claude/hooks/carve-validate.sh --red        # + 케이스가 실제로 무언가를 재는지 확인
+```
+
+- 기본 검증: 필수 필드(`id`·`prompt`·`version`·`assert`) · id 중복 · 미지 assert 타입 ·
+  정규식 컴파일(JS 의미론, node 있을 때만 — 없으면 `SKIP`으로 명시 보고) · `file_contains`의 `::` ·
+  `k` 범위 · 부정형 전용 케이스 · llm-rubric 전용 경고.
+- `--red`: 각 케이스의 `setup`을 임시 디렉토리에서 돌린 뒤 **에이전트 작업 없이** 결정론 assert를 채점한다.
+  전부 통과하면 `NO-SIGNAL` — 아무것도 안 한 응답자가 green을 받는 케이스이므로 그 케이스는 아무것도 재지 않는다.
+  setup 스크립트 자체가 실패해도 여기서 잡힌다. (setup·`cmd_exit0`을 로컬에서 실행하므로 옵트인)
+- `/eval`은 이 검증을 Phase 0으로 자동 실행하고, 실패하면 **런을 시작하지 않는다**(비용 보호).
+
 ## verifier 반복 절차 (첫 verifier는 거의 항상 틀린다)
 
 새 케이스를 추가하면 **채점 결과만 보지 말고 반드시 1회는 양쪽 궤적을 검사**한다:
 
+0. **양방향으로 확인한다** — 한쪽만 보면 절반은 틀린다.
+   - *red*: `carve-validate.sh --red` — 에이전트가 아무것도 안 했을 때 assert가 **실패**하는가(안 그러면 아무것도 재지 않는다).
+   - *green*: 케이스를 손으로 푼 정답 상태에서 assert가 **통과**하는가(안 그러면 영원히 0점인 케이스다).
+   green 확인 없이 넣은 케이스가 실제로 run#1에서 false-zero 3건을 만들었다.
 1. 케이스를 1회 실행한다(`/eval` 또는 단건).
 2. **에이전트 궤적** 검사: respondent가 실제로 무엇을 했나(툴콜·산출물) — 태스크를 우회했는가.
 3. **verifier 궤적** 검사: assert가 잰 것이 의도한 능력인가 — 프록시만 잰 것 아닌가.
@@ -79,7 +111,7 @@ description: 골든셋(고정 입력→루브릭 케이스)으로 산출물 품�
 | 해킹 | 징후 | 대응 |
 |---|---|---|
 | 허위 주장 | "했다"는 텍스트만 있고 상태 변화 없음 | 텍스트 assert → 상태 assert(`file_exists`·`cmd_exit0`)로 교체 |
-| 프록시 충족 | 지표는 green인데 태스크 미완 | 최종 결과물 기준 상태 assert 추가 |
+| 프록시 충족 | 지표는 green인데 태스크 미완 | 최종 결과물 기준 상태 assert 추가 — `--red`가 자동 탐지(NO-SIGNAL) |
 | 정답 노출 | respondent가 골든셋/assert를 읽고 역산 | 상태 assert·setup 케이스는 자동으로 리포 밖 격리 — 텍스트 전용 케이스는 assert에 답 자체를 넣지 않기 |
 | 과잉 충족 | 금지어 회피를 위해 무의미한 출력 | `not_*` 만 있는 케이스에 positive assert 병행 |
 
@@ -135,10 +167,22 @@ bash .claude/hooks/eval-gate.sh --mode block --delta 3 # 회귀 시 exit 1 (CI �
 
 또는 발화에 `carve-eval 실행`. 인자: `{ goldenset?: glob, threshold?: 70, delta?: 3, config?: "라벨" }`.
 
+> **`carve-eval.js`를 고친 직후에는 이름(`carve-eval`)으로 실행하지 마라.** 이름 해석은 세션 초반에 잡힌
+> 레지스트리 스냅샷을 쓸 수 있어 **수정 전 코드가 그대로 돌아간다**(실측 확인됨 — run#3이 구버전 회귀
+> 판정 로직으로 실행됐다). 수정 후 첫 실행은 `Workflow({scriptPath: ".claude/workflows/carve-eval.js"})`로
+> 파일을 직접 지정하고, 결과에 새 필드가 실제로 들어왔는지 확인하라.
+
 - 추이 엔트리에 하네스 `VERSION`과 `config` 라벨이 함께 기록된다 — **환경·태스크 고정, 구성만 교체**
   방식으로 버전 간(v0.5.1 vs 다음)·구성 간(모델 A vs B) 비교가 가능.
 
 ## 참고
 - 루프 코드: `.claude/workflows/carve-eval.js` · 상태 채점기: `.claude/hooks/eval-state.sh`
+  · 프리플라이트: `.claude/hooks/carve-validate.sh`
 - 예시 골든셋: `example-goldenset.json`(텍스트) · `example-harness-e2e.json`(상태 기반 — 하네스 능력 e2e)
+- 이 리포의 실제 골든셋: `specs/goldenset/harness-guard.json`(가드 준수 5) ·
+  `harness-craft.json`(작업 품질 5) · `harness-hard.json`(고난도 5) — 케이스 작성 참고용
+- **난이도 관리**: 전 케이스가 통과하는 골든셋은 회귀 탐지 여지가 없다. 개선을 못 재고, 작은 퇴행도
+  절벽처럼만 보여 원인 해상도가 낮다. 일부가 실패하는 상태를 유지하라 — `harness-hard.json`은
+  실제로 관측된 실패(이스케이프 파손·소스 grep 위장 테스트·`mv`로 실행권한 소실·비멱등 스크립트·
+  빈 입력 처리)를 케이스로 고정한 것이다.
 - 태스크당 5축 채점: `.claude/skills/checklist-loop/SKILL.md`

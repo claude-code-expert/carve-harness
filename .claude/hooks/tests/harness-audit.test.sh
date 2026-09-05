@@ -30,6 +30,38 @@ CLAUDE_PROJECT_DIR="$REPO" bash "$AUDIT" >/dev/null 2>&1
 _livesnap() { cat "$REPO/.claude/settings.json" "$REPO/.claude/hooks/pretool-guard.sh" 2>/dev/null | cksum; }
 PRE_SNAP=$(_livesnap)
 
+# (1b) AUDIT-04 hooksPath branches. The copy needs a .git for the check to run at
+# all. An absolute path activates the gate exactly as well as the relative one —
+# rejecting it reported a live, working config as "unset" and blocked a Stop gate.
+r=$(mkroot); git -C "$r" init -q >/dev/null 2>&1
+git -C "$r" config core.hooksPath ".githooks"
+CLAUDE_PROJECT_DIR="$r" bash "$AUDIT" >/dev/null 2>&1
+[ $? -eq 0 ] && ok "hooksPath relative .githooks accepted (AUDIT-04)" || no "relative hooksPath rejected"
+git -C "$r" config core.hooksPath "$r/.githooks"
+CLAUDE_PROJECT_DIR="$r" bash "$AUDIT" >/dev/null 2>&1
+[ $? -eq 0 ] && ok "hooksPath absolute path accepted (AUDIT-04)" || no "absolute hooksPath rejected"
+git -C "$r" config core.hooksPath "/tmp/not-our-hooks"
+out=$(CLAUDE_PROJECT_DIR="$r" bash "$AUDIT" 2>&1); rc=$?
+[ "$rc" -ne 0 ] && printf '%s' "$out" | grep -q 'points outside .githooks' \
+  && ok "hooksPath pointing elsewhere -> non-zero, named as such (AUDIT-04)" || no "foreign hooksPath ($rc)"
+git -C "$r" config --unset core.hooksPath
+out=$(CLAUDE_PROJECT_DIR="$r" bash "$AUDIT" 2>&1); rc=$?
+[ "$rc" -ne 0 ] && printf '%s' "$out" | grep -q 'core.hooksPath unset' \
+  && ok "hooksPath unset -> non-zero, reported as unset (AUDIT-04)" || no "unset hooksPath ($rc)"
+rm -rf "$r"
+
+# (1c) AUDIT-03 PII masking: the audit's own masking check had no mutation test,
+# so deleting it from the audit reported PASS while log masking silently died.
+r=$(mkroot)
+for h in log-event.sh lib-protected.sh; do
+  [ -f "$r/.claude/hooks/$h" ] && { sed 's/<masked>/<plain>/g' "$r/.claude/hooks/$h" > "$r/x" \
+    && mv "$r/x" "$r/.claude/hooks/$h"; }
+done
+out=$(CLAUDE_PROJECT_DIR="$r" bash "$AUDIT" 2>&1); rc=$?
+[ "$rc" -ne 0 ] && printf '%s' "$out" | grep -q 'PII masking' \
+  && ok "PII masking removed -> non-zero (AUDIT-03)" || no "PII masking mutation ($rc)"
+rm -rf "$r"
+
 # (2) jq absent -> non-zero (PATH holds bash but not jq).
 r=$(mkroot); nob=$(mktemp -d); ln -s "$(command -v bash)" "$nob/bash"
 ( PATH="$nob" CLAUDE_PROJECT_DIR="$r" bash "$AUDIT" ) >/dev/null 2>&1

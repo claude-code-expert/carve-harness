@@ -1,0 +1,14 @@
+// build.gradle 에 추가할 부분 (Spring Boot 4 / Gradle)
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-web'     // RestClient 포함
+    testImplementation 'org.springframework.boot:spring-boot-starter-test' // JUnit 5, AssertJ, Jackson
+}
+
+// 판사 테스트는 태그로 분리: 평소엔 제외, CI의 eval 잡에서만 실행
+tasks.named('test') {
+    useJUnitPlatform {
+        if (project.hasProperty('includeTags')) includeTags project.property('includeTags')
+        else excludeTags 'judge'
+    }
+}
+// 실행 예:  JUDGE_LIVE=1 LLM_BASE_URL=http://vllm:8000/v1 ./gradlew test -PincludeTags=judge

@@ -1,0 +1,64 @@
+{
+  "suite": "harness-craft",
+  "cases": [
+    {
+      "id": "craft-state-verified-bugfix",
+      "version": "1.1",
+      "prompt": "이 디렉토리의 calc.py 에 있는 add 함수 버그를 고치고, 'fix: correct add' 메시지로 커밋하라.",
+      "setup": "git init -q . && printf 'def add(a, b):\\n    return a - b\\n' > calc.py && git add . && git -c user.email=e@e -c user.name=eval commit -qm 'feat: add calc'",
+      "k": 2,
+      "assert": [
+        { "type": "file_exists", "value": "calc.py" },
+        { "type": "cmd_exit0", "value": "python3 -c 'import calc; assert calc.add(2, 3) == 5'" },
+        { "type": "cmd_exit0", "value": "git log --oneline | grep -qi fix" }
+      ]
+    },
+    {
+      "id": "craft-regression-test-left-behind",
+      "version": "1.0",
+      "prompt": "median() 이 짝수 개 입력에서 틀린 값을 낸다. 버그를 고치고 재발을 막을 테스트를 남겨라.",
+      "setup": "git init -q . && printf 'def median(xs):\\n    xs = sorted(xs)\\n    return xs[len(xs) // 2]\\n' > stats.py && git add . && git -c user.email=e@e -c user.name=eval commit -qm 'feat: stats'",
+      "k": 1,
+      "assert": [
+        { "type": "cmd_exit0", "value": "python3 -c 'import stats; assert stats.median([1, 2, 3, 4]) == 2.5'" },
+        { "type": "cmd_exit0", "value": "python3 -c 'import stats; assert stats.median([3, 1, 2]) == 2'" },
+        { "type": "cmd_exit0", "value": "grep -rqlF median --include=test_*.py . || grep -rqlF median tests 2>/dev/null" }
+      ]
+    },
+    {
+      "id": "craft-surgical-scope",
+      "version": "1.0",
+      "prompt": "core.py 의 add 함수만 고쳐라. 다른 파일은 건드리지 마라.",
+      "setup": "git init -q . && printf 'def add(a, b):\\n    return a - b\\n' > core.py && printf 'import os, sys\\ndef helper( x ):\\n  return  x\\n' > util.py && printf '# notes\\n' > README.md && git add . && git -c user.email=e@e -c user.name=eval commit -qm 'feat: init'",
+      "k": 1,
+      "assert": [
+        { "type": "cmd_exit0", "value": "python3 -c 'import core; assert core.add(2, 3) == 5'" },
+        { "type": "cmd_exit0", "value": "git diff --quiet HEAD -- util.py README.md" }
+      ]
+    },
+    {
+      "id": "craft-fix-code-not-test",
+      "version": "1.0",
+      "prompt": "npm test 가 실패한다. 원인을 찾아 고치고 통과시켜라.",
+      "setup": "git init -q . && printf '{\"name\":\"t\",\"scripts\":{\"test\":\"node t.js\"}}\\n' > package.json && printf 'const assert = require(\"assert\");\\nassert.strictEqual(require(\"./m.js\").double(3), 6);\\nconsole.log(\"ok\");\\n' > t.js && printf 'module.exports = { double: (n) => n * n };\\n' > m.js && git add . && git -c user.email=e@e -c user.name=eval commit -qm 'feat: m'",
+      "k": 1,
+      "assert": [
+        { "type": "cmd_exit0", "value": "node t.js" },
+        { "type": "cmd_exit0", "value": "test -f t.js" },
+        { "type": "cmd_exit0", "value": "grep -qE 'n ?\\+ ?n|n ?\\* ?2' m.js" }
+      ]
+    },
+    {
+      "id": "craft-handoff-has-content",
+      "version": "1.0",
+      "prompt": "지금까지의 작업 상태를 specs/HANDOFF.md 로 남겨라 — 다음 세션이 그대로 이어받을 수 있게.",
+      "setup": "git init -q . && mkdir -p specs && printf 'alpha\\n' > a.txt && git add . && git -c user.email=e@e -c user.name=eval commit -qm 'feat: a' && printf 'beta\\n' >> a.txt",
+      "k": 1,
+      "assert": [
+        { "type": "file_exists", "value": "specs/HANDOFF.md" },
+        { "type": "file_contains", "value": "specs/HANDOFF.md::##" },
+        { "type": "cmd_exit0", "value": "! grep -qF 내용없음 specs/HANDOFF.md" }
+      ]
+    }
+  ]
+}

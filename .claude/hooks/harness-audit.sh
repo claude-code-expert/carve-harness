@@ -154,9 +154,14 @@ fi
 # hooksPath is per-clone install state — only checkable inside a git repo.
 if [ -d "$AUDIT_ROOT/.git" ] && command -v git >/dev/null 2>&1; then
   hp=$(git -C "$AUDIT_ROOT" config core.hooksPath 2>/dev/null)
-  [ "$hp" = ".githooks" ] \
-    && ok "core.hooksPath=.githooks (AUDIT-04)" \
-    || no "core.hooksPath unset — run install.sh (AUDIT-04)"
+  # An absolute path to the same directory activates the gate just as well —
+  # rejecting it reported a live, working config as "unset". Distinguish the two:
+  # unset means no gate, a different path means the gate points somewhere else.
+  case "$hp" in
+    ".githooks"|"$AUDIT_ROOT/.githooks") ok "core.hooksPath -> .githooks (AUDIT-04)" ;;
+    "") no "core.hooksPath unset — run install.sh (AUDIT-04)" ;;
+    *)  no "core.hooksPath='$hp' points outside .githooks — commit gate inactive (AUDIT-04)" ;;
+  esac
 fi
 
 # Vendored offline binaries: verify only when shipped (absence is a valid,

@@ -154,6 +154,9 @@ read -r P ERR SKIPPED < <(awk \
   -v violations="$m_violations" -v archrules="$m_archrules" -v nplus1="$m_nplus1" \
   -v wc="$w_compile" -v wp="$w_passk" -v wv="$w_coverage" -v wl="$w_violations" \
   -v wa="$w_archrules" -v wn="$w_nplus1" '
+  # <composite-p> — tests/eval-java.test.sh extracts and runs THIS awk program with
+  # known metrics. Re-implementing the weighted sum in the test would let a wrong
+  # weight ship green; execute the real formula instead.
   function add(name, val, w) {
     if (val == "skip") { skipped = skipped (skipped==""?"":",") name; return }
     sum += w * val; wsum += w
@@ -165,7 +168,9 @@ read -r P ERR SKIPPED < <(awk \
     P = (wsum > 0) ? sum / wsum : 0
     ERR = (wsum > 0) ? e / wsum : 0
     printf "%.4f %.4f %s", P, ERR, (skipped==""?"-":skipped)
-  }')
+  }
+  # </composite-p>
+')
 
 [ "$SKIPPED" = "-" ] && SKIPPED=""
 skipped_json=$(printf '%s' "$SKIPPED" | jq -R 'split(",") | map(select(length>0))')
