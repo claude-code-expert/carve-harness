@@ -7,5 +7,6 @@
     "test:install": "bash .claude/hooks/tests/install-components.test.sh",
     "test:guard": "bash .claude/hooks/tests/pretool-guard.test.sh",
     "test:audit": "bash .claude/hooks/tests/harness-audit.test.sh"
-  }
+  },
+  "license": "MIT"
 }

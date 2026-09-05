@@ -2,8 +2,8 @@
 
 > Claude Code 드롭인 하네스 — 전체 사용 설명 + 설치 내역.
 > 대상: 이 하네스를 쓰거나 다른 프로젝트에 이식하려는 사용자.
-> 기준: 릴리스 **v0.6.0** (v1 하드닝 + 크로스에이전트 + update/rollback/setup + 게이트웨이 검증 v2 + Java/Spring 결정적 evaluator v3 + 설치 구성 선택·fable 오케스트레이터 팀 + verify-loop·carve-eval + 강한 모델 기준 감량). `/harness-audit` = 47 PASS.
-> 최종 갱신: 2026-08-03.
+> 기준: 릴리스 **v0.8.0** (v1 하드닝 + 크로스에이전트 + update/rollback/setup + 게이트웨이 검증 v2 + Java/Spring 결정적 evaluator v3 + 설치 구성 선택·fable 오케스트레이터 팀 + verify-loop·carve-eval + 강한 모델 기준 감량 + 적대적 감사 게이트 경화 + `/eval-init` 평가 게이트 셋업). `/harness-audit` = 47 PASS.
+> 최종 갱신: 2026-08-06.
 
 초기 뼈대 매뉴얼·외부 도구 설치 리스트(구 `docs/md/`)는 v0.6.x에서 제거됐다(git 히스토리 보존). **현재 상태는 이 GUIDE를 정본으로 본다.**
 
@@ -168,7 +168,7 @@ harness/
 > 파이프라인 전체는 `.claude/workflows/fable-team-pipeline.js` — `"fable-team-pipeline 실행"`(옵트인)으로 Spec→Build+Verify→Document→Verify 4-Phase 자동 실행.
 > (squad 파이프라인 에이전트 8종+커맨드 9종은 전문 리뷰어·fable 팀과 역할이 중복되어 제거됨 — v0.5.1 이후.)
 
-### 5.3 스킬 (`.claude/skills/`, 9종)
+### 5.3 스킬 (`.claude/skills/`, 10종)
 
 **하네스 코어 스킬** (자동발동):
 
@@ -181,7 +181,8 @@ harness/
 | `carve-guide/` | `/carve-guide` | 하네스 HTML 산출물 작성(디자인 시스템·anti-slop 게이트·theme-factory/frontend-design 검토·1000px 임베드 안전). §릴리스 인벤토리 갱신 모드는 리포 전용. v0.0.13부터 배포 |
 | `carve-harness-create/` | `/carve-harness-create` | 프로젝트 스택 분석 → 맞지 않는 규칙·에이전트·스킬을 KEEP/PRUNE 표로 제안, 1회 확인 후 `install.sh prune` 실행. 명시 호출 전용(`disable-model-invocation`). 의존성 간선(eval-java↔archunit·fable↔워크플로) 미분리 |
 | `checklist-loop/` | 자동 | Stop 게이트(checklist-gate.sh)와 연동되는 체크리스트 작성·소진 루프 |
-| `eval-goldenset/` | 자동/`/eval-goldenset` | 골든셋 태스크 정의 — carve-eval 워크플로의 채점 기준 |
+| `eval-goldenset/` | 자동/`/eval-goldenset` | 골든셋 형식·리워드 해킹 점검표·트레이스 마이닝 **절차 정본**(SOP). carve-eval의 채점 기준 |
+| `eval-init/` | `/eval-init` | 그 SOP의 **실행기** — 프로젝트 분석 → 인터뷰 7문항으로 평가·품질 게이트 확정 → 골든셋 초안 → 궤적 검사 후 승인분만 편입 → CI 배선 → baseline 기록. 설치 후 1회성, 명시 호출 전용 |
 
 **벤더 스킬 1종** (외부 출처 벤더링, SKILL.md만):
 
@@ -412,8 +413,8 @@ Slack/위키에 그대로:
 
 ## 10. 검증 / 한계
 
-- 훅 14개 `bash -n` clean · 테스트 20 스위트(280건) 전부 통과(`npm test`) · `/harness-audit` 47 PASS. (2026-08-03 실검증)
-- **한계(적대적 감사로 실측한 천장, 2026-08-03)**: ① Bash 쓰기 가드는 명령 표면만 — 변수 간접(`F=.env; … > $F`)·인터프리터 경유(`python3 -c`) 미탐 ② 시크릿 스캔은 리터럴 매칭 — base64·분할 조립 미탐 ③ 위험 명령은 셸 alias/함수로 감싸면 미탐, `curl -o f && bash f` 미탐 ④ Stop 게이트는 6스택(Java·Node·Python·Go·Rust·bash)만, 각 스택 툴체인 설치 시에만 작동 ⑤ checklist 게이트는 삭제·threshold 하향은 막지만 **거짓 채점 내용**은 못 막음 ⑥ 코드 `TODO/FIXME` 스캔 범위 밖 ⑦ `LICENSE` 미추가(보류). 재현: 우회 프로브 34종(`redteam-probe.sh`), 추적: `specs/HANDOFF.md`.
+- 훅 14개 `bash -n` clean · 테스트 20 스위트(283건) 전부 통과(`npm test`) · `/harness-audit` 47 PASS. (2026-08-06 실검증)
+- **한계(적대적 감사로 실측한 천장, 2026-08-03)**: ① Bash 쓰기 가드는 명령 표면만 — 변수 간접(`F=.env; … > $F`)·인터프리터 경유(`python3 -c`) 미탐 ② 시크릿 스캔은 리터럴 매칭 — base64·분할 조립 미탐 ③ 위험 명령은 셸 alias/함수로 감싸면 미탐, `curl -o f && bash f` 미탐 ④ Stop 게이트는 6스택(Java·Node·Python·Go·Rust·bash)만, 각 스택 툴체인 설치 시에만 작동 ⑤ checklist 게이트는 삭제·threshold 하향은 막지만 **거짓 채점 내용**은 못 막음 ⑥ 코드 `TODO/FIXME` 스캔 범위 밖 재현: 우회 프로브 34종(`redteam-probe.sh`), 추적: `specs/HANDOFF.md`.
 - 훅/스킬 규약은 Claude Code 버전에 따라 바뀔 수 있음 — 도입 전 `/hooks`·`/plugins`로 현행 확인, `code.claude.com/docs` 대조.
 
 ---
