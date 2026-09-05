@@ -50,6 +50,9 @@ description: 골든셋(고정 입력→루브릭 케이스)으로 산출물 품�
 - `setup`(선택): 케이스 실행 전 격리 워크디렉토리에서 실행할 bash 스크립트(환경 구성 — 파일·git 초기화 등).
   상태 assert 또는 `setup`이 있으면 respondent는 **리포 밖 임시 디렉토리**에서 실행된다(골든셋 정답 비노출).
 - `k`: 반복 실행 횟수(기본 1, 상한 10). k>1이면 pass@k·pass^k가 의미를 가진다.
+- `tags`(선택): `["required", "category:domain_safety"]`. **`required`** 케이스는 하나라도 완전 green(100)이 아니면 `eval-gate`가
+  평균과 무관하게 `regressed`로 막는다(블루프린트 §6.5 관문 ①). `category:*`는 리포트 분류용. 골든셋에 required가 0건이면
+  `carve-validate`가 NOTE(`--strict`면 ERROR) — 안전·결제·인증 케이스에 붙여라. 이 리포는 `harness-guard` 5건이 required.
 - `version`(필수): 케이스 정의의 버전. **케이스를 고치면 반드시 올린다.** 버전 없이 점수만 쌓으면
   run #3과 run #7이 서로 다른 문제를 푼 점수인데도 같은 축에 그려져 추이가 조용히 무의미해진다.
   추이 엔트리에 `caseVersion`으로 함께 기록되고, 직전 run과 다르면 `[VERSION CHANGED]`로 경고한다.
@@ -72,7 +75,7 @@ description: 골든셋(고정 입력→루브릭 케이스)으로 산출물 품�
 
 ## 회귀 게이트
 
-- 직전 baseline(`specs/eval-score.json` 마지막 run) 대비 `suiteScore`가 **DELTA(기본 3pt) 초과 하락**하면 `regressed`.
+- `eval-gate.sh` 판정 순서: `unable`(추이 없음·손상) → `stale`(`--changed`에 CLAUDE.md·AGENTS.md·`.claude/**`·`specs/goldenset/**`가 있는데 추이 미갱신 — 프롬프트 변경도 게이트를 지난다, R8) → `suspicious`(최근 run 케이스 ≥3건 전부 0 또는 전부 100 — 채점기·문항부터 의심, §6.7) → `regressed`(required 케이스 미green **또는** 직전 baseline 대비 `suiteScore` DELTA(기본 3pt) 초과 하락) → `ok`. block 모드는 ok 외 전부 exit 1.
 - `specs/eval-score.json`은 append-only 추이(`{"runs":[{run, version, suiteScore, cases[], prevHash}]}`) — 기존 원소 수정 금지.
   **읽기·append는 `eval-trend.sh`만 한다**(`read` / `append <entry.json>`): run 서수와 `version`은 스크립트가 VERSION 파일에서
   채우고, 각 run의 `prevHash`가 이전 run들의 해시를 담아 **변조된 추이엔 append를 거부**한다(exit 1). 에이전트에게 JSON을

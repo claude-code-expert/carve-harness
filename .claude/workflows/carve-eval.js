@@ -38,6 +38,7 @@ const GOLDENSET_SCHEMA = {
           prompt: { type: 'string' },
           setup: { type: 'string' },
           k: { type: 'number' },
+          tags: { type: 'array', items: { type: 'string' } },
           assert: {
             type: 'array',
             items: {
@@ -119,7 +120,7 @@ if (!preflight || preflight.exitCode !== 0) {
 // ── Phase 1: Load golden set (workflow has no fs → Read via agent) ──
 phase('Load')
 const loaded = await agent(
-  `${GLOB} 파일들을 Read로 열어 JSON을 파싱하고, 모든 케이스를 하나의 배열로 병합해 반환하라. 각 케이스: {suite, id, file, version, prompt, setup, k, assert:[{type,value}]}. file은 그 케이스가 정의된 파일의 리포 기준 상대경로다(상태 채점기가 원본에서 직접 읽는다). version은 케이스 정의의 버전 문자열이며 그대로 옮겨라. 파일이 하나도 없으면 cases:[] 로 반환하라. 파일에 실재하는 내용만 — 지어내지 마라.`,
+  `${GLOB} 파일들을 Read로 열어 JSON을 파싱하고, 모든 케이스를 하나의 배열로 병합해 반환하라. 각 케이스: {suite, id, file, version, prompt, setup, k, tags, assert:[{type,value}]}. tags 는 있으면 배열 그대로(없으면 생략). file은 그 케이스가 정의된 파일의 리포 기준 상대경로다(상태 채점기가 원본에서 직접 읽는다). version은 케이스 정의의 버전 문자열이며 그대로 옮겨라. 파일이 하나도 없으면 cases:[] 로 반환하라. 파일에 실재하는 내용만 — 지어내지 마라.`,
   { agentType: 'general-purpose', label: 'load-goldenset', phase: 'Load', schema: GOLDENSET_SCHEMA }
 )
 const cases = (loaded?.cases ?? []).filter((c) => c && c.prompt && c.id)
@@ -150,7 +151,7 @@ const judgeRubrics = async (c, r) => {
 }
 const runCase = async (c) => {
   const k = Math.max(1, Math.min(Number(c.k) || 1, K_MAX))
-  const base = { suite: c.suite || 'default', id: c.id, caseVersion: c.version ?? null, k }
+  const base = { suite: c.suite || 'default', id: c.id, caseVersion: c.version ?? null, k, tags: Array.isArray(c.tags) ? c.tags : [] }
   if (!c.file) return { ...base, greens: 0, pass_at_k: false, pass_pow_k: false, caseScore: 0, failed: ['case:file-unknown'] }
 
   let runs
@@ -222,6 +223,8 @@ const prior = await agent(
 const prev = prior?.lastSuiteScore ?? null
 const runOrdinal = (prior?.runs ?? 0) + 1
 const belowThreshold = graded.filter((r) => r.caseScore < THRESHOLD).map((r) => `${r.id}(${r.caseScore})`)
+// required 태그 케이스는 평균과 무관하게 전부 green 이어야 한다(블루프린트 §6.5 관문 ①). eval-gate.sh 가 추이에서 같은 판정을 강제한다.
+const requiredFailed = graded.filter((r) => r.tags.includes('required') && r.caseScore < 100).map((r) => `${r.id}(${r.caseScore})`)
 
 // suiteScore는 케이스를 추가·제거·수정하면 곧바로 비교 불가가 된다(평균의 모집단이 바뀐다).
 // 회귀는 **양쪽 run에 같은 버전으로 존재하는 케이스**만으로 판정한다 — 그게 유일한 동일 조건 비교.
@@ -265,6 +268,7 @@ if (comparable.length) {
   log('직전 run과 겹치는 케이스가 없다 — 회귀 판정 불가(비교 기준 없음).')
 }
 if (regressed) log(`[REGRESSION] 동일 케이스 ${comparablePrev}→${comparableNow} (>${DELTA}pt 하락). 임계 미달: ${belowThreshold.join(', ') || '없음'}`)
+if (requiredFailed.length) log(`[REQUIRED FAIL] ${requiredFailed.join(', ')} — required 케이스는 평균과 무관하게 게이트를 막는다.`)
 if (added.length || removed.length) {
   log(`[CASE SET CHANGED] 추가 ${added.join(', ') || '없음'} / 제거 ${removed.join(', ') || '없음'} — suite ${prev}→${suiteScore} 비교는 모집단이 달라 무의미하다. 위 동일 케이스 기준만 보라.`)
 }
@@ -273,7 +277,7 @@ if (versionChanged.length) log(`[VERSION CHANGED] ${versionChanged.join(', ')} �
 return {
   suiteScore, threshold: THRESHOLD, run: runOrdinal, baseline: prev,
   comparableNow, comparablePrev, comparableCount: comparable.length,
-  regressed, belowThreshold, versionChanged, added, removed,
+  regressed, belowThreshold, requiredFailed, versionChanged, added, removed,
   passAtK: graded.filter((r) => r.pass_at_k).length,
   passPowK: graded.filter((r) => r.pass_pow_k).length,
   total: graded.length,
