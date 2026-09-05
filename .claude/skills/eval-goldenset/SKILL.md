@@ -71,7 +71,11 @@ description: 골든셋(고정 입력→루브릭 케이스)으로 산출물 품�
 ## 회귀 게이트
 
 - 직전 baseline(`specs/eval-score.json` 마지막 run) 대비 `suiteScore`가 **DELTA(기본 3pt) 초과 하락**하면 `regressed`.
-- `specs/eval-score.json`은 append-only 추이(`{"runs":[{run, suiteScore, cases[]}]}`) — 기존 원소 수정 금지.
+- `specs/eval-score.json`은 append-only 추이(`{"runs":[{run, version, suiteScore, cases[], prevHash}]}`) — 기존 원소 수정 금지.
+  **읽기·append는 `eval-trend.sh`만 한다**(`read` / `append <entry.json>`): run 서수와 `version`은 스크립트가 VERSION 파일에서
+  채우고, 각 run의 `prevHash`가 이전 run들의 해시를 담아 **변조된 추이엔 append를 거부**한다(exit 1). 에이전트에게 JSON을
+  열어 고치게 하지 마라 — 실제로 run 하나가 유실되고 version이 오기록된 적이 있다. 사람이 정정해야 하면 손으로 고치고
+  `DECISIONS.md`에 남긴다.
 - 강제(CI/pre-push 차단)는 옵트인 — 팀이 골든셋을 유지할 때만 배선한다(과잉 차단 방지).
 
 ## 프리플라이트 — 돌리기 전에 검증한다 (`carve-validate`)

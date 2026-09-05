@@ -361,6 +361,7 @@ bash .claude/hooks/carve-validate.sh --red   # 케이스를 쓰거나 고친 직
 | `eval-state` | carve-eval 상태 assert 채점 시(헬퍼) | 골든셋 상태 assert(파일·명령·diff)를 실상태로 결정적 채점 — 자기 보고 불신. `--case <id>`로 골든셋 원본에서 직접 읽어 값 전달 중 이스케이프 훼손 차단 |
 | `eval-gate` | CI·로컬에서 골든셋 회귀 판정 시(수동 CLI) | `specs/eval-score.json` 추이만 읽어 직전 대비 하락폭 판정 — LLM 없음. `--mode block`이면 회귀 시 exit 1, 추이 없음·손상은 fail-closed |
 | `carve-validate` | `/eval` Phase 0 자동 · 케이스 작성 후 수동 CLI | 골든셋 프리플라이트 — 필수 필드·id 중복·미지 assert 타입·정규식 컴파일·`k` 범위 검증. `--red`는 setup 실행 후 "에이전트 작업 없이 이미 green"인 NO-SIGNAL 케이스 탐지 |
+| `eval-trend` | `/eval`이 추이를 읽고 쓸 때(헬퍼) | `specs/eval-score.json` 결정론 읽기·append — run 서수·`version`은 VERSION 파일에서, `prevHash`로 이전 run 변조 시 append 거부. LLM이 추이 파일을 직접 편집하지 않는다 |
 | `eval-score` | 빌드 건강도 점수가 필요할 때(수동 CLI) | 언어 무관 채점표(블루프린트 §5.7) — `.claude/stacks/*.sh` 어댑터로 G1 빌드·G2 테스트·G3 안전(거부권)·lint·회귀·커버리지 산출, 못 잰 항목은 `skipped`로 명시. `specs/SCORE.json` |
 | `lib-packs` | 설치기·감사가 `source`로 참조 | 언어팩 매니페스트(`packs/*.pack`) 리더 — 목록·경로·감지(마커 파일 + ORM 의존성 grep) |
 

@@ -227,10 +227,12 @@ const suiteScore = graded.length
   ? Math.round(graded.reduce((s, r) => s + r.caseScore, 0) / graded.length)
   : 0
 
-// 직전 baseline 읽기(없으면 runs:0). 워크플로는 Date 사용 불가 → run 서수는 기존 엔트리 수 +1.
+// 직전 baseline — 추이 파일은 LLM이 아니라 eval-trend.sh 가 읽는다. 에이전트가 JSON을 직접
+// 파싱·재구성하게 두면 다른 워크스페이스 파일로 덮어쓰거나 version을 지어낸다(실제 발생, DECISIONS
+// 2026-09-06). 에이전트는 스크립트 stdout을 그대로 옮기는 릴레이만 한다.
 const prior = await agent(
-  `(1) specs/eval-score.json 을 Read로 열어라. 없으면 runs:0, lastSuiteScore:null, lastCaseVersions:[]. 있으면 .runs 배열 길이를 runs로, 마지막 원소의 suiteScore를 lastSuiteScore로, 마지막 원소의 cases[]에서 {id, caseVersion, caseScore}만 뽑아 lastCaseVersions로. (2) VERSION 파일을 Read로 열어 내용(trim)을 version으로. 없으면 null. 지어내지 마라.`,
-  { agentType: 'general-purpose', label: 'read-baseline', phase: 'Score', schema: PRIOR_SCHEMA }
+  `Bash로 \`bash .claude/hooks/eval-trend.sh read\` 를 실행하고 stdout의 JSON 객체를 그대로 반환하라. 파일을 직접 열거나 값을 보태지 마라. 스크립트가 실패하면 runs:0, lastSuiteScore:null, version:null, lastCaseVersions:[] 를 반환하라.`,
+  { agentType: 'general-purpose', label: 'read-baseline', phase: 'Score', effort: 'low', schema: PRIOR_SCHEMA }
 )
 const prev = prior?.lastSuiteScore ?? null
 const runOrdinal = (prior?.runs ?? 0) + 1
@@ -255,14 +257,16 @@ const comparablePrev = mean(comparable.map((r) => priorCases.get(r.id).caseScore
 const regressed = comparablePrev != null && comparableNow < comparablePrev - DELTA
 
 // 구성 기록 — 같은 골든셋으로 하네스 버전/구성 간 비교하는 축(환경·태스크 고정, 구성만 교체).
-const entry = {
-  run: runOrdinal, version: prior?.version ?? null, config: ARGS.config ?? null,
-  suiteScore, threshold: THRESHOLD, cases: graded,
-}
-await agent(
-  `specs/eval-score.json 을 갱신하라. 없으면 {"runs":[]} 로 생성. 기존 .runs 배열 끝에 아래 원소를 append 하라(기존 원소 변형·삭제 금지). 저장 후 경로만 보고하라.\n\n${JSON.stringify(entry, null, 2)}`,
-  { agentType: 'general-purpose', label: `persist-trend#${runOrdinal}`, phase: 'Score' }
+// run·version은 여기 적어도 eval-trend.sh 가 덮어쓴다(서수 = 기존 길이+1, VERSION 파일). 에이전트는
+// 엔트리를 임시 파일에 그대로 쓰고 스크립트를 부르는 릴레이만 — 추이 파일을 직접 편집하지 않는다.
+// 스크립트는 이전 run 해시(prevHash)를 검사해 변조된 추이엔 append 하지 않는다(exit 1).
+const entry = { config: ARGS.config ?? null, suiteScore, threshold: THRESHOLD, cases: graded }
+const persisted = await agent(
+  `다음을 순서대로 수행하라: (1) 아래 JSON을 \`mktemp\` 로 만든 임시 파일에 **그대로**(변형·요약 금지) 저장 (2) Bash로 \`bash .claude/hooks/eval-trend.sh append <그 파일>\` 실행 (3) stdout의 JSON을 그대로 반환. specs/eval-score.json 을 직접 열거나 편집하지 마라. 스크립트가 exit 1이면 stderr 메시지를 error 필드로 반환하라.\n\n${JSON.stringify(entry, null, 2)}`,
+  { agentType: 'general-purpose', label: `persist-trend#${runOrdinal}`, phase: 'Score', effort: 'low',
+    schema: { type: 'object', properties: { run: { type: ['number', 'null'] }, version: { type: ['string', 'null'] }, suiteScore: { type: ['number', 'null'] }, error: { type: ['string', 'null'] } } } }
 )
+if (persisted?.error) log(`[TREND NOT SAVED] ${persisted.error} — 점수는 위 리포트에만 있다. 추이를 고친 뒤 재실행하라.`)
 
 log(`suite ${suiteScore}/100 (run #${runOrdinal}, 케이스 ${graded.length}건)`)
 if (comparable.length) {
