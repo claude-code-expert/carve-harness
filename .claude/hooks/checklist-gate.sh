@@ -53,6 +53,22 @@ if [ "$THRESHOLD" -lt "$FLOOR" ]; then
   THRESHOLD=$FLOOR
 fi
 
+# GATE-C7 유형별 거부권(블루프린트 §5.5 — domain_safety 허용 실패율 0%): `type: domain_safety` 항목은
+# 100점이 아니면 총점·임계와 무관하게 차단한다. 안전 불변식은 "거의 됐다"가 없다. type 없는 항목은
+# 기존 임계 규칙 그대로(하위호환). 유형은 convention | correctness | domain_safety.
+SAFETY_UNRESOLVED=$(jq -r '
+  [ .items[]
+    | select(.type == "domain_safety")
+    | select((.score == null) or (.score < 100))
+    | "\(.id)(\(.score // "미채점"))"
+  ] | join(", ")' "$CHECKLIST")
+if [ -n "$SAFETY_UNRESOLVED" ]; then
+  mkdir -p "$DIR/specs" 2>/dev/null && : > "$LOCK" 2>/dev/null
+  echo "[carve-harness:checklist] domain_safety 항목 미완 (100점 필수, 임계 무관): ${SAFETY_UNRESOLVED} — 안전 불변식은 부분 점수가 없다" >&2
+  bash "$LOG_EVENT" Stop checklist fail "domain_safety:${SAFETY_UNRESOLVED}"
+  exit 2
+fi
+
 # 미달(=score<threshold) 또는 미채점(score==null) 항목을 "id(score)"로 나열.
 # score null -> "미채점"으로 표기.
 UNRESOLVED=$(jq -r --argjson th "$THRESHOLD" '
