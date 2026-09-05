@@ -31,6 +31,7 @@ const CHECKLIST_SCHEMA = {
           claim: { type: 'string' },        // "구현했다"고 주장하는 단위
           acceptance: { type: 'string' },   // 검증 가능한 완료 기준(SC)
           owns: { type: 'array', items: { type: 'string' } },
+          type: { enum: ['convention', 'correctness', 'domain_safety'] },   // 선택 — domain_safety 는 100점 필수(GATE-C7)
         },
         required: ['id', 'claim', 'acceptance', 'owns'],
       },
@@ -99,7 +100,7 @@ const VERDICT_SCHEMA = {
 const toChecklist = (items, iteration) => JSON.stringify({
   goal, iteration, threshold: THRESHOLD,
   items: items.map((it) => ({
-    id: it.id, claim: it.claim, acceptance: it.acceptance, owns: it.owns,
+    id: it.id, claim: it.claim, acceptance: it.acceptance, owns: it.owns, type: it.type ?? undefined,
     score: it.score, axes: it.axes, pass: it.pass, gaps: it.gaps, evidence: it.evidence, attempts: it.attempts,
   })),
 }, null, 2)
@@ -120,7 +121,7 @@ const research = await agent(
 let decomposed = args?.tasks
 if (!decomposed) {
   const plan = await agent(
-    `목표: ${goal}\n리서치 요약:\n${research}\n\n목표를 3~7개의 독립 체크리스트 항목으로 분해하라. 각 항목:\n- claim: "구현했다"고 주장할 단위(구체 기능/엔드포인트/규칙 하나).\n- acceptance: 코드+테스트로 검증 가능한 완료 기준(SC).\n- owns: 담당 파일 glob. 항목끼리 겹치면 안 된다(파일 오너 1개).\n\n**중요(격리 제약):** 각 항목은 격리된 worktree에서 빌드·채점되어 다른 항목의 파일을 볼 수 없다. 상호의존 파일(구현 + 그 테스트, 모듈 + 그 마이그레이션 등)은 반드시 같은 항목의 owns에 함께 둔다. 항목의 acceptance는 그 항목 owns 안의 파일만으로 검증 가능해야 한다. 구현과 테스트를 별개 항목으로 쪼개지 마라 — 테스트 항목이 구현 파일을 못 봐 영구 미달이 된다.`,
+    `목표: ${goal}\n리서치 요약:\n${research}\n\n목표를 3~7개의 독립 체크리스트 항목으로 분해하라. 각 항목:\n- claim: "구현했다"고 주장할 단위(구체 기능/엔드포인트/규칙 하나).\n- acceptance: 코드+테스트로 검증 가능한 완료 기준(SC).\n- owns: 담당 파일 glob. 항목끼리 겹치면 안 된다(파일 오너 1개).\n- type(선택): convention | correctness | domain_safety. CLAUDE.md 의 도메인 규칙(불변식)을 구현·보호하는 항목은 반드시 domain_safety — 그 항목은 95가 아니라 100점이어야 게이트를 통과한다.\n\n**중요(격리 제약):** 각 항목은 격리된 worktree에서 빌드·채점되어 다른 항목의 파일을 볼 수 없다. 상호의존 파일(구현 + 그 테스트, 모듈 + 그 마이그레이션 등)은 반드시 같은 항목의 owns에 함께 둔다. 항목의 acceptance는 그 항목 owns 안의 파일만으로 검증 가능해야 한다. 구현과 테스트를 별개 항목으로 쪼개지 마라 — 테스트 항목이 구현 파일을 못 봐 영구 미달이 된다.`,
     { label: 'decompose', phase: 'Spec', schema: CHECKLIST_SCHEMA }
   )
   decomposed = plan.items
@@ -128,7 +129,7 @@ if (!decomposed) {
 
 // 작업 상태를 담은 항목 객체(항목마다 독립 → pipeline 병렬 변이 안전).
 const items = decomposed.map((t) => ({
-  id: t.id, claim: t.claim, acceptance: t.acceptance, owns: t.owns,
+  id: t.id, claim: t.claim, acceptance: t.acceptance, owns: t.owns, type: t.type ?? null,
   attempts: 0, score: null, axes: null, pass: false, gaps: [], evidence: '', lastBuild: null,
 }))
 await persist(items, 0)
@@ -160,7 +161,7 @@ const buildAndScore = (it, iteration) => {
       it.score = scoreFromAxes(v?.axes)
       it.gaps = v?.gaps ?? []
       it.evidence = v?.evidence ?? ''
-      it.pass = it.score >= THRESHOLD
+      it.pass = it.type === 'domain_safety' ? it.score >= 100 : it.score >= THRESHOLD   // GATE-C7 와 동일 규칙
       return it
     })
   })

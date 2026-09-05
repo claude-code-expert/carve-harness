@@ -349,7 +349,7 @@ bash .claude/hooks/carve-validate.sh --red   # 케이스를 쓰거나 고친 직
 | `pretool-guard` | PreToolUse — Write·Edit·Bash 실행 **직전마다** | 보호 경로(쓰기·삭제 모두)·시크릿·위험 명령(force push·`reset --hard`·`curl\|sh`·파괴적 SQL·루트/홈 재귀 삭제) 차단 + 하네스 자기보호(GUARD-07, 설치본) + 동일 툴콜 5연속 루프 브레이크(exit 2), fail-closed |
 | `posttool-format` | PostToolUse — 파일 쓰기·수정 성공 **직후** | 확장자 언어 감지 후 포맷(후처리, exit 0) |
 | `stop-verify` | Stop — 응답 종료(완료 선언) **직전** | 변경 스택 빌드·타입·테스트 게이트(실패 exit 2) |
-| `checklist-gate` | Stop — 응답 종료 **직전**(`stop-verify` 뒤) | `specs/checklist.json` 미달(<95)·미채점 항목 남으면 완료 차단(exit 2). 루프 미개시면 무동작. **자가 우회 차단** — 채점 파일을 지워도 tombstone(`specs/.checklist-active`)이 남아 계속 차단, threshold 하향은 하한 95로 무효화 |
+| `checklist-gate` | Stop — 응답 종료 **직전**(`stop-verify` 뒤) | `specs/checklist.json` 미달(<95)·미채점 항목 남으면 완료 차단(exit 2). `type: domain_safety` 항목은 100점 필수(거부권). 루프 미개시면 무동작. **자가 우회 차단** — 채점 파일을 지워도 tombstone(`specs/.checklist-active`)이 남아 계속 차단, threshold 하향은 하한 95로 무효화 |
 | `session-handoff` | 세션 **시작·압축·종료** 시점(SessionStart·PreCompact·SessionEnd) | 핸드오프 복원·저장 + 구성 배너 |
 | `log-event` | 다른 훅이 판정을 기록할 때(내부 서브프로세스 호출) | JSONL 관측 append — 스키마·PII 마스킹 단일 출처 |
 | `lib-protected` | 훅 로드 시 `source`로 참조(직접 실행 안 함) | 보호 경로·시크릿·위험 명령 정규식 단일 정의(순수 데이터) |

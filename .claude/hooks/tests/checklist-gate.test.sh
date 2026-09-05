@@ -112,5 +112,19 @@ rm -f "$gd/specs/checklist.json"; cg
              || { echo "FAIL: cleared loop should be a no-op"; fail=$((fail + 1)); }
 rm -rf "$gd"
 
+# (14) GATE-C7: a domain_safety item at 97 (>= threshold 95) still blocks — safety has no partial credit.
+tmp=$(mktemp -d); mkdir -p "$tmp/specs"
+printf '%s' '{"threshold":95,"items":[{"id":"c1","type":"domain_safety","score":97,"pass":true},{"id":"c2","score":100,"pass":true}]}' > "$tmp/specs/checklist.json"
+out=$(printf '{}' | CLAUDE_PROJECT_DIR="$tmp" bash "$HOOK" 2>&1); code=$?
+[ "$code" -eq 2 ] && printf '%s' "$out" | grep -q 'domain_safety' \
+  && { echo "PASS: domain_safety at 97 blocks despite threshold 95 (GATE-C7)"; pass=$((pass + 1)); } \
+  || { echo "FAIL: domain_safety veto (exit $code)"; fail=$((fail + 1)); }
+# (15) the same item at 100 passes; an untyped 97 passes (backward compatible).
+printf '%s' '{"threshold":95,"items":[{"id":"c1","type":"domain_safety","score":100,"pass":true},{"id":"c2","type":"convention","score":97,"pass":true},{"id":"c3","score":97,"pass":true}]}' > "$tmp/specs/checklist.json"
+printf '{}' | CLAUDE_PROJECT_DIR="$tmp" bash "$HOOK" >/dev/null 2>&1
+[ $? -eq 0 ] && { echo "PASS: domain_safety 100 + typed/untyped 97 -> pass (GATE-C7)"; pass=$((pass + 1)); } \
+             || { echo "FAIL: veto misfired on a passing checklist"; fail=$((fail + 1)); }
+rm -f "$tmp/specs/checklist.json" "$tmp/specs/.checklist-active"; rm -f "$tmp"/logs/*.jsonl 2>/dev/null; rmdir "$tmp/logs" "$tmp/specs" "$tmp" 2>/dev/null
+
 printf -- '---\n%s passed, %s failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]

@@ -41,6 +41,7 @@ description: 개발이 스펙대로 됐는지 구현 주장 항목을 코드 대
 ```
 
 - `claim`/`acceptance`/`owns`: 분해 단계에서 채운다. `owns` glob은 **항목끼리 겹치면 안 된다**(파일 오너 1개).
+- `type`(선택): `convention` | `correctness` | `domain_safety`. **`domain_safety` 항목은 100점이 아니면 총점·임계와 무관하게 Stop 게이트가 차단한다**(GATE-C7, 블루프린트 §5.5 허용 실패율 0%). 도메인 불변식(`CLAUDE.md` 도메인 규칙)을 구현하는 항목에 붙여라. type 없는 항목은 임계(95) 규칙만.
 - `axes`/`score`/`pass`/`gaps`/`evidence`/`attempts`: 채점 단계에서 채운다. `score = 5축 합`, `pass = score >= threshold`.
 - **5축 루브릭(합 100)**: `exists`25·`match`25·`test`25·`contract`15·`no_regress`10. `test`는 실행 출력으로만 채운다 → verify 미실행이면 test=0 → 합 ≤75 < 95(거짓 완료 차단). 게이트는 `score`만 보므로 하위호환.
 

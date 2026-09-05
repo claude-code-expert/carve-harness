@@ -37,13 +37,13 @@
   - [x] `test` 축 미실행 시 항목 최대 75점(95 게이트 자동 미달)임을 테스트로 증명.
   - [x] `checklist-loop` SKILL의 수동 SOP도 동일 루브릭으로 갱신(도구·수동 정합).
 
-### 2. 유형별 허용 실패율 게이트 `[ ]`
+### 2. 유형별 허용 실패율 게이트 `[x]` (2026-09-06, GATE-C7)
 - **덱 근거**: §4 3계층 게이트 — `convention 5% / correctness 3% / domain_safety 0%`(불변식 위반 무조건 차단).
 - **현재**: `stop-verify.sh`/`checklist-gate.sh`는 단일 임계(95)만. 위반 유형 분류·유형별 허용치 없음.
 - **SC**:
-  - [ ] 체크리스트 항목에 `type: convention|correctness|domain_safety` 라벨 필드 추가.
-  - [ ] `domain_safety` 항목이 1건이라도 fail이면 총점 무관 게이트 차단(fail-closed) — 테스트로 증명.
-  - [ ] 허용치는 설정으로 표현(하드코딩 금지).
+  - [x] 체크리스트 항목에 `type: convention|correctness|domain_safety` 라벨 필드 추가(`carve-verify-loop` 스키마·`checklist-loop` SOP).
+  - [x] `domain_safety` 항목이 100점 미만이면 총점 무관 게이트 차단 — `checklist-gate.test.sh` (14)(15).
+  - [~] 허용치: domain_safety 0%는 고정(블루프린트), convention/correctness 비율 게이트는 미구현(단일 임계 95 유지).
 
 ---
 
