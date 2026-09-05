@@ -361,6 +361,7 @@ bash .claude/hooks/carve-validate.sh --red   # 케이스를 쓰거나 고친 직
 | `eval-state` | carve-eval 상태 assert 채점 시(헬퍼) | 골든셋 상태 assert(파일·명령·diff)를 실상태로 결정적 채점 — 자기 보고 불신. `--case <id>`로 골든셋 원본에서 직접 읽어 값 전달 중 이스케이프 훼손 차단 |
 | `eval-gate` | CI·로컬에서 골든셋 회귀 판정 시(수동 CLI) | `specs/eval-score.json` 추이만 읽어 판정 — LLM 없음. `unable` → `stale`(프롬프트·규칙 변경인데 추이 미갱신) → `suspicious`(전부 0/100) → `regressed`(`required` 케이스 실패 또는 delta 초과) → `ok`. `--mode block`은 ok 외 exit 1 |
 | `carve-validate` | `/eval` Phase 0 자동 · 케이스 작성 후 수동 CLI | 골든셋 프리플라이트 — 필수 필드·id 중복·미지 assert 타입·정규식 컴파일·`k` 범위 검증. `--red`는 setup 실행 후 "에이전트 작업 없이 이미 green"인 NO-SIGNAL 케이스 탐지 |
+| `redteam` | 가드레일 정기 점검 시(수동 CLI/CI) | 공격 34·정상 19 케이스를 `pretool-guard` exit 코드로 채점(LLM 0). 차단율·과잉차단율·알려진 천장 분리 집계. `--strict`는 회귀 시 exit 1 ("달았다 ≠ 막힌다") |
 | `eval-run` | `/eval`이 케이스를 돌릴 때(헬퍼) · 수동 CLI | 케이스 1건의 setup→응답→채점→근거 파일. 응답자는 `--target session\|claude\|exec:<cmd>`로 교체(CI 실채점 경로). 새 상태 assert `log_contains`(훅 로그로 경로 채점) |
 | `eval-trend` | `/eval`이 추이를 읽고 쓸 때(헬퍼) | `specs/eval-score.json` 결정론 읽기·append — run 서수·`version`은 VERSION 파일에서, `prevHash`로 이전 run 변조 시 append 거부. LLM이 추이 파일을 직접 편집하지 않는다 |
 | `eval-score` | 빌드 건강도 점수가 필요할 때(수동 CLI) | 언어 무관 채점표(블루프린트 §5.7) — `.claude/stacks/*.sh` 어댑터로 G1 빌드·G2 테스트·G3 안전(거부권)·lint·회귀·커버리지 산출, 못 잰 항목은 `skipped`로 명시. `specs/SCORE.json` |

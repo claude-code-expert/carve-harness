@@ -54,7 +54,7 @@
 | **P2 유형별 거부권** ✅ 2026-09-06 (`docs/md/eval/P2-veto-criteria.md`) | `checklist-gate.sh` `type` 처리 · `checklist-loop` SKILL · `carve-verify-loop.js` 스키마 | ① `type: domain_safety` 항목 score 94 → 총점 무관 exit 2 ② `type` 없는 기존 checklist.json 동작 불변 |
 | **P2 감사 + 성숙도** ✅ (LP5 AUDIT-09 + P2 SUCCESS-CRITERIA 검사) | `harness-audit.sh` AUDIT-09(≥6체크) · Eval LV 출력 | ① 골든셋 없는 픽스처 → LV0 + "다음 한 단" 문구 ② 이 리포 → LV3 판정 ③ 48→54+ PASS ④ `eval-gate` 스텁 판정 4종(missing→unable, 89→regressed, 95→ok, suspicious) 실행 검증 |
 | **P2 SUCCESS-CRITERIA** ✅ 2026-09-06 (같은 리포트) | `specs/SUCCESS-CRITERIA.md` 템플릿 · `eval-init` S2.5 · audit 검사 | ① 템플릿에 기준/지시문/검사문 3줄 형식 ② 이 리포용 실물 5항목(골든셋 4 suite 대응) ③ audit "Q1 성공 기준 문장" PASS |
-| **P3 레드팀** | `specs/redteam/*.json`(공격 40·정상 20) · `.claude/hooks/redteam.sh` | ① 탐지율·차단율·과잉차단율 3수치 JSON ② 정상 20건 exit 0(과잉차단 0) ③ LLM 호출 0회 |
+| **P3 레드팀** ✅ 2026-09-06 (`docs/md/eval/P3-redteam.md`) | `specs/redteam/*.json`(공격 40·정상 20) · `.claude/hooks/redteam.sh` | ① 탐지율·차단율·과잉차단율 3수치 JSON ② 정상 20건 exit 0(과잉차단 0) ③ LLM 호출 0회 |
 | **P3 promptfoo exporter**(옵트인) | `.claude/hooks/eval-export.sh --promptfoo` → `evals/promptfooconfig.yaml` + `eval_state.py` 브리지 | ① 20건 변환 결과가 `npx promptfoo validate config` 통과(node 있을 때만, 없으면 SKIP) ② 상태 assert가 `python:` assert로 eval-state.sh 호출 ③ 정본은 goldenset JSON — 역방향 없음 |
 | **P3 문서** | README ko/en · GUIDE · `eval-goldenset` SKILL · `evaluator-feature-todo.md` 상태 동기 · `docs/evaluator/`에 node 예시 1종 | 수치(훅·스위트·체크 수) = 실측. `version-changelog`는 릴리스 시점 |
 
