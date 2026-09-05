@@ -319,6 +319,10 @@ Score  compute pass@k (capability) · pass^k (consistency) → append suiteScore
 - [ ] Semantic version comparison (downgrade protection)
 - [ ] Skill trigger-phrase (description-level) duplicate detection
 
+## License
+
+MIT — see [LICENSE](LICENSE). The vendored `ponytail` keeps its own license (`vendor/ponytail/LICENSE`).
+
 ## Version history
 
 | Version | Date | Summary |

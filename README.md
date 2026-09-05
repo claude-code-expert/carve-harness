@@ -319,6 +319,10 @@ Score  pass@k(능력)·pass^k(일관성) 산출 → suiteScore를 specs/eval-sco
 - [ ] 시맨틱 버전 비교 (다운그레이드 방지)
 - [ ] 스킬 트리거 문구(description) 수준 중복 검사
 
+## 라이선스
+
+MIT — 자세한 내용은 [LICENSE](LICENSE). 벤더링된 `ponytail`은 자체 라이선스를 따른다(`vendor/ponytail/LICENSE`).
+
 ## 버전 이력
 
 | 버전 | 날짜 | 요약 |

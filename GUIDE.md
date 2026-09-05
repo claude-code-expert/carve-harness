@@ -414,7 +414,7 @@ Slack/위키에 그대로:
 ## 10. 검증 / 한계
 
 - 훅 14개 `bash -n` clean · 테스트 20 스위트(283건) 전부 통과(`npm test`) · `/harness-audit` 47 PASS. (2026-08-06 실검증)
-- **한계(적대적 감사로 실측한 천장, 2026-08-03)**: ① Bash 쓰기 가드는 명령 표면만 — 변수 간접(`F=.env; … > $F`)·인터프리터 경유(`python3 -c`) 미탐 ② 시크릿 스캔은 리터럴 매칭 — base64·분할 조립 미탐 ③ 위험 명령은 셸 alias/함수로 감싸면 미탐, `curl -o f && bash f` 미탐 ④ Stop 게이트는 6스택(Java·Node·Python·Go·Rust·bash)만, 각 스택 툴체인 설치 시에만 작동 ⑤ checklist 게이트는 삭제·threshold 하향은 막지만 **거짓 채점 내용**은 못 막음 ⑥ 코드 `TODO/FIXME` 스캔 범위 밖 ⑦ `LICENSE` 미추가(보류). 재현: 우회 프로브 34종(`redteam-probe.sh`), 추적: `specs/HANDOFF.md`.
+- **한계(적대적 감사로 실측한 천장, 2026-08-03)**: ① Bash 쓰기 가드는 명령 표면만 — 변수 간접(`F=.env; … > $F`)·인터프리터 경유(`python3 -c`) 미탐 ② 시크릿 스캔은 리터럴 매칭 — base64·분할 조립 미탐 ③ 위험 명령은 셸 alias/함수로 감싸면 미탐, `curl -o f && bash f` 미탐 ④ Stop 게이트는 6스택(Java·Node·Python·Go·Rust·bash)만, 각 스택 툴체인 설치 시에만 작동 ⑤ checklist 게이트는 삭제·threshold 하향은 막지만 **거짓 채점 내용**은 못 막음 ⑥ 코드 `TODO/FIXME` 스캔 범위 밖 재현: 우회 프로브 34종(`redteam-probe.sh`), 추적: `specs/HANDOFF.md`.
 - 훅/스킬 규약은 Claude Code 버전에 따라 바뀔 수 있음 — 도입 전 `/hooks`·`/plugins`로 현행 확인, `code.claude.com/docs` 대조.
 
 ---
