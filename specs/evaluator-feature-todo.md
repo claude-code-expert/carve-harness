@@ -51,15 +51,15 @@
 
 ### 3. 골든셋 + 점수 시계열 `[~]`
 - **덱 근거**: §4 "골든셋 고정 + 재채점 → 점수 시계열", §5 Step 0 "실패 20~50건으로 골든셋 v1".
-- **현재**: 골든셋 v1 10건 작성(`specs/goldenset/harness-guard.json` 5 · `harness-craft.json` 5), 전건 구조 검증 + `--red` 신호 검증 통과. 재채점은 `/eval`(carve-eval). **미실행** — 첫 실측 run이 아직 없어 `specs/eval-score.json`은 미생성.
+- **현재**(2026-09-06 동기): 하네스 자체 골든셋 20건(`carve-harness` 5 · `harness-guard` 5 · `harness-craft` 5 · `harness-hard` 5), `specs/eval-score.json` 4 run(최근 93). 언어팩 스타터 20건 추가(`specs/goldenset/starters/`, 5언어×4 — `/eval-init` 시드용, 하네스 `/eval` 글롭 밖). 범용 채점기 `eval-score.sh`(블루프린트 §5.7)·언어팩 체계는 `docs/md/language-packs/LP0~LP5-*.md`.
 - **SC**:
-  - [~] `specs/goldenset/`에 실패 케이스(입력+기대) 20~50건 스키마 정의 + 예시 5건 → 스키마·예시 완료, 케이스는 10/20건.
+  - [x] `specs/goldenset/`에 실패 케이스(입력+기대) 20~50건 스키마 정의 + 예시 5건 → 하네스 20건 + 팩 스타터 20건.
   - [x] 재채점 커맨드/스킬: 골든셋 전수 실행 → 케이스별 점수 기록(append-only 시계열 파일).
   - [x] 케이스 추가는 인간 검수 필수임을 절차에 명시(자기강화 방지).
   - [x] 프리플라이트 검증기(`carve-validate.sh`) — 설정 오류를 런 전에 분리, `--red`로 NO-SIGNAL 케이스 탐지.
   - [x] 케이스 `version` 필수화 + 추이에 `caseVersion` 기록 + 직전 run과 다르면 `[VERSION CHANGED]` 경고.
   - [x] 첫 실측 run(`/eval`) 수행 → baseline 확보. run#1 60점(채점기 결함값, 기준 부적합) → run#2 **100점**(채점기 수정 후, 실질 baseline). `specs/eval-score.json` 2 run 기록.
-  - [~] **골든셋 난이도 보강** — `harness-hard.json` 5건 추가(총 15건). 소재는 이번 세션에서 실제 관측된 실패: 이스케이프 파손 전송 · 소스 grep 위장 테스트 · `mv`로 실행권한 소실 · 비멱등 스크립트 · 빈 입력 처리. 전건 양방향 검증(사전 red · 정답 green) 통과. **난이도는 run#3 실측 전까지 미확인** — 만점이면 더 보강해야 한다.
+  - [x] **골든셋 난이도 보강** — `harness-hard.json` 5건 추가. 소재는 실제 관측된 실패: 이스케이프 파손 전송 · 소스 grep 위장 테스트 · `mv`로 실행권한 소실 · 비멱등 스크립트 · 빈 입력 처리. 전건 양방향 검증 통과. run#4 실측 93점(2건 부분 실패) — 회귀 탐지 여지 확보.
 
 ### 4. LLM-as-Judge 루브릭 그레이더 `[ ]`
 - **덱 근거**: §4 채점기 3종 — 모델형(G-Eval 루브릭, `guided_json` 스키마 강제, temperature 0, 다중 Judge 합의).

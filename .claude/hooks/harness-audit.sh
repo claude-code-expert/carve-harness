@@ -252,5 +252,59 @@ if [ -f "$EJ" ]; then
   fi
 fi
 
+# ── AUDIT-09 ────────────────────────────────────────────────────────────────
+# Language-pack integrity: an installed pack must be complete (every manifest path
+# present, its stack file sourced by the gates, its golden-set starter structurally
+# valid) and its LSP toggle must agree with the install record. A half-installed
+# pack is an orphan gate — rules without a stack file, or a stack file without
+# rules. Source repo (no harness-packs record) audits every pack. No packs/ dir =
+# pre-pack install, section self-skips.
+if [ -d "$AUDIT_ROOT/packs" ] && [ -f "$HOOKS_DIR/lib-packs.sh" ]; then
+  PACKS_DIR="$AUDIT_ROOT/packs"
+  # shellcheck source=/dev/null
+  source "$HOOKS_DIR/lib-packs.sh"
+  if [ -f "$AUDIT_ROOT/.claude/harness-packs" ]; then
+    audit_packs=$(tr '\n' ' ' < "$AUDIT_ROOT/.claude/harness-packs")
+  else
+    audit_packs=$(pack_list | tr '\n' ' ')
+  fi
+  for pk in $audit_packs; do
+    [ -f "$(pack_file "$pk")" ] || { no "pack '$pk' recorded but packs/$pk.pack missing (AUDIT-09)"; continue; }
+    missing=$(pack_check "$pk" "$AUDIT_ROOT" 2>/dev/null | tr '\n' ' ')
+    if [ -z "$missing" ]; then
+      ok "pack $pk: every path present (AUDIT-09)"
+    else
+      no "pack $pk: missing paths — $missing(install.sh pack add $pk) (AUDIT-09)"
+    fi
+    st=$(pack_paths "$pk" | grep -E '^\.claude/stacks/.*\.sh$' | head -1)
+    if [ -n "$st" ]; then
+      bash -n "$AUDIT_ROOT/$st" 2>/dev/null && grep -q 'stack_gate' "$AUDIT_ROOT/$st" 2>/dev/null \
+        && ok "pack $pk: stack file defines stack_gate (AUDIT-09)" \
+        || no "pack $pk: $st unparsable or lacks stack_gate — Stop gate inert (AUDIT-09)"
+    fi
+    starter=$(pack_paths "$pk" | grep -E '^specs/goldenset/starters/.*\.json$' | head -1)
+    if [ -n "$starter" ] && [ -f "$AUDIT_ROOT/$starter" ]; then
+      ( cd "$AUDIT_ROOT" && bash "$HOOKS_DIR/carve-validate.sh" "$starter" ) >/dev/null 2>&1 \
+        && ok "pack $pk: golden-set starter validates (AUDIT-09)" \
+        || no "pack $pk: starter $starter fails carve-validate (AUDIT-09)"
+    fi
+    lsp=$(pack_meta "$pk" lsp)
+    if [ -n "$lsp" ] && [ -f "$AUDIT_ROOT/.claude/harness-packs" ] && [ -f "$S" ] \
+       && jq -e '.enabledPlugins' "$S" >/dev/null 2>&1; then
+      [ "$(jq -r --arg k "$lsp" '.enabledPlugins[$k] // false' "$S")" = "true" ] \
+        && ok "pack $pk: LSP $lsp enabled (AUDIT-09)" \
+        || no "pack $pk installed but LSP $lsp not enabled in settings.json (AUDIT-09)"
+    fi
+  done
+  # Eval maturity readout (blueprint §5.12) — informational, never a FAIL.
+  gs=$(ls "$AUDIT_ROOT"/specs/goldenset/*.json 2>/dev/null | wc -l | tr -d ' ')
+  runs=$(jq '[.runs[]? | select(.suiteScore != null)] | length' "$AUDIT_ROOT/specs/eval-score.json" 2>/dev/null || echo 0)
+  if [ "$gs" = 0 ]; then lv="LV0 — 골든셋 없음. 다음 한 단: /eval-init (설치 팩의 스타터를 시드로)"
+  elif [ "${runs:-0}" = 0 ]; then lv="LV1 — 골든셋 ${gs}파일, 실측 run 없음. 다음 한 단: /eval 로 baseline"
+  elif [ -f "$AUDIT_ROOT/.github/workflows/eval-gate.yml" ]; then lv="LV3 — 골든셋·추이 ${runs}run·CI 게이트 배선. 다음 한 단: block 모드 + required 태그"
+  else lv="LV2 — 골든셋·추이 ${runs}run, CI 게이트 없음. 다음 한 단: /eval-init 로 eval-gate.yml 배선"; fi
+  printf 'INFO: eval maturity %s (AUDIT-09)\n' "$lv"
+fi
+
 printf -- '---\n%s passed, %s failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]

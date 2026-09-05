@@ -19,11 +19,12 @@ Drop it into your project root and it works immediately.
 | **Feedback** | Stop hook blocks "done" claims while build/type/lint/tests fail — incremental, changed stacks only (Java, Node/TS, Python, Go, Rust, bash; each runs only when its toolchain is installed, bringing CI's `npm run lint` local) |
 | **State** | Handoff auto-saved at session end/compaction (real TODOs and decisions), restored at start |
 | **Observability** | Every hook verdict logged to `logs/*.jsonl` (PII masked), with report/rotation. The session-start banner lists every loaded component, and all hook messages carry a unified `[carve-harness:<hook>]` prefix |
-| **Self-audit** | `/harness-audit` — 48 mechanical checks PASS/FAIL the harness configuration itself |
+| **Self-audit** | `/harness-audit` — 67 mechanical checks PASS/FAIL the harness configuration itself (pack integrity + eval maturity included) |
+| **Language packs** | At install time only the detected packs among typescript · java-spring · python · go · rust · database land — rules, verification gate, scoring adapter, golden-set starter and LSP as one set. Unselected languages have no files at all |
 | **Verify loop** | `/verify-loop` — grades each claimed implementation 0–100 against real code, feeds gaps back to rework anything under 95, loops until every item passes. Stop hook blocks "done" while any item is unresolved → [verify-loop guide](docs/md/verify-loop-guide.md) |
 | **Quantitative eval** | `/eval` — re-runs a fixed golden set k times for pass@k/pass^k, a score trend and regression detection. `carve-validate` separates golden-set config errors first, at zero agent cost |
 
-**Inventory**: 15 hooks (5 event gates · 2 libraries · 8 CLI/helpers) · 14 slash commands · 7 agents · 10 skills · 8 rule files (+8 stack references in `docs/rules/`) · 3 workflows · 21 test suites (326 cases) — full lists in the [component tables](#full-component-list-skills--commands--hooks) below
+**Inventory**: 17 hooks (5 event gates · 3 libraries · 9 CLI/helpers) · 6 stack definitions (`.claude/stacks/`) · 6 language packs (`packs/`) · 14 slash commands · 7 agents · 10 skills · 11 rule files (+10 stack references in `docs/rules/`) · 3 workflows · 20 golden-set starters · 26 test suites (419 cases) — full lists in the [component tables](#full-component-list-skills--commands--hooks) below
 
 **Cross-agent**: hook blocking is Claude Code-only. Cursor/Codex/etc. follow `AGENTS.md` as the canonical rules, with `.githooks/pre-commit` as the final gate at commit time.
 
@@ -42,7 +43,8 @@ curl -fsSL https://raw.githubusercontent.com/claude-code-expert/carve-harness/ma
 - Existing files are never touched (reported as SKIP) — installed paths are recorded in `.claude/harness-manifest.txt`.
 - **Exception: `.claude/settings.json` is merged, not skipped** — your existing config (`permissions`, `model`, own hooks) is preserved while the harness's 6 hook events plus LSP/plugin declarations are registered via jq (idempotent). Skipping it would leave the hooks unregistered and every gate (banner, guard, verify) inert.
 - **LSP + plugins auto-declared**: settings.json declares the `vtsls` (TypeScript/React/JavaScript LSP), `jdtls` (Java LSP), `ponytail`, and `frontend-design` (design-direction skill) plugins along with their marketplaces (`claude-code-lsps` · `ponytail` · `claude-code-plugins`) — Claude Code installs them after a trust prompt at session start. Server binaries are separate: `bash install.sh setup` offers a global npm install of vtsls; jdtls needs `brew install jdtls` (JDK required). Missing binaries are reported as NOTE lines at the end of install.
-- The installer ends by running `/harness-audit` — 48 PASS means all gates are live.
+- The installer ends by running `/harness-audit` — 0 failed means all gates are live (the check count depends on the installed packs).
+- **Language packs**: interactively, one prompt after the component menu (detected packs pre-selected, Enter = detected). Non-interactive `HARNESS_PACKS=auto|none|all|typescript,python` (unset = auto). Later: `bash install.sh pack list|add <name>|remove <name>`.
 
 **On any full install** (project-aware `[1]`, non-interactive `curl | bash`/env, or manual with everything selected) the installer prints the banner below at the end, pointing you to run `/carve-harness-create` in a session (it fires **only via the slash command**, not a natural-language request). The installer output is in Korean:
 
@@ -124,7 +126,7 @@ Once installed, the gates are automatic — protected-path writes are blocked, o
 
 | Command | Purpose |
 |---------|---------|
-| `/harness-audit` | 48-check PASS/FAIL of the harness configuration |
+| `/harness-audit` | PASS/FAIL of the harness configuration (AUDIT-01~09, 67 checks in this repo) |
 | `/plan` `/verify` `/review` `/commit` | SC breakdown · SC verification · code review · commit→pull→push with your message |
 | `/verify-loop <goal>` | For multi-requirement work — grades each item 0–100 and reworks until all pass 95 |
 | `/eval-init` | **Once, after install** — analyzes the project and fixes the eval/quality gates through an interview, then builds the golden set |
@@ -132,7 +134,9 @@ Once installed, the gates are automatic — protected-path writes are blocked, o
 | `bash .claude/hooks/carve-validate.sh [--red]` | Golden-set preflight — structural validation at zero agent cost; `--red` also checks that a case measures anything at all |
 | `bash .claude/hooks/eval-gate.sh --mode report\|block [--delta N]` | Judge regression from the score trend alone (no LLM). `block` exits 1 past the tolerance — this is what CI calls |
 | `bash .claude/hooks/logs-report.sh [days]` | hook verdict log summary (`--rotate N` to rotate · `--tokens N` per-session token usage) |
-| `npm test` / `npm run test:install` | all 21 hook test suites (326 cases) / installer component-selection suite |
+| `npm test` / `npm run test:install` | all 26 hook test suites (419 cases) / installer component-selection suite |
+| `bash install.sh pack list\|add\|remove` | language-pack status table / add / remove (backed up → `rollback`) |
+| `bash .claude/hooks/eval-score.sh` | build-health scorecard `specs/SCORE.json` — G1 build · G2 tests · G3 safety (veto) + lint · regression · coverage, no LLM |
 
 > **Order right after install**: `/carve-harness-create` (trim to your stack) → three domain invariants in `CLAUDE.md` → use it normally for a week or two → `/eval-init` (a golden set only means something once real failures exist).
 
@@ -273,7 +277,7 @@ This repo's own 20 cases (`specs/goldenset/`) are the worked example — 5 on gu
 
 | Command | Purpose |
 |------|------|
-| `/harness-audit` | 48-check PASS/FAIL of the harness configuration |
+| `/harness-audit` | PASS/FAIL of the harness configuration (AUDIT-01~09, 67 checks in this repo) |
 | `/commit-branch` | Commit + push on the current branch, Conventional Commits (never `main` directly) |
 | `/plan` | Break work into success-criteria (SC) units → `specs/` |
 | `/verify` | Verify current changes against SC · build · types · tests |
@@ -283,7 +287,7 @@ This repo's own 20 cases (`specs/goldenset/`) are the worked example — 5 on gu
 | `/commit` | Commit + push current branch with your message (syncs before push) |
 | `/ponytail*` (6) | ponytail mode control · audit · debt · gain · review · help |
 
-### Hooks (14 — 5 event gates · 2 libraries · 7 CLI/helpers)
+### Hooks (17 — 5 event gates · 3 libraries · 9 CLI/helpers)
 
 | Hook | Trigger (when it fires) | Role |
 |------|------|------|
@@ -296,12 +300,14 @@ This repo's own 20 cases (`specs/goldenset/`) are the worked example — 5 on gu
 | `lib-protected` | Referenced via `source` when a hook loads (never runs directly) | Single definition of protected-path, secret and danger-command regexes (pure data) |
 | `lib-stop-guard` | Referenced via `source` by Stop hooks | Shared Stop loop-guard library |
 | `config-doctor` | On config checkups (manual/installer) | Diagnose settings/config consistency |
-| `harness-audit` | When `/harness-audit` runs (manual) | 48 read-only checks PASS/FAIL |
+| `harness-audit` | When `/harness-audit` runs (manual) | read-only PASS/FAIL — AUDIT-01~09 (pack integrity · eval maturity included) |
 | `logs-report` | When `logs-report.sh` runs (manual CLI) | JSONL verdict summary + N-day rotation + `--tokens` per-session token accounting |
 | `eval-java` | When a Java/Spring quality score is needed (manual scorer) | Deterministic Java/Spring quality probability `P∈[0,1]`, no LLM |
 | `eval-state` | When carve-eval grades state asserts (helper) | Grade golden-set state asserts (files · commands · diff) against real state — never trust self-report. `--case <id>` reads values straight from the golden-set file so escaping is never mangled in transit |
 | `eval-gate` | Golden-set regression verdict in CI or locally (manual CLI) | Reads only the `specs/eval-score.json` trend and judges the drop vs the previous run — no LLM. `--mode block` exits 1 on regression; a missing or malformed trend fails closed |
 | `carve-validate` | Automatically as `/eval` Phase 0 · manually after writing cases | Golden-set preflight — required fields, duplicate ids, unknown assert types, regex compilation, `k` range. `--red` runs each setup and flags NO-SIGNAL cases that are already green before the agent does anything |
+| `eval-score` | When a build-health score is needed (manual CLI) | Language-agnostic scorecard (blueprint §5.7) — `.claude/stacks/*.sh` adapters yield G1 build · G2 tests · G3 safety (veto) · lint · regression · coverage; anything unmeasurable is listed under `skipped`. Writes `specs/SCORE.json` |
+| `lib-packs` | Sourced by the installer and the audit | Language-pack manifest reader (`packs/*.pack`) — list, paths, detection (marker files + ORM dependency grep) |
 
 ## Layout
 
@@ -314,10 +320,14 @@ This repo's own 20 cases (`specs/goldenset/`) are the worked example — 5 on gu
 ├── specs/                   # state: handoffs · decision log · golden set (goldenset/)
 └── .claude/
     ├── settings.json        # 6 hook events registered
-    ├── hooks/  (14 + 20 test suites)
+    ├── hooks/  (17 + 26 test suites)
+    ├── stacks/ (6 — per-stack verification gate · formatter · scoring adapter, installed per language pack)
     ├── workflows/ (fable-team-pipeline · carve-verify-loop · carve-eval)
-    ├── commands/ (14) · agents/ (7) · skills/ (10) · rules/ (8)
-# docs/rules/code-convention/   # 8 stack reference guides (not auto-loaded — read on demand)
+    ├── commands/ (14) · agents/ (7) · skills/ (10) · rules/ (11)
+├── packs/                   # 6 language-pack manifests (typescript · java-spring · python · go · rust · database)
+├── specs/goldenset/starters/ # per-pack golden-set starters (5 languages × 4 cases — /eval-init seeds)
+# docs/rules/code-convention/   # 10 stack reference guides (not auto-loaded — read on demand)
+# docs/evaluator/<lang>-example/ # 5 LLM-judge examples (java · python · typescript · go · rust)
 ```
 
 ## Limitations

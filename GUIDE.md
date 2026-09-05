@@ -2,7 +2,7 @@
 
 > Claude Code 드롭인 하네스 — 전체 사용 설명 + 설치 내역.
 > 대상: 이 하네스를 쓰거나 다른 프로젝트에 이식하려는 사용자.
-> 기준: 릴리스 **v0.8.0** (v1 하드닝 + 크로스에이전트 + update/rollback/setup + 게이트웨이 검증 v2 + Java/Spring 결정적 evaluator v3 + 설치 구성 선택·fable 오케스트레이터 팀 + verify-loop·carve-eval + 강한 모델 기준 감량 + 적대적 감사 게이트 경화 + `/eval-init` 평가 게이트 셋업). `/harness-audit` = 47 PASS.
+> 기준: 릴리스 **v0.8.0** (v1 하드닝 + 크로스에이전트 + update/rollback/setup + 게이트웨이 검증 v2 + Java/Spring 결정적 evaluator v3 + 설치 구성 선택·fable 오케스트레이터 팀 + verify-loop·carve-eval + 강한 모델 기준 감량 + 적대적 감사 게이트 경화 + `/eval-init` 평가 게이트 셋업). `/harness-audit` = 0 failed(이 리포 67체크).
 > 최종 갱신: 2026-08-06.
 
 초기 뼈대 매뉴얼·외부 도구 설치 리스트(구 `docs/md/`)는 v0.6.x에서 제거됐다(git 히스토리 보존). **현재 상태는 이 GUIDE를 정본으로 본다.**
@@ -63,7 +63,9 @@ harness/
 ├── logs/                     # 관측: 날짜별 JSONL 이벤트 로그 (gitignore)
 ├── docs/md/                  # 오케스트레이션·fable 팀·verify-loop 가이드
 ├── docs/rules/
-│   └── code-convention/      # 스택별 코딩 표준 상세본 8종 (자동 로드 아님 — 필요 시 참조)
+│   └── code-convention/      # 스택별 코딩 표준 상세본 10종 (자동 로드 아님 — 필요 시 참조)
+├── packs/                    # 언어팩 정의 6종 (typescript·java-spring·python·go·rust·database) — 경로 목록 + detect/lsp
+├── specs/goldenset/starters/ # 팩별 골든셋 스타터 5×4 (/eval-init 시드)
 └── .claude/
     ├── settings.json         # 훅 6이벤트 + permissions.deny + $schema
     ├── bin/                  # install.sh가 vendor에서 배치 (gitignore)
@@ -88,6 +90,7 @@ harness/
         ├── common/           # security·testing·git-workflow (항상 적용)
         ├── java-spring/      # patterns (**/*.java) · gateway-testing (게이트웨이 파일)
         ├── react-next/       # patterns (**/*.ts,tsx)
+        ├── python/ · go/ · rust/   # patterns (언어팩과 함께 설치)
         └── safety.md · database.md
 ```
 
@@ -109,11 +112,14 @@ harness/
 | `config-doctor.sh` | (수동 CLI / 설치기) | `settings.json`·`@참조`·하네스 경로 정합 진단(권고형) | 0 (advisory) |
 | `lib-protected.sh` | (데이터) | `PROTECTED_RE`(보호경로) + `SECRETS_RE`(시크릿) 단일 정의 — 재정의 금지. `protected-extra.regex`/`secrets-extra.regex` OR-병합(업데이트 보존) | — |
 | `logs-report.sh` | (수동 CLI) | `logs/*.jsonl` 요약 리포트; `--rotate N` N일 이전 로그 삭제; `--tokens [N]` 세션별 토큰 사용량(트랜스크립트 usage 합산 — 비용 폭주 사후 인지 방지) | 0 |
-| `harness-audit.sh` | (수동 CLI / `/harness-audit`) | 하네스 구성 48체크 PASS/FAIL (§7) | 실패 시 비영 |
+| `harness-audit.sh` | (수동 CLI / `/harness-audit`) | 하네스 구성 PASS/FAIL (§7; AUDIT-01~09, 이 리포 기준 67체크 — 설치 팩 수에 따라 변동). AUDIT-09 = 언어팩 무결성(경로·스택 파일·스타터·LSP 토글) + Eval 성숙도 LV 안내 | 실패 시 비영 |
 | `eval-java.sh` | (수동 CLI) | Java/Spring 결정적 출력검증 — gradle grader(compile·pass^k·JaCoCo·정적분석·ArchUnit·N+1) 파싱 → 재현 가능한 `P±오차` JSON emit. LLM 없음, jq/gradle 부재 시 "unable"(fail-closed) | 0 (unable=1) |
 | `eval-state.sh` | (carve-eval 헬퍼) | 골든셋 **상태 assert**(`file_exists`·`file_contains`·`cmd_exit0`·`git_diff_contains`)를 워크디렉토리 실상태로 결정적 채점 — 에이전트 자기 보고 불신(리워드 해킹 방지). `--case <id>`로 골든셋 원본에서 직접 읽어 이스케이프 훼손 차단. 불능 입력 fail-closed | 0 (unusable=1) |
 | `carve-validate.sh` | (수동 CLI / `/eval` Phase 0) | 골든셋 **프리플라이트** — 필수 필드(`id`·`prompt`·`version`·`assert`)·id 중복·미지 assert 타입·정규식 컴파일·`k` 범위 검증(에이전트 0회). `--red`는 setup을 실행해 "에이전트 작업 없이 이미 green"인 NO-SIGNAL 케이스와 보호경로 픽스처를 탐지 | 오류 시 1 |
 | `eval-gate.sh` | (수동 CLI / CI) | 골든셋 **회귀 판정** — `specs/eval-score.json` 추이만 읽어 직전 대비 하락폭을 본다. 채점은 carve-eval, 강제는 이 스크립트로 분리해 **CI가 모델 판단에 의존하지 않는다**. 추이 없음·손상·미채점은 `unable`(조용한 통과 금지) | report=항상 0 / block=회귀·unable 시 1 |
+| `eval-score.sh` | (수동 CLI) | 언어 무관 **빌드 건강도 채점표**(블루프린트 §5.7) — `.claude/stacks/*.sh` 어댑터로 G1 빌드 25·G2 테스트 25·G3 안전 15(거부권)·lint 10·회귀 10·커버리지 5 산출. 못 잰 항목은 `skipped`로 분모에서 제외(숨은 통과 없음). 다중 스택은 AND/min. `specs/SCORE.json` | 0 / 스택 미감지 `unable` 1 |
+| `lib-packs.sh` | (설치기·감사 `source`) | 언어팩 매니페스트(`packs/<name>.pack`) 리더 — `pack_list`·`pack_meta`·`pack_paths`·`pack_check`·`pack_detect`(마커 파일 + ORM 의존성 grep). jq 불요 | — |
+| `.claude/stacks/<pack>.sh` (6) | (`stop-verify`·`posttool-format`·`eval-score` `source`) | 스택 정의 1파일 = 검증 게이트(`stack_gate`)·포맷(`stack_format`)·채점 어댑터(`stack_build/test/lint/coverage`)·증분 정규식. 언어팩 단위로 설치·제거되며 설치본에선 훅과 같이 자기보호(GUARD-07) | — |
 
 **게이트웨이 확장** (게이트웨이 파일 변경 시): `stop-verify.sh`가 `*Gateway*/*Filter*/*Auth*/*RateLimit*.java` 변경을 감지하면 전체 대신 `*GatewayIntegration*` 통합 테스트만 증분 실행(GATE-04), 실패 시 exit 2(GATE-05).
 

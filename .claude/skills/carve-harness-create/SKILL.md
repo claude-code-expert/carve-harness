@@ -112,19 +112,22 @@ CLAUDE.md·AGENTS.md·`.claude/CLAUDE.md`의 정합성을 점검한다. 각 항�
 - `.claude/commands/harness-audit.md` · `commit.md` · `plan.md` · `review.md` · `verify.md`
 - `.claude/rules/database.md`는 ORM/DB 감지 시에만.
 
-### 스택 게이트 (감지 시에만 KEEP, 아니면 PRUNE)
-| 감지 | KEEP |
-| --- | --- |
-| Java/Spring | `.claude/rules/java-spring`(dir 전체, archunit 포함) · `dev-stack-java-spring.md` · **`.claude/hooks/eval-java.sh`** |
-| TS/React/Next | `.claude/rules/react-next` · `dev-stack-typescript.md` · `dev-stack-react.md` · `dev-stack-nextjs.md` · `dev-stack-javascript.md` (감지된 하위스택만) |
-| Python/FastAPI | `dev-stack-python.md` · `dev-stack-fastapi.md`(FastAPI 감지 시) |
-| ORM/DB | `.claude/rules/database.md` · `dev-stack-orm.md` |
+### 언어팩 (스택 자산은 팩 단위로만 넣고 뺀다 — 경로를 손으로 고르지 않는다)
+스택별 규칙·스택 정의(`.claude/stacks/<pack>.sh`)·채점 어댑터·골든셋 스타터·judge 예시·LSP 토글은
+`packs/<name>.pack`이 한 세트로 묶는다. 감지 결과와 설치 기록을 대조해 **add/remove 제안**만 만든다:
 
-> `dev-stack-*.md` 상세본의 경로는 `docs/rules/code-convention/` (자동 로드 아님, 참조본).
+```bash
+bash install.sh pack list          # 팩 | 설치 | 감지 | 요약 (누락 경로 표시)
+```
+- 감지 ✓ · 설치 ✗ → `ADD: install.sh pack add <name>` (규칙+게이트+스타터가 함께 온다)
+- 감지 ✗ · 설치 ✓ → `PRUNE: install.sh pack remove <name>` (백업 → `rollback` 복원)
+- `database` 팩은 ORM 의존성(prisma·drizzle·typeorm·sqlalchemy·JPA·gorm·diesel·sqlx…)으로 감지된다.
+- 팩 경로는 keep-list/prune 대상에서 **제외**한다 — `pack remove`가 manifest·`harness-packs`·LSP까지 정리한다.
+  경로 단위로 자르면 반쪽 팩(규칙만 남고 스택 파일 없음)이 되고 `harness-audit` AUDIT-09가 FAIL한다.
 
 ### 하드 의존성 간선 (묶어서 keep 또는 prune — 절대 분리 금지)
-1. **eval-java ⟷ archunit** (★최우선): `eval-java.sh` keep면 `java-spring`(archunit 포함)도 keep.
-   한쪽만 남기면 `harness-audit` **AUDIT-08 FAIL**. Java 미감지 → 둘 다 prune.
+1. **eval-java ⟷ archunit**: 둘 다 `java-spring` 팩 안에 있다 — 팩 단위 add/remove면 자동으로 함께 움직인다.
+   경로 단위로 한쪽만 남기면 `harness-audit` **AUDIT-08/09 FAIL**.
 2. **fable**: `workflows/fable-team-pipeline.js` ⟷ `agents/fable-*`(4) + `docs/md/orchestration.md` +
    `docs/md/fable-team-guide.md`. 함께.
 3. **review ⟷ 리뷰어**: `commands/review.md`(ALWAYS-KEEP)가 `security-reviewer`를 참조 → 이 에이전트 keep.
@@ -153,8 +156,10 @@ KEEP 조정·FIX 취사선택이 필요하면 말씀하세요." — **놓친 스
    **세 파일 모두** 동기화한다(정합성 전수 점검). 미승인 항목은 건드리지 않는다.
 2. **ADD(복구)**: 승인 시 `install.sh rollback` 또는 `update`로 하네스 구성 복구. 외부 도구는 명령만 제시
    (임의 설치 실행 금지). 스캐폴딩은 승인분만 append.
-3. **PRUNE**: KEEP 경로를 `mktemp` 파일에 1줄씩 기록(PROTECTED 포함 무방, 최소한 비보호 ALWAYS-KEEP·
-   스택 매칭·의존성 keep 포함) → `bash install.sh prune --keep-list <tmp>`.
+3. **언어팩**: 승인된 제안대로 `bash install.sh pack add <name>` / `pack remove <name>`. 팩이 아닌
+   구성(fable 오케스트레이터·에이전트·스킬)만 다음 단계의 prune으로 다룬다.
+4. **PRUNE**(팩 외): KEEP 경로를 `mktemp` 파일에 1줄씩 기록(PROTECTED 포함 무방, 최소한 비보호 ALWAYS-KEEP·
+   의존성 keep 포함, **팩 경로도 keep에 넣어 손대지 않는다**) → `bash install.sh prune --keep-list <tmp>`.
    - prune이 manifest 확장 → keep-list 밖 비보호 파일을 `logs/harness-backup/`에 백업 후 제거 → manifest 갱신.
 
 ## 8. 검증 + evaluator 평가표

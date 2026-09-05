@@ -19,11 +19,12 @@
 | **피드백** | Stop 훅이 빌드·타입·린트·테스트 실패 시 완료 선언 차단 — 변경된 스택만 증분 검증(Java·Node/TS·Python·Go·Rust·bash. 각 스택 툴체인이 있을 때만 실행, CI의 `npm run lint`를 로컬로 앞당김) |
 | **상태** | 세션 종료·압축 시 핸드오프 자동 저장(실제 TODO·결정 수집), 시작 시 복원 |
 | **관측** | 모든 훅 판정을 `logs/*.jsonl`에 기록 (PII 마스킹), 리포트·회전 지원. 세션 시작 배너가 로드된 전 구성을 표시하고, 훅 메시지는 `[carve-harness:<hook>]` 프리픽스로 통일 |
-| **자가감사** | `/harness-audit` — 48개 기계 체크로 하네스 오구성 PASS/FAIL |
+| **자가감사** | `/harness-audit` — 67개 기계 체크로 하네스 오구성 PASS/FAIL (언어팩 무결성·Eval 성숙도 포함) |
+| **언어팩** | 설치 시 typescript·java-spring·python·go·rust·database 중 감지된 팩만 — 규칙·검증 게이트·채점 어댑터·골든셋 스타터·LSP가 한 세트. 미선택 언어는 파일 자체가 없다 |
 | **검증 루프** | `/verify-loop` — 구현 주장을 항목별로 코드 대조 0~100 채점, 95점 미만은 gap 되먹여 재작업, 전 항목 95점까지 루프. 미달 잔존 시 Stop 훅이 완료 차단 → [검증 루프 가이드](docs/md/verify-loop-guide.md) |
 | **정량 평가** | `/eval` — 고정 골든셋을 k회 재실행해 pass@k/pass^k·점수 추이·회귀를 산출. 실행 전 `carve-validate`가 골든셋 설정 오류를 에이전트 0회로 분리 |
 
-**구성 요소**: 훅 15종(이벤트 게이트 5 · 라이브러리 2 · CLI·헬퍼 8) · 슬래시 커맨드 14종 · 에이전트 7종 · 스킬 10종 · 규칙 8종(+스택 상세본 8, `docs/rules/`) · 워크플로 3종 · 테스트 21 스위트(326건) — 전체 목록은 [전체 구성](#전체-구성-스킬커맨드훅) 표 참고
+**구성 요소**: 훅 17종(이벤트 게이트 5 · 라이브러리 3 · CLI·헬퍼 9) · 스택 정의 6종(`.claude/stacks/`) · 언어팩 6종(`packs/`) · 슬래시 커맨드 14종 · 에이전트 7종 · 스킬 10종 · 규칙 11종(+스택 상세본 10, `docs/rules/`) · 워크플로 3종 · 골든셋 스타터 20건 · 테스트 26 스위트(419건) — 전체 목록은 [전체 구성](#전체-구성-스킬커맨드훅) 표 참고
 
 **크로스 에이전트**: 훅 차단은 Claude Code 전용. Cursor/Codex 등은 `AGENTS.md` 정본 + `.githooks/pre-commit`이 커밋 시점에 최종 차단.
 
@@ -42,7 +43,8 @@ curl -fsSL https://raw.githubusercontent.com/claude-code-expert/carve-harness/ma
 - 기존 파일은 건드리지 않는다(SKIP 보고) — 설치 목록은 `.claude/harness-manifest.txt`에 기록.
 - **예외: `.claude/settings.json`은 스킵이 아니라 병합**한다 — 기존 설정(`permissions`·`model`·자체 훅)을 보존하며 하네스 훅 6이벤트 + LSP/플러그인 선언을 jq로 등록(멱등). 이걸 스킵하면 훅이 미등록돼 배너·가드·검증이 전부 무력화되기 때문.
 - **LSP·플러그인 자동 선언**: settings.json이 `vtsls`(TypeScript·React·JavaScript LSP)·`jdtls`(Java LSP)·`ponytail`·`frontend-design`(디자인 방향 스킬) 플러그인과 각 마켓플레이스(`claude-code-lsps`·`ponytail`·`claude-code-plugins`)를 선언한다 — 세션 시작 시 Claude Code가 신뢰 승인 후 자동 설치. 서버 실행 파일은 별도: vtsls는 `bash install.sh setup`에서 npm 전역 설치 제안, jdtls는 `brew install jdtls`(JDK 필요). 미설치면 install 끝에 NOTE로 안내된다.
-- 설치 끝에 `/harness-audit` 자동 실행 — 48 PASS면 전 게이트 활성.
+- 설치 끝에 `/harness-audit` 자동 실행 — 0 failed면 전 게이트 활성(체크 수는 설치 팩에 따라 다르다).
+- **언어팩 선택**: 대화형이면 구성 선택 뒤 한 줄 질문(감지된 팩이 기본, 엔터 = 감지분). 비대화형 `HARNESS_PACKS=auto|none|all|typescript,python`(미지정 = auto). 사후 `bash install.sh pack list|add <name>|remove <name>`.
 
 **전체 설치면**(맞춤 구축 `[1]` · `curl | bash`·env 비대화형 · 수동에서 전부 선택) 설치 끝에 아래 배너가 출력된다 — 세션에서 `/carve-harness-create` 실행을 안내한다(자연어 요청이 아니라 **슬래시 커맨드로만** 발동):
 
@@ -124,7 +126,7 @@ bash uninstall.sh --yes    # 실제 제거 (manifest 범위만, 원래 있던 �
 
 | 명령 | 용도 |
 |------|------|
-| `/harness-audit` | 하네스 구성 48체크 PASS/FAIL |
+| `/harness-audit` | 하네스 구성 PASS/FAIL (AUDIT-01~09, 이 리포 67체크) |
 | `/plan` `/verify` `/review` `/commit` | SC 분해 · SC 검증 · 코드 검토 · 인자 메시지로 commit→pull→push |
 | `/verify-loop <목표>` | 요구가 여러 개일 때 — 항목별 0~100 채점, 전 항목 95점까지 재작업 반복 |
 | `/eval-init` | **설치 후 1회** — 프로젝트 분석 + 인터뷰로 평가·품질 게이트를 확정하고 골든셋을 만든다 |
@@ -132,7 +134,9 @@ bash uninstall.sh --yes    # 실제 제거 (manifest 범위만, 원래 있던 �
 | `bash .claude/hooks/carve-validate.sh [--red]` | 골든셋 프리플라이트 — 구조 검증(에이전트 0회), `--red`는 "그 케이스가 실제로 무언가를 재는지"까지 확인 |
 | `bash .claude/hooks/eval-gate.sh --mode report\|block [--delta N]` | 추이 파일만 읽어 회귀 판정(LLM 없음). `block`은 허용 하락폭 초과 시 exit 1 — CI가 이걸 호출한다 |
 | `bash .claude/hooks/logs-report.sh [days]` | 훅 판정 로그 요약 (`--rotate N` 회전 · `--tokens N` 세션별 토큰 사용량) |
-| `npm test` / `npm run test:install` | 전체 훅 테스트 21 스위트(326건) / 설치 구성 선택 스위트 |
+| `npm test` / `npm run test:install` | 전체 훅 테스트 26 스위트(419건) / 설치 구성 선택 스위트 |
+| `bash install.sh pack list\|add\|remove` | 언어팩 상태표 / 추가 / 제거(백업 → `rollback`) |
+| `bash .claude/hooks/eval-score.sh` | 빌드 건강도 채점표 `specs/SCORE.json` — G1 빌드·G2 테스트·G3 안전(거부권) + lint·회귀·커버리지, LLM 없음 |
 
 > **설치 직후 순서**: `/carve-harness-create`(스택 맞춤 정리) → `CLAUDE.md`에 도메인 불변식 3줄 → 1~2주 그냥 사용 → `/eval-init`(실패 소재가 쌓인 뒤라야 골든셋이 의미 있다).
 
@@ -273,7 +277,7 @@ bash .claude/hooks/carve-validate.sh --red   # 케이스를 쓰거나 고친 직
 
 | 커맨드 | 용도 |
 |------|------|
-| `/harness-audit` | 하네스 구성 48체크 PASS/FAIL |
+| `/harness-audit` | 하네스 구성 PASS/FAIL (AUDIT-01~09, 이 리포 67체크) |
 | `/commit-branch` | 현재 브랜치에 Conventional Commits로 커밋 + 푸시(`main` 직접 금지) |
 | `/plan` | 작업을 완료 기준(SC) 단위로 분해 → `specs/` |
 | `/verify` | 현재 변경을 SC·빌드·타입·테스트로 검증 |
@@ -283,7 +287,7 @@ bash .claude/hooks/carve-validate.sh --red   # 케이스를 쓰거나 고친 직
 | `/commit` | 인자를 메시지로 현재 브랜치에 commit→pull→push (문제 시 해결책 제시) |
 | `/ponytail*` (6) | ponytail 모드 제어·audit·debt·gain·review·help |
 
-### 훅 (14종 — 이벤트 게이트 5 · 라이브러리 2 · CLI·헬퍼 7)
+### 훅 (17종 — 이벤트 게이트 5 · 라이브러리 3 · CLI·헬퍼 9)
 
 | 훅 | 트리거 (언제 작동) | 역할 |
 |------|------|------|
@@ -296,12 +300,14 @@ bash .claude/hooks/carve-validate.sh --red   # 케이스를 쓰거나 고친 직
 | `lib-protected` | 훅 로드 시 `source`로 참조(직접 실행 안 함) | 보호 경로·시크릿·위험 명령 정규식 단일 정의(순수 데이터) |
 | `lib-stop-guard` | Stop 훅 로드 시 `source`로 참조 | Stop 루프 가드 공유 라이브러리 |
 | `config-doctor` | 설정 점검 시(수동/설치기) | settings·구성 파일 정합 진단 |
-| `harness-audit` | `/harness-audit` 실행 시(수동) | 48 체크 read-only PASS/FAIL |
+| `harness-audit` | `/harness-audit` 실행 시(수동) | read-only PASS/FAIL — AUDIT-01~09(언어팩 무결성·Eval 성숙도 포함) |
 | `logs-report` | `logs-report.sh` 실행 시(수동 CLI) | JSONL 판정 요약 + N일 회전 + `--tokens` 세션별 토큰 회계 |
 | `eval-java` | Java/Spring 품질 스코어가 필요할 때(수동 스코어러) | Java/Spring 결정적 품질 확률 `P∈[0,1]`, LLM 없음 |
 | `eval-state` | carve-eval 상태 assert 채점 시(헬퍼) | 골든셋 상태 assert(파일·명령·diff)를 실상태로 결정적 채점 — 자기 보고 불신. `--case <id>`로 골든셋 원본에서 직접 읽어 값 전달 중 이스케이프 훼손 차단 |
 | `eval-gate` | CI·로컬에서 골든셋 회귀 판정 시(수동 CLI) | `specs/eval-score.json` 추이만 읽어 직전 대비 하락폭 판정 — LLM 없음. `--mode block`이면 회귀 시 exit 1, 추이 없음·손상은 fail-closed |
 | `carve-validate` | `/eval` Phase 0 자동 · 케이스 작성 후 수동 CLI | 골든셋 프리플라이트 — 필수 필드·id 중복·미지 assert 타입·정규식 컴파일·`k` 범위 검증. `--red`는 setup 실행 후 "에이전트 작업 없이 이미 green"인 NO-SIGNAL 케이스 탐지 |
+| `eval-score` | 빌드 건강도 점수가 필요할 때(수동 CLI) | 언어 무관 채점표(블루프린트 §5.7) — `.claude/stacks/*.sh` 어댑터로 G1 빌드·G2 테스트·G3 안전(거부권)·lint·회귀·커버리지 산출, 못 잰 항목은 `skipped`로 명시. `specs/SCORE.json` |
+| `lib-packs` | 설치기·감사가 `source`로 참조 | 언어팩 매니페스트(`packs/*.pack`) 리더 — 목록·경로·감지(마커 파일 + ORM 의존성 grep) |
 
 ## 구조
 
@@ -314,10 +320,14 @@ bash .claude/hooks/carve-validate.sh --red   # 케이스를 쓰거나 고친 직
 ├── specs/                   # 상태: 핸드오프·결정 기록·골든셋(goldenset/)
 └── .claude/
     ├── settings.json        # 훅 6이벤트 등록
-    ├── hooks/  (14종 + tests 20 스위트)
+    ├── hooks/  (17종 + tests 26 스위트)
+    ├── stacks/ (6종 — 스택별 검증 게이트·포맷·채점 어댑터, 언어팩 단위로 설치)
     ├── workflows/ (fable-team-pipeline · carve-verify-loop · carve-eval)
-    ├── commands/ (14종) · agents/ (7종) · skills/ (10종) · rules/ (8종)
-# docs/rules/code-convention/   # 스택 상세본 8종 (자동 로드 아님 — 필요 시 참조)
+    ├── commands/ (14종) · agents/ (7종) · skills/ (10종) · rules/ (11종)
+├── packs/                   # 언어팩 정의 6종 (typescript · java-spring · python · go · rust · database)
+├── specs/goldenset/starters/ # 팩별 골든셋 스타터 (5언어 × 4건 — /eval-init 시드)
+# docs/rules/code-convention/   # 스택 상세본 10종 (자동 로드 아님 — 필요 시 참조)
+# docs/evaluator/<lang>-example/ # LLM-judge 예시 5종 (java · python · typescript · go · rust)
 ```
 
 ## 한계

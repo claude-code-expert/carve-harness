@@ -205,7 +205,7 @@ AUDIT-08  eval-java 스코어러 ↔ ArchUnit 템플릿·빌드 스니펫 동반
 
 다른 프로젝트로 이식 가능해야 템플릿이다: `install.sh`(멱등, 오프라인, 기존 파일 불가침) → `update`(VERSION 비교, manifest 범위만, 자동 백업) → `rollback`(백업 복원) → `setup`(대화형 초기 설정). 버전 규율은 pre-commit이 강제: VERSION 변경 커밋에 CHANGELOG 항목 없으면 차단.
 
-**맞춤 절단(`prune`)** — 상시 로드되는 `rules/`는 세션 시작 토큰을 늘린다(제1불변식의 비용). 전체 설치 후 `/carve-harness-create` 스킬이 프로젝트 스택을 분석해 맞지 않는 규칙·에이전트·스킬을 `install.sh prune`으로 잘라낸다. 되돌림은 `update`와 같은 백업 경로를 재사용하므로 `rollback` 한 번. 핵심 안전장치: 코어(제약·피드백·상태 3기둥)는 제거 거부, 절단 후 `harness-audit`가 orphan 정책(예: eval-java↔archunit 불일치)을 기계 검출한다 — 하네스가 자신의 절단을 검증한다.
+**언어팩 선택 설치 + 맞춤 절단(`prune`)** — 상시 로드되는 `rules/`는 세션 시작 토큰을 늘린다(제1불변식의 비용). 설치 시 언어팩(typescript·java-spring·python·go·rust·database)을 감지 기본으로 고르면 그 언어의 규칙·스택 정의(`.claude/stacks/`)·채점 어댑터·골든셋 스타터·LSP만 들어온다(`HARNESS_PACKS=auto|none|a,b`, 사후 `install.sh pack add|remove|list`). 팩이 아닌 구성(에이전트·스킬)은 전체 설치 후 `/carve-harness-create` 스킬이 프로젝트를 분석해 `install.sh prune`으로 잘라낸다. 되돌림은 `update`와 같은 백업 경로를 재사용하므로 `rollback` 한 번. 핵심 안전장치: 코어(제약·피드백·상태 3기둥)는 제거 거부, 절단 후 `harness-audit`가 orphan 정책(예: eval-java↔archunit 불일치)을 기계 검출한다 — 하네스가 자신의 절단을 검증한다.
 
 ---
 

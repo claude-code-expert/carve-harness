@@ -1,6 +1,6 @@
 # 언어팩(Language Pack) 설치 체계 — 리서치 리포트 + 세부 개발 계획
 
-> 작성 2026-09-05 · 상태 **승인 · 진행 중**(D1~D6 확정, Go/Rust 팩 포함). 단계별 리포트: `docs/md/language-packs/LP<n>-*.md`
+> 작성 2026-09-05 · 상태 **LP0~LP5 구현 완료(2026-09-06, 브랜치 `feat/lp0-pack-manifest` → … → `feat/lp5-audit-docs` 순 스택)**. 단계별 리포트: `docs/md/language-packs/LP<n>-*.md`. 후속: `eval-generalization-plan.md` P0·P1a·P1 게이트 확장.
 > 목표: 설치 시 언어팩(TS · Java/Spring · Python 우선)을 고르면 **규칙 + 검증 게이트 + 평가 게이트 + 골든셋 스타터**가 한 세트로 들어오고, 안 고른 언어는 파일 자체가 안 깔리는 라이트웨이트 하네스.
 > 선행: `specs/eval-generalization-plan.md`(평가 범용화 P0~P3) · `specs/promptfoo-eval-analysis.md`(target 어댑터). 이 문서는 그 위에 "설치 단위"를 얹는다.
 
