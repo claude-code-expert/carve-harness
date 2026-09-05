@@ -6,7 +6,7 @@
 
 # Claude 하네스 (언어 무관 드롭인)
 
-[English](README.en.md) · 현재 버전 **v0.9.0** · 변경 내역 [CHANGELOG.md](CHANGELOG.md) · 강좌 [HARNESS_GUIDE.md](HARNESS_GUIDE.md)
+[English](README.en.md) · 현재 버전 **v0.10.0** · 변경 내역 [CHANGELOG.md](CHANGELOG.md) · 강좌 [HARNESS_GUIDE.md](HARNESS_GUIDE.md)
 
 코딩 에이전트의 규칙 위반을 "설득"이 아니라 **훅 exit 2로 차단**하는 가드레일 템플릿.
 프로젝트 루트에 드롭인하면 즉시 동작한다.
@@ -454,6 +454,7 @@ MIT — 자세한 내용은 [LICENSE](LICENSE). 벤더링된 `ponytail`은 자�
 
 | 버전 | 날짜 | 요약 |
 |------|------|------|
+| v0.10.0 | 2026-09-05 | deterministic guardrail self-test redteam.sh (P3) |
 | v0.9.0 | 2026-09-05 | pack integrity AUDIT-09, skill wiring, doc sync (LP5) |
 | v0.8.0 | 2026-08-06 | interactive eval-init setup + deterministic regression gate |
 | v0.7.0 | 2026-08-03 | harden gates after adversarial audit |

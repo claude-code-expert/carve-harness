@@ -4,6 +4,15 @@
 
 > **규칙**: `VERSION` 파일이 바뀌는 커밋에는 반드시 해당 버전 항목(`[X.Y.Z]`)이 이 파일에 함께 스테이징되어야 한다 — `.githooks/pre-commit`이 기계적으로 차단, 작성은 `/version-changelog` 스킬. 배포 절차는 `RELEASE.md`.
 
+## [0.10.0] - 2026-09-05
+
+### Added
+- feat(eval): deterministic guardrail self-test redteam.sh (P3)
+- feat(eval): domain_safety veto (GATE-C7) and SUCCESS-CRITERIA (P2)
+- feat(eval): required tags, suspicious and stale gate verdicts (P1)
+- feat(eval): eval-run.sh target adapter + log_contains (P1a)
+- feat(eval): deterministic trend read/append via eval-trend.sh (P0)
+
 ## [0.9.0] - 2026-09-05
 
 ### Added
