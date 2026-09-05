@@ -4,25 +4,6 @@
 
 > **규칙**: `VERSION` 파일이 바뀌는 커밋에는 반드시 해당 버전 항목(`[X.Y.Z]`)이 이 파일에 함께 스테이징되어야 한다 — `.githooks/pre-commit`이 기계적으로 차단, 작성은 `/version-changelog` 스킬. 배포 절차는 `RELEASE.md`.
 
-## [Unreleased]
-
-### Added
-- feat(packs): language packs — `packs/<name>.pack` manifests (typescript · java-spring · python · go · rust · database), `lib-packs.sh` reader, install-time selection (`HARNESS_PACKS`, detected packs by default), `install.sh pack list|add|remove`, LSP toggle, `.claude/harness-packs` record
-- feat(stacks): `.claude/stacks/<pack>.sh` — one file per stack defines the Stop gate, formatter and scoring adapter; `stop-verify.sh`/`posttool-format.sh` source them (behaviour unchanged, existing suites green unmodified)
-- feat(eval): `eval-score.sh` language-agnostic build-health scorecard (blueprint §5.7: G1 build · G2 tests · G3 safety veto · lint · regression · coverage · antislop), `specs/SCORE.json`
-- feat(packs): golden-set starters `specs/goldenset/starters/<lang>.json` (5 languages × 4 state-assert cases, red/green verified), slim rules for python/go/rust, Go/Rust reference guides, LLM-judge examples for typescript/go/rust
-- feat(audit): AUDIT-09 pack integrity (paths · stack file · starter · LSP) + eval-maturity readout
-- docs: `docs/md/language-packs/LP0~LP5-*.md` step reports, README ko/en "which projects it fits" + end-to-end workflow + language-pack sections
-
-### Changed
-- `/carve-harness-create` proposes pack add/remove instead of hand-picked stack paths; `/eval-init` reads stack hints and seeds from starters
-- `prune_run` backs up manifest/harness-packs so `rollback` restores records; `uninstall.sh` removes empty dirs left by file-level manifests
-- `ruff format` wired for `.py` writes; GUARD-07 self-protection covers `.claude/stacks/`
-- CLAUDE.md response protocol: Korean-only, summary first
-
-### Fixed
-- fix(eval): restored the lost run 1 in `specs/eval-score.json` and corrected version tags on runs 2-4
-
 ## [0.8.0] - 2026-08-06
 
 ### Added
