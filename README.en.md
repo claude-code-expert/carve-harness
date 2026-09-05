@@ -6,7 +6,7 @@
 
 # Claude Harness (language-agnostic drop-in)
 
-[한국어](README.md) · Current version **v0.10.0** · Changes: [CHANGELOG.md](CHANGELOG.md) · Course: [HARNESS_GUIDE.md](HARNESS_GUIDE.md) (Korean)
+[한국어](README.md) · Current version **v0.10.1** · Changes: [CHANGELOG.md](CHANGELOG.md) · Course: [HARNESS_GUIDE.md](HARNESS_GUIDE.md) (Korean)
 
 A guardrail template that stops coding-agent rule violations with **hook exit 2 blocking** — not persuasion.
 Drop it into your project root and it works immediately.
@@ -454,6 +454,7 @@ MIT — see [LICENSE](LICENSE). The vendored `ponytail` keeps its own license (`
 
 | Version | Date | Summary |
 |---------|------|---------|
+| v0.10.1 | 2026-09-05 | add .nojekyll so hand-written HTML serves raw |
 | v0.10.0 | 2026-09-05 | deterministic guardrail self-test redteam.sh (P3) |
 | v0.9.0 | 2026-09-05 | pack integrity AUDIT-09, skill wiring, doc sync (LP5) |
 | v0.8.0 | 2026-08-06 | interactive eval-init setup + deterministic regression gate |
