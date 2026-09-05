@@ -43,7 +43,9 @@ description: 골든셋(고정 입력→루브릭 케이스)으로 산출물 품�
 - `assert.type` 3계층:
   - **텍스트**(순수 채점): `contains` · `not_contains` · `regex` · `not_regex`
   - **상태**(`.claude/hooks/eval-state.sh`가 결정론 채점 — 워크디렉토리의 실제 상태):
-    `file_exists`(경로) · `file_contains`(`경로::리터럴`) · `cmd_exit0`(명령 exit 0) · `git_diff_contains`(diff 내 리터럴)
+    `file_exists`(경로) · `file_contains`(`경로::리터럴`) · `cmd_exit0`(명령 exit 0) · `git_diff_contains`(diff 내 리터럴) ·
+    `log_contains`(`logs/*.jsonl::<jq 불리언 필터>` — 워크디렉토리의 하네스 훅 로그로 **경로(trajectory)를 결정론 채점**. 예:
+    `.decision=="block" and .tool=="Write"`. 외부 target(`claude`·`exec:`)에서만 유효 — 세션 응답자는 로그가 리포 `logs/`로 간다)
   - **정성**: `llm-rubric`(evaluator 위임 — "평가의 평가" 문제가 있으니 상태 assert로 대체 가능하면 대체)
 - `setup`(선택): 케이스 실행 전 격리 워크디렉토리에서 실행할 bash 스크립트(환경 구성 — 파일·git 초기화 등).
   상태 assert 또는 `setup`이 있으면 respondent는 **리포 밖 임시 디렉토리**에서 실행된다(골든셋 정답 비노출).
@@ -169,7 +171,13 @@ bash .claude/hooks/eval-gate.sh --mode block --delta 3 # 회귀 시 exit 1 (CI �
 /eval                       # specs/goldenset/*.json 전체 재채점 → 추이 append → 회귀 판정
 ```
 
-또는 발화에 `carve-eval 실행`. 인자: `{ goldenset?: glob, threshold?: 70, delta?: 3, config?: "라벨" }`.
+또는 발화에 `carve-eval 실행`. 인자: `{ goldenset?: glob, threshold?: 70, delta?: 3, config?: "라벨", target?: "session" | "claude" | "exec:<cmd>" }`.
+
+**응답자(target)는 명령이다** — `eval-run.sh`가 setup→응답→채점→근거 파일을 한 번에 처리한다(promptfoo `exec:` 계약: cwd=워크디렉토리, argv[1]=prompt, stdout=응답).
+- `session`(기본): 워크플로 서브에이전트가 응답, setup·채점은 스크립트.
+- `claude`: 헤드리스 `claude -p` — CI에서 **실채점**이 가능해지는 경로(CLI+인증 필요, 없으면 `target-unavailable`).
+- `exec:<cmd>`: 임의 명령(다른 에이전트·스텁·회귀 픽스처).
+실행 근거는 `specs/eval-runs/run-<N>/<id>#<i>.json`(응답 원문 + assert별 pass/reason)에 남는다 — 점수가 이상하면 여기부터 읽는다(블루프린트 R10). gitignore 대상.
 
 > **`carve-eval.js`를 고친 직후에는 이름(`carve-eval`)으로 실행하지 마라.** 이름 해석은 세션 초반에 잡힌
 > 레지스트리 스냅샷을 쓸 수 있어 **수정 전 코드가 그대로 돌아간다**(실측 확인됨 — run#3이 구버전 회귀

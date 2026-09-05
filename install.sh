@@ -927,6 +927,7 @@ if [ "$NEED_FETCH" -eq 1 ]; then
         echo '.claude/harness-create-pending'
         echo '.claude/harness-packs'
         echo 'specs/HANDOFF.md'
+        echo 'specs/eval-runs/'
         echo '# <<< harness <<<'
       } >> "$HERE/.gitignore"
       say "OK: .gitignore 하네스 블록 추가"
