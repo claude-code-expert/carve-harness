@@ -121,6 +121,29 @@ bash install.sh setup
 git init · jq PATH · LICENSE generation (MIT/Apache-2.0) · extra protected paths · domain-rule collection · stack detection report · GSD install offer.
 For domain rules and per-stack gates, see `GUIDE.md` §8.
 
+## First run (post-install setup · language packs)
+
+After install, walk this order once and the harness fits your project. Steps 1–3 already give you every guard and gate.
+
+1. **Install** — `curl … | bash`. Pick `[1] project-aware build (recommended)` at the prompt: it full-installs, then guides the stack trim.
+2. **Confirm language packs** — the detected packs land by default. Adjust later:
+   ```bash
+   bash install.sh pack list                 # pack | installed | detected | summary
+   bash install.sh pack add python           # add a pack detection missed
+   bash install.sh pack remove java-spring   # drop one you don't need (backed up → rollback)
+   ```
+3. **Machine prep + initial setup** — `jq`, `git`, and the stack toolchains (`tsc`, `gradlew`, `ruff/pytest`, `go`, `cargo`) must be present for the gates to actually bite.
+   ```bash
+   bash install.sh setup    # git init · jq PATH · LICENSE · protected paths · domain-rule collection · stack report
+   ```
+4. **Tailor to the stack (optional)** — run `/carve-harness-create` in a Claude Code session. It proposes pack add/remove and prunes agents/skills you don't need, applied **after one confirmation**. Shrinks the always-loaded tokens.
+5. **Domain rules** — three project invariants under "도메인 규칙" in `CLAUDE.md` (e.g. "order amount never negative"). Hooks can't see code patterns — **enforce these with tests**.
+6. **Verify** — `/harness-audit` at `0 failed` means every gate is live; it also checks language-pack integrity (AUDIT-09) and eval maturity.
+7. **Just work** — protected paths, secrets and dangerous commands are blocked automatically; on response end only the changed stacks build and test; `specs/HANDOFF.md` is saved and restored at session boundaries.
+8. **(after 1–2 weeks) golden-set setup** — once real failures exist, run `/eval-init` once: an interview fixes the eval/quality gates and builds the golden set. Then track regressions with `/eval`.
+
+> For which tool to use when, see the [end-to-end workflow](#end-to-end-workflow--which-tool-when) table below; for the folder layout, see each directory's `README.md`.
+
 ## Update / Rollback
 
 Run every command **from the target project root**.
@@ -368,6 +391,8 @@ This repo's own 20 cases (`specs/goldenset/`) are the worked example — 5 on gu
 | `lib-packs` | Sourced by the installer and the audit | Language-pack manifest reader (`packs/*.pack`) — list, paths, detection (marker files + ORM dependency grep) |
 
 ## Layout
+
+Every directory carries a `README.md` describing its role (what the folder does, who reads it).
 
 ```
 ├── CLAUDE.md / AGENTS.md    # canonical rules (Claude / cross-agent)

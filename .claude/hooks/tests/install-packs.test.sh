@@ -45,7 +45,7 @@ printf '{"stop_hook_active":true}' | CLAUDE_PROJECT_DIR="$T1" bash "$T1/.claude/
 # (2) HARNESS_PACKS=none: no pack path at all, core gates intact.
 T2=$(mktemp -d)
 code=$(inst "$T2" HARNESS_PACKS=none)
-if [ "$code" -eq 0 ] && [ -f "$T2/.claude/stacks/bash.sh" ] && [ "$(ls "$T2/.claude/stacks" | wc -l | tr -d ' ')" = "1" ] \
+if [ "$code" -eq 0 ] && [ -f "$T2/.claude/stacks/bash.sh" ] && [ "$(ls "$T2/.claude/stacks"/*.sh | wc -l | tr -d ' ')" = "1" ] \
    && [ ! -e "$T2/.claude/rules/java-spring" ] && [ ! -e "$T2/.claude/rules/database.md" ] \
    && [ ! -s "$T2/.claude/harness-packs" ] && [ -f "$T2/.claude/hooks/pretool-guard.sh" ]; then
   ok "HARNESS_PACKS=none -> core only (bash stack, no pack paths)"

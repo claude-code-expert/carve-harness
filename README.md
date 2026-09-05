@@ -121,6 +121,29 @@ bash install.sh setup
 git init · jq PATH · LICENSE 생성(MIT/Apache-2.0) · 보호 경로 추가 · 도메인 규칙 수집 · 스택 감지 리포트 · GSD 설치 제안.
 도메인 규칙·스택 게이트 보강은 `GUIDE.md` §8 참고.
 
+## 시작 순서 (설치 후 셋업 · 언어팩 구성)
+
+설치가 끝나면 아래 순서로 한 번 훑으면 하네스가 이 프로젝트에 맞게 선다. 3번까지만 해도 가드·게이트는 전부 동작한다.
+
+1. **설치** — `curl … | bash`. 시작 질문에서 `[1] 맞춤 구축(권장)`을 고르면 전체 설치 후 스택 정리를 안내한다.
+2. **언어팩 확정** — 설치 중 감지된 팩이 기본으로 들어온다. 나중에 조정:
+   ```bash
+   bash install.sh pack list                 # 팩 | 설치 | 감지 | 요약
+   bash install.sh pack add python           # 감지 못 한 팩 추가
+   bash install.sh pack remove java-spring   # 필요 없는 팩 제거(백업 → rollback)
+   ```
+3. **머신 준비 + 초기 설정** — `jq`·`git`과 스택 툴체인(`tsc`·`gradlew`·`ruff/pytest`·`go`·`cargo`)이 있어야 게이트가 실제로 문다.
+   ```bash
+   bash install.sh setup    # git init · jq PATH · LICENSE · 보호 경로 · 도메인 규칙 수집 · 스택 감지 리포트
+   ```
+4. **스택 맞춤(선택)** — Claude Code 세션에서 `/carve-harness-create`. 감지 대조로 팩 add/remove와 불필요한 에이전트·스킬 prune을 **1회 확인 후** 적용. 상시 로드 토큰을 줄인다.
+5. **도메인 규칙** — `CLAUDE.md`의 "도메인 규칙"에 프로젝트 불변식 3줄(예: "주문 금액 음수 불가"). 코드 패턴은 훅이 못 보므로 **테스트로 강제**한다.
+6. **검증** — `/harness-audit`가 `0 failed`면 전 게이트 활성. 언어팩 무결성(AUDIT-09)과 Eval 성숙도도 함께 본다.
+7. **그냥 사용** — 보호 경로·시크릿·위험 명령은 자동 차단, 응답 종료 시 변경된 스택만 빌드·테스트. 세션 경계에서 `specs/HANDOFF.md` 저장·복원.
+8. **(1~2주 뒤) 골든셋 셋업** — 실제 실패가 쌓인 뒤 `/eval-init` 1회. 인터뷰로 평가·품질 게이트를 확정하고 골든셋을 만든다. 이후 `/eval`로 회귀 추적.
+
+> 단계별 도구를 언제 무엇으로 쓰는지는 아래 [전체 워크플로](#전체-워크플로--도구-세트를-언제-무엇으로-쓰나) 표를, 폴더 구조는 각 디렉토리의 `README.md`를 본다.
+
 ## 업데이트 / 롤백
 
 모든 명령은 **대상 프로젝트 루트에서** 실행.
@@ -368,6 +391,8 @@ bash .claude/hooks/carve-validate.sh --red   # 케이스를 쓰거나 고친 직
 | `lib-packs` | 설치기·감사가 `source`로 참조 | 언어팩 매니페스트(`packs/*.pack`) 리더 — 목록·경로·감지(마커 파일 + ORM 의존성 grep) |
 
 ## 구조
+
+각 디렉토리에 역할을 적은 `README.md`가 있다(폴더가 무엇을 하고 누가 읽는지).
 
 ```
 ├── CLAUDE.md / AGENTS.md    # 규칙 정본 (Claude / 크로스 에이전트)
