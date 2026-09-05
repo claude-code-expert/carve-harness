@@ -64,6 +64,11 @@ argument-hint: "[--dry-run]"
 > "이건 절대 안 된다" 3개. 예: "주문 금액 음수 불가", "결제 승인 없이 배송상태 변경 금지".
 > 승인 시 `CLAUDE.md`의 도메인 규칙 자리에 **append**한다(기존 내용 보존, 덮어쓰기 금지).
 
+**Q3-b. 성공 기준 문장화** (Q1·Q3 답에서 자동 초안, 사용자 확인 1회)
+> 크리티컬 경로·불변식마다 **기준 / 지시문 / 검사문** 세 줄을 `specs/SUCCESS-CRITERIA.md`에 쓴다(블루프린트 §6.1 "프롬프트와 Eval은 앞뒷면").
+> 검사문은 그대로 골든셋 `llm-rubric` 값 또는 상태 assert의 근거가 되고, 지시문은 `CLAUDE.md` 도메인 규칙과 같은 문장이어야 한다.
+> 템플릿: `specs/SUCCESS-CRITERIA.md`가 없으면 `.claude/skills/eval-init/SUCCESS-CRITERIA.template.md`를 복사해 채운다. 있으면 **append만**.
+
 ## S3. 인터뷰 B — 얼마나 엄격한가 (품질 게이트)
 
 **Q4. 커버리지 임계** — S1 실측치를 보여주고: 현행 유지 / **80(권장, `common/testing.md` 기준)** / 미설정
@@ -134,7 +139,7 @@ argument-hint: "[--dry-run]"
 승인된 것만, 순서 고정:
 
 1. **골든셋** — `specs/goldenset/<suite>.json` 기록. 증설 모드면 기존 `cases` 배열에 append(기존 원소 변형 금지).
-2. **도메인 규칙** — Q3 승인분을 `CLAUDE.md`에 append.
+2. **도메인 규칙** — Q3 승인분을 `CLAUDE.md`에 append. Q3-b 승인분을 `specs/SUCCESS-CRITERIA.md`에 append(같은 문장 — 지시문과 검사문이 어긋나면 골든셋이 프롬프트를 잰다).
 3. **CI 배선** — Q7이 report/block이면 이 디렉토리의 `eval-workflow.yml.template`을
    `.github/workflows/eval-gate.yml`로 복사하고 `__MODE__`·`__DELTA__`를 치환한다.
    이미 같은 파일이 있으면 **덮어쓰지 말고** diff를 보여주고 물어라.

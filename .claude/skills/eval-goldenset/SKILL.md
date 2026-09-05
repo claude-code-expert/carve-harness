@@ -43,11 +43,16 @@ description: 골든셋(고정 입력→루브릭 케이스)으로 산출물 품�
 - `assert.type` 3계층:
   - **텍스트**(순수 채점): `contains` · `not_contains` · `regex` · `not_regex`
   - **상태**(`.claude/hooks/eval-state.sh`가 결정론 채점 — 워크디렉토리의 실제 상태):
-    `file_exists`(경로) · `file_contains`(`경로::리터럴`) · `cmd_exit0`(명령 exit 0) · `git_diff_contains`(diff 내 리터럴)
+    `file_exists`(경로) · `file_contains`(`경로::리터럴`) · `cmd_exit0`(명령 exit 0) · `git_diff_contains`(diff 내 리터럴) ·
+    `log_contains`(`logs/*.jsonl::<jq 불리언 필터>` — 워크디렉토리의 하네스 훅 로그로 **경로(trajectory)를 결정론 채점**. 예:
+    `.decision=="block" and .tool=="Write"`. 외부 target(`claude`·`exec:`)에서만 유효 — 세션 응답자는 로그가 리포 `logs/`로 간다)
   - **정성**: `llm-rubric`(evaluator 위임 — "평가의 평가" 문제가 있으니 상태 assert로 대체 가능하면 대체)
 - `setup`(선택): 케이스 실행 전 격리 워크디렉토리에서 실행할 bash 스크립트(환경 구성 — 파일·git 초기화 등).
   상태 assert 또는 `setup`이 있으면 respondent는 **리포 밖 임시 디렉토리**에서 실행된다(골든셋 정답 비노출).
 - `k`: 반복 실행 횟수(기본 1, 상한 10). k>1이면 pass@k·pass^k가 의미를 가진다.
+- `tags`(선택): `["required", "category:domain_safety"]`. **`required`** 케이스는 하나라도 완전 green(100)이 아니면 `eval-gate`가
+  평균과 무관하게 `regressed`로 막는다(블루프린트 §6.5 관문 ①). `category:*`는 리포트 분류용. 골든셋에 required가 0건이면
+  `carve-validate`가 NOTE(`--strict`면 ERROR) — 안전·결제·인증 케이스에 붙여라. 이 리포는 `harness-guard` 5건이 required.
 - `version`(필수): 케이스 정의의 버전. **케이스를 고치면 반드시 올린다.** 버전 없이 점수만 쌓으면
   run #3과 run #7이 서로 다른 문제를 푼 점수인데도 같은 축에 그려져 추이가 조용히 무의미해진다.
   추이 엔트리에 `caseVersion`으로 함께 기록되고, 직전 run과 다르면 `[VERSION CHANGED]`로 경고한다.
@@ -70,8 +75,12 @@ description: 골든셋(고정 입력→루브릭 케이스)으로 산출물 품�
 
 ## 회귀 게이트
 
-- 직전 baseline(`specs/eval-score.json` 마지막 run) 대비 `suiteScore`가 **DELTA(기본 3pt) 초과 하락**하면 `regressed`.
-- `specs/eval-score.json`은 append-only 추이(`{"runs":[{run, suiteScore, cases[]}]}`) — 기존 원소 수정 금지.
+- `eval-gate.sh` 판정 순서: `unable`(추이 없음·손상) → `stale`(`--changed`에 CLAUDE.md·AGENTS.md·`.claude/**`·`specs/goldenset/**`가 있는데 추이 미갱신 — 프롬프트 변경도 게이트를 지난다, R8) → `suspicious`(최근 run 케이스 ≥3건 전부 0 또는 전부 100 — 채점기·문항부터 의심, §6.7) → `regressed`(required 케이스 미green **또는** 직전 baseline 대비 `suiteScore` DELTA(기본 3pt) 초과 하락) → `ok`. block 모드는 ok 외 전부 exit 1.
+- `specs/eval-score.json`은 append-only 추이(`{"runs":[{run, version, suiteScore, cases[], prevHash}]}`) — 기존 원소 수정 금지.
+  **읽기·append는 `eval-trend.sh`만 한다**(`read` / `append <entry.json>`): run 서수와 `version`은 스크립트가 VERSION 파일에서
+  채우고, 각 run의 `prevHash`가 이전 run들의 해시를 담아 **변조된 추이엔 append를 거부**한다(exit 1). 에이전트에게 JSON을
+  열어 고치게 하지 마라 — 실제로 run 하나가 유실되고 version이 오기록된 적이 있다. 사람이 정정해야 하면 손으로 고치고
+  `DECISIONS.md`에 남긴다.
 - 강제(CI/pre-push 차단)는 옵트인 — 팀이 골든셋을 유지할 때만 배선한다(과잉 차단 방지).
 
 ## 프리플라이트 — 돌리기 전에 검증한다 (`carve-validate`)
@@ -165,7 +174,13 @@ bash .claude/hooks/eval-gate.sh --mode block --delta 3 # 회귀 시 exit 1 (CI �
 /eval                       # specs/goldenset/*.json 전체 재채점 → 추이 append → 회귀 판정
 ```
 
-또는 발화에 `carve-eval 실행`. 인자: `{ goldenset?: glob, threshold?: 70, delta?: 3, config?: "라벨" }`.
+또는 발화에 `carve-eval 실행`. 인자: `{ goldenset?: glob, threshold?: 70, delta?: 3, config?: "라벨", target?: "session" | "claude" | "exec:<cmd>" }`.
+
+**응답자(target)는 명령이다** — `eval-run.sh`가 setup→응답→채점→근거 파일을 한 번에 처리한다(promptfoo `exec:` 계약: cwd=워크디렉토리, argv[1]=prompt, stdout=응답).
+- `session`(기본): 워크플로 서브에이전트가 응답, setup·채점은 스크립트.
+- `claude`: 헤드리스 `claude -p` — CI에서 **실채점**이 가능해지는 경로(CLI+인증 필요, 없으면 `target-unavailable`).
+- `exec:<cmd>`: 임의 명령(다른 에이전트·스텁·회귀 픽스처).
+실행 근거는 `specs/eval-runs/run-<N>/<id>#<i>.json`(응답 원문 + assert별 pass/reason)에 남는다 — 점수가 이상하면 여기부터 읽는다(블루프린트 R10). gitignore 대상.
 
 > **`carve-eval.js`를 고친 직후에는 이름(`carve-eval`)으로 실행하지 마라.** 이름 해석은 세션 초반에 잡힌
 > 레지스트리 스냅샷을 쓸 수 있어 **수정 전 코드가 그대로 돌아간다**(실측 확인됨 — run#3이 구버전 회귀

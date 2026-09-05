@@ -121,6 +121,29 @@ bash install.sh setup
 git init · jq PATH · LICENSE 생성(MIT/Apache-2.0) · 보호 경로 추가 · 도메인 규칙 수집 · 스택 감지 리포트 · GSD 설치 제안.
 도메인 규칙·스택 게이트 보강은 `GUIDE.md` §8 참고.
 
+## 시작 순서 (설치 후 셋업 · 언어팩 구성)
+
+설치가 끝나면 아래 순서로 한 번 훑으면 하네스가 이 프로젝트에 맞게 선다. 3번까지만 해도 가드·게이트는 전부 동작한다.
+
+1. **설치** — `curl … | bash`. 시작 질문에서 `[1] 맞춤 구축(권장)`을 고르면 전체 설치 후 스택 정리를 안내한다.
+2. **언어팩 확정** — 설치 중 감지된 팩이 기본으로 들어온다. 나중에 조정:
+   ```bash
+   bash install.sh pack list                 # 팩 | 설치 | 감지 | 요약
+   bash install.sh pack add python           # 감지 못 한 팩 추가
+   bash install.sh pack remove java-spring   # 필요 없는 팩 제거(백업 → rollback)
+   ```
+3. **머신 준비 + 초기 설정** — `jq`·`git`과 스택 툴체인(`tsc`·`gradlew`·`ruff/pytest`·`go`·`cargo`)이 있어야 게이트가 실제로 문다.
+   ```bash
+   bash install.sh setup    # git init · jq PATH · LICENSE · 보호 경로 · 도메인 규칙 수집 · 스택 감지 리포트
+   ```
+4. **스택 맞춤(선택)** — Claude Code 세션에서 `/carve-harness-create`. 감지 대조로 팩 add/remove와 불필요한 에이전트·스킬 prune을 **1회 확인 후** 적용. 상시 로드 토큰을 줄인다.
+5. **도메인 규칙** — `CLAUDE.md`의 "도메인 규칙"에 프로젝트 불변식 3줄(예: "주문 금액 음수 불가"). 코드 패턴은 훅이 못 보므로 **테스트로 강제**한다.
+6. **검증** — `/harness-audit`가 `0 failed`면 전 게이트 활성. 언어팩 무결성(AUDIT-09)과 Eval 성숙도도 함께 본다.
+7. **그냥 사용** — 보호 경로·시크릿·위험 명령은 자동 차단, 응답 종료 시 변경된 스택만 빌드·테스트. 세션 경계에서 `specs/HANDOFF.md` 저장·복원.
+8. **(1~2주 뒤) 골든셋 셋업** — 실제 실패가 쌓인 뒤 `/eval-init` 1회. 인터뷰로 평가·품질 게이트를 확정하고 골든셋을 만든다. 이후 `/eval`로 회귀 추적.
+
+> 단계별 도구를 언제 무엇으로 쓰는지는 아래 [전체 워크플로](#전체-워크플로--도구-세트를-언제-무엇으로-쓰나) 표를, 폴더 구조는 각 디렉토리의 `README.md`를 본다.
+
 ## 업데이트 / 롤백
 
 모든 명령은 **대상 프로젝트 루트에서** 실행.
@@ -349,7 +372,7 @@ bash .claude/hooks/carve-validate.sh --red   # 케이스를 쓰거나 고친 직
 | `pretool-guard` | PreToolUse — Write·Edit·Bash 실행 **직전마다** | 보호 경로(쓰기·삭제 모두)·시크릿·위험 명령(force push·`reset --hard`·`curl\|sh`·파괴적 SQL·루트/홈 재귀 삭제) 차단 + 하네스 자기보호(GUARD-07, 설치본) + 동일 툴콜 5연속 루프 브레이크(exit 2), fail-closed |
 | `posttool-format` | PostToolUse — 파일 쓰기·수정 성공 **직후** | 확장자 언어 감지 후 포맷(후처리, exit 0) |
 | `stop-verify` | Stop — 응답 종료(완료 선언) **직전** | 변경 스택 빌드·타입·테스트 게이트(실패 exit 2) |
-| `checklist-gate` | Stop — 응답 종료 **직전**(`stop-verify` 뒤) | `specs/checklist.json` 미달(<95)·미채점 항목 남으면 완료 차단(exit 2). 루프 미개시면 무동작. **자가 우회 차단** — 채점 파일을 지워도 tombstone(`specs/.checklist-active`)이 남아 계속 차단, threshold 하향은 하한 95로 무효화 |
+| `checklist-gate` | Stop — 응답 종료 **직전**(`stop-verify` 뒤) | `specs/checklist.json` 미달(<95)·미채점 항목 남으면 완료 차단(exit 2). `type: domain_safety` 항목은 100점 필수(거부권). 루프 미개시면 무동작. **자가 우회 차단** — 채점 파일을 지워도 tombstone(`specs/.checklist-active`)이 남아 계속 차단, threshold 하향은 하한 95로 무효화 |
 | `session-handoff` | 세션 **시작·압축·종료** 시점(SessionStart·PreCompact·SessionEnd) | 핸드오프 복원·저장 + 구성 배너 |
 | `log-event` | 다른 훅이 판정을 기록할 때(내부 서브프로세스 호출) | JSONL 관측 append — 스키마·PII 마스킹 단일 출처 |
 | `lib-protected` | 훅 로드 시 `source`로 참조(직접 실행 안 함) | 보호 경로·시크릿·위험 명령 정규식 단일 정의(순수 데이터) |
@@ -359,12 +382,17 @@ bash .claude/hooks/carve-validate.sh --red   # 케이스를 쓰거나 고친 직
 | `logs-report` | `logs-report.sh` 실행 시(수동 CLI) | JSONL 판정 요약 + N일 회전 + `--tokens` 세션별 토큰 회계 |
 | `eval-java` | Java/Spring 품질 스코어가 필요할 때(수동 스코어러) | Java/Spring 결정적 품질 확률 `P∈[0,1]`, LLM 없음 |
 | `eval-state` | carve-eval 상태 assert 채점 시(헬퍼) | 골든셋 상태 assert(파일·명령·diff)를 실상태로 결정적 채점 — 자기 보고 불신. `--case <id>`로 골든셋 원본에서 직접 읽어 값 전달 중 이스케이프 훼손 차단 |
-| `eval-gate` | CI·로컬에서 골든셋 회귀 판정 시(수동 CLI) | `specs/eval-score.json` 추이만 읽어 직전 대비 하락폭 판정 — LLM 없음. `--mode block`이면 회귀 시 exit 1, 추이 없음·손상은 fail-closed |
+| `eval-gate` | CI·로컬에서 골든셋 회귀 판정 시(수동 CLI) | `specs/eval-score.json` 추이만 읽어 판정 — LLM 없음. `unable` → `stale`(프롬프트·규칙 변경인데 추이 미갱신) → `suspicious`(전부 0/100) → `regressed`(`required` 케이스 실패 또는 delta 초과) → `ok`. `--mode block`은 ok 외 exit 1 |
 | `carve-validate` | `/eval` Phase 0 자동 · 케이스 작성 후 수동 CLI | 골든셋 프리플라이트 — 필수 필드·id 중복·미지 assert 타입·정규식 컴파일·`k` 범위 검증. `--red`는 setup 실행 후 "에이전트 작업 없이 이미 green"인 NO-SIGNAL 케이스 탐지 |
+| `redteam` | 가드레일 정기 점검 시(수동 CLI/CI) | 공격 34·정상 19 케이스를 `pretool-guard` exit 코드로 채점(LLM 0). 차단율·과잉차단율·알려진 천장 분리 집계. `--strict`는 회귀 시 exit 1 ("달았다 ≠ 막힌다") |
+| `eval-run` | `/eval`이 케이스를 돌릴 때(헬퍼) · 수동 CLI | 케이스 1건의 setup→응답→채점→근거 파일. 응답자는 `--target session\|claude\|exec:<cmd>`로 교체(CI 실채점 경로). 새 상태 assert `log_contains`(훅 로그로 경로 채점) |
+| `eval-trend` | `/eval`이 추이를 읽고 쓸 때(헬퍼) | `specs/eval-score.json` 결정론 읽기·append — run 서수·`version`은 VERSION 파일에서, `prevHash`로 이전 run 변조 시 append 거부. LLM이 추이 파일을 직접 편집하지 않는다 |
 | `eval-score` | 빌드 건강도 점수가 필요할 때(수동 CLI) | 언어 무관 채점표(블루프린트 §5.7) — `.claude/stacks/*.sh` 어댑터로 G1 빌드·G2 테스트·G3 안전(거부권)·lint·회귀·커버리지 산출, 못 잰 항목은 `skipped`로 명시. `specs/SCORE.json` |
 | `lib-packs` | 설치기·감사가 `source`로 참조 | 언어팩 매니페스트(`packs/*.pack`) 리더 — 목록·경로·감지(마커 파일 + ORM 의존성 grep) |
 
 ## 구조
+
+각 디렉토리에 역할을 적은 `README.md`가 있다(폴더가 무엇을 하고 누가 읽는지).
 
 ```
 ├── CLAUDE.md / AGENTS.md    # 규칙 정본 (Claude / 크로스 에이전트)

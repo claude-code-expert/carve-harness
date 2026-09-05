@@ -8,9 +8,12 @@ name: eval-gate
 
 on:
   pull_request:
-    paths:
+    paths:                     # 프롬프트·규칙이 바뀌면 추이도 같은 PR에서 갱신돼야 한다(블루프린트 R8 → stale 판정)
       - 'specs/eval-score.json'
       - 'specs/goldenset/**'
+      - 'CLAUDE.md'
+      - 'AGENTS.md'
+      - '.claude/**'
   workflow_dispatch:
 
 jobs:
@@ -18,6 +21,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0     # 변경 파일 목록(base...HEAD)에 필요
 
       - name: Install jq
         run: sudo apt-get update -qq && sudo apt-get install -y -qq jq
@@ -27,7 +32,12 @@ jobs:
           MODE: report     # /eval-init 이 report 또는 block 으로 치환한다
           DELTA: 3   # 허용 하락폭(점)
         run: |
-          bash .claude/hooks/eval-gate.sh --mode "$MODE" --delta "$DELTA" | tee gate.json
+          # PR 이면 base 대비 변경 파일을 넘겨 stale(프롬프트 변경 + 추이 미갱신) 판정을 켠다.
+          CHANGED=""
+          if [ -n "${{ github.event.pull_request.base.sha || '' }}" ]; then
+            CHANGED=$(git diff --name-only "${{ github.event.pull_request.base.sha }}...HEAD" | tr '\n' ',')
+          fi
+          bash .claude/hooks/eval-gate.sh --mode "$MODE" --delta "$DELTA" --changed "$CHANGED" | tee gate.json
           echo "### 골든셋 회귀 게이트" >> "$GITHUB_STEP_SUMMARY"
           jq -r '"- 판정: \(.verdict)\n- 점수: \(.suiteScore // "없음") (baseline \(.baseline // "없음"))\n- 하락: \(.delta // "-")pt / 허용 \(.allowed // "-")pt"' \
             gate.json >> "$GITHUB_STEP_SUMMARY"

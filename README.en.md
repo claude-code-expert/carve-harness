@@ -121,6 +121,29 @@ bash install.sh setup
 git init · jq PATH · LICENSE generation (MIT/Apache-2.0) · extra protected paths · domain-rule collection · stack detection report · GSD install offer.
 For domain rules and per-stack gates, see `GUIDE.md` §8.
 
+## First run (post-install setup · language packs)
+
+After install, walk this order once and the harness fits your project. Steps 1–3 already give you every guard and gate.
+
+1. **Install** — `curl … | bash`. Pick `[1] project-aware build (recommended)` at the prompt: it full-installs, then guides the stack trim.
+2. **Confirm language packs** — the detected packs land by default. Adjust later:
+   ```bash
+   bash install.sh pack list                 # pack | installed | detected | summary
+   bash install.sh pack add python           # add a pack detection missed
+   bash install.sh pack remove java-spring   # drop one you don't need (backed up → rollback)
+   ```
+3. **Machine prep + initial setup** — `jq`, `git`, and the stack toolchains (`tsc`, `gradlew`, `ruff/pytest`, `go`, `cargo`) must be present for the gates to actually bite.
+   ```bash
+   bash install.sh setup    # git init · jq PATH · LICENSE · protected paths · domain-rule collection · stack report
+   ```
+4. **Tailor to the stack (optional)** — run `/carve-harness-create` in a Claude Code session. It proposes pack add/remove and prunes agents/skills you don't need, applied **after one confirmation**. Shrinks the always-loaded tokens.
+5. **Domain rules** — three project invariants under "도메인 규칙" in `CLAUDE.md` (e.g. "order amount never negative"). Hooks can't see code patterns — **enforce these with tests**.
+6. **Verify** — `/harness-audit` at `0 failed` means every gate is live; it also checks language-pack integrity (AUDIT-09) and eval maturity.
+7. **Just work** — protected paths, secrets and dangerous commands are blocked automatically; on response end only the changed stacks build and test; `specs/HANDOFF.md` is saved and restored at session boundaries.
+8. **(after 1–2 weeks) golden-set setup** — once real failures exist, run `/eval-init` once: an interview fixes the eval/quality gates and builds the golden set. Then track regressions with `/eval`.
+
+> For which tool to use when, see the [end-to-end workflow](#end-to-end-workflow--which-tool-when) table below; for the folder layout, see each directory's `README.md`.
+
 ## Update / Rollback
 
 Run every command **from the target project root**.
@@ -349,7 +372,7 @@ This repo's own 20 cases (`specs/goldenset/`) are the worked example — 5 on gu
 | `pretool-guard` | PreToolUse — **before every** Write · Edit · Bash | Block protected-path writes *and deletes*, secrets, dangerous commands (force push · `reset --hard` · `curl\|sh` · destructive SQL · recursive delete of `/`/`$HOME`/project root) + harness self-protection (GUARD-07, installed harnesses) + loop brake on the 5th identical tool call (exit 2); fail-closed |
 | `posttool-format` | PostToolUse — **right after** a file write/edit succeeds | Detect language by extension and format (post-process, exit 0) |
 | `stop-verify` | Stop — **just before** a response ends (the "done" claim) | Build/type/test gate for changed stacks (exit 2 on failure) |
-| `checklist-gate` | Stop — **just before** a response ends (after `stop-verify`) | Blocks "done" while `specs/checklist.json` has any item under 95 or unscored (exit 2). No-op when no loop was started. **Self-bypass blocked** — deleting the scorecard leaves a tombstone (`specs/.checklist-active`) that keeps blocking, and a lowered threshold is floored back to 95 |
+| `checklist-gate` | Stop — **just before** a response ends (after `stop-verify`) | Blocks "done" while `specs/checklist.json` has any item under 95 or unscored (exit 2). No-op when no loop was started. **Self-bypass blocked** — deleting the scorecard leaves a tombstone (`specs/.checklist-active`) that keeps blocking, and a lowered threshold is floored back to 95. `type: domain_safety` items must score 100 (veto, GATE-C7) |
 | `session-handoff` | At session **start · compaction · end** (SessionStart · PreCompact · SessionEnd) | Restore/save handoff + config banner |
 | `log-event` | When another hook records a verdict (internal subprocess call) | JSONL observability append — single source for schema & PII masking |
 | `lib-protected` | Referenced via `source` when a hook loads (never runs directly) | Single definition of protected-path, secret and danger-command regexes (pure data) |
@@ -359,12 +382,17 @@ This repo's own 20 cases (`specs/goldenset/`) are the worked example — 5 on gu
 | `logs-report` | When `logs-report.sh` runs (manual CLI) | JSONL verdict summary + N-day rotation + `--tokens` per-session token accounting |
 | `eval-java` | When a Java/Spring quality score is needed (manual scorer) | Deterministic Java/Spring quality probability `P∈[0,1]`, no LLM |
 | `eval-state` | When carve-eval grades state asserts (helper) | Grade golden-set state asserts (files · commands · diff) against real state — never trust self-report. `--case <id>` reads values straight from the golden-set file so escaping is never mangled in transit |
-| `eval-gate` | Golden-set regression verdict in CI or locally (manual CLI) | Reads only the `specs/eval-score.json` trend and judges the drop vs the previous run — no LLM. `--mode block` exits 1 on regression; a missing or malformed trend fails closed |
+| `eval-gate` | Golden-set regression verdict in CI or locally (manual CLI) | Reads only the `specs/eval-score.json` trend — no LLM. `unable` → `stale` (prompts/rules changed, trend not re-measured) → `suspicious` (all 0 / all 100) → `regressed` (a `required` case failed, or the drop exceeds delta) → `ok`. `--mode block` exits 1 on anything but ok |
 | `carve-validate` | Automatically as `/eval` Phase 0 · manually after writing cases | Golden-set preflight — required fields, duplicate ids, unknown assert types, regex compilation, `k` range. `--red` runs each setup and flags NO-SIGNAL cases that are already green before the agent does anything |
+| `redteam` | Periodic guardrail check (manual CLI / CI) | Grades attack (34) and normal (19) cases by `pretool-guard` exit code (no LLM): block rate, over-block rate, documented ceilings tracked. `--strict` exits 1 on a regression ("installed ≠ enforced") |
+| `eval-run` | When `/eval` runs a case (helper) · manual CLI | One case end to end: setup → respondent → grading → evidence file. The respondent is swappable via `--target session\|claude\|exec:<cmd>` (real scoring in CI). New state assert `log_contains` grades the trajectory from the hook log |
+| `eval-trend` | When `/eval` reads or writes the trend (helper) | Deterministic read/append of `specs/eval-score.json` — run ordinal and `version` come from the VERSION file, `prevHash` refuses to append onto a tampered trend. The LLM never edits the trend file itself |
 | `eval-score` | When a build-health score is needed (manual CLI) | Language-agnostic scorecard (blueprint §5.7) — `.claude/stacks/*.sh` adapters yield G1 build · G2 tests · G3 safety (veto) · lint · regression · coverage; anything unmeasurable is listed under `skipped`. Writes `specs/SCORE.json` |
 | `lib-packs` | Sourced by the installer and the audit | Language-pack manifest reader (`packs/*.pack`) — list, paths, detection (marker files + ORM dependency grep) |
 
 ## Layout
+
+Every directory carries a `README.md` describing its role (what the folder does, who reads it).
 
 ```
 ├── CLAUDE.md / AGENTS.md    # canonical rules (Claude / cross-agent)

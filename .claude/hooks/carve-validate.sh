@@ -21,8 +21,14 @@
 # hook, so the local run alone would report a false OK.
 set -u
 
-RED=0
-if [ "${1:-}" = "--red" ]; then RED=1; shift; fi
+RED=0; STRICT=0
+while :; do
+  case "${1:-}" in
+    --red) RED=1; shift ;;
+    --strict) STRICT=1; shift ;;   # required 태그 0건을 WARN 이 아니라 ERROR 로 (CI 게이트용)
+    *) break ;;
+  esac
+done
 
 K_MAX=10   # keep in sync with K_MAX in .claude/workflows/carve-eval.js
 
@@ -74,6 +80,8 @@ else
          then "ERROR\t\($L): k must be an integer 1..'"$K_MAX"' (got \($c.k | tostring))" else empty end),
       (if ($c | has("setup")) and (($c.setup | type) != "string" or ($c.setup // "") == "")
          then "ERROR\t\($L): setup must be a non-empty string when present" else empty end),
+      (if ($c | has("tags")) and (($c.tags | type) != "array" or ([ $c.tags[]? | select(type != "string" or length == 0) ] | length) > 0)
+         then "ERROR\t\($L): tags must be an array of non-empty strings (e.g. [\"required\",\"category:domain_safety\"])" else empty end),
       (if ($as | type) != "array" or ($as | length) == 0
          then "ERROR\t\($L): assert must be a non-empty array"
          else
@@ -82,7 +90,7 @@ else
                    or ($a.type // "") == "regex" or ($a.type // "") == "not_regex"
                    or ($a.type // "") == "file_exists" or ($a.type // "") == "file_contains"
                    or ($a.type // "") == "cmd_exit0" or ($a.type // "") == "git_diff_contains"
-                   or ($a.type // "") == "llm-rubric"
+                   or ($a.type // "") == "log_contains" or ($a.type // "") == "llm-rubric"
                  then empty
                  else "ERROR\t\($L) assert[\($j)]: unknown type \"\(q($a.type))\" (fail-closed at run time = silent 0)" end),
                (if ($a.value | type) != "string" or ($a.value // "") == ""
@@ -90,12 +98,16 @@ else
                (if ($a.type // "") == "file_contains"
                    and (($a.value // "") | test("^[^:]+::.+") | not)
                   then "ERROR\t\($L) assert[\($j)]: file_contains needs \"<path>::<needle>\" (got \"\($a.value // "")\")"
+                  else empty end),
+               (if ($a.type // "") == "log_contains"
+                   and (($a.value // "") | test("^[^:]+::.+") | not)
+                  then "ERROR\t\($L) assert[\($j)]: log_contains needs \"<jsonl-glob>::<jq boolean filter>\" (got \"\($a.value // "")\")"
                   else empty end)
            ),
            (if ([ $as[] | select(
                     .type == "contains" or .type == "regex" or .type == "file_exists"
                     or .type == "file_contains" or .type == "cmd_exit0"
-                    or .type == "git_diff_contains" or .type == "llm-rubric") ] | length) == 0
+                    or .type == "git_diff_contains" or .type == "log_contains" or .type == "llm-rubric") ] | length) == 0
               then "ERROR\t\($L): negative asserts only — add a positive assert (과잉 충족 리워드 해킹 방지)"
               else empty end),
            (if ([ $as[] | select(.type != "llm-rubric") ] | length) == 0
@@ -159,6 +171,19 @@ if [ "$files" -eq 0 ]; then
   emit ERROR "no golden-set files matched — write cases first (eval-goldenset 스킬 참고)"
 fi
 
+# ── required tag: gate ① fails on a single required case — without one, the gate is mean-only ──
+if [ "$files" -gt 0 ] && [ "$errors" -eq 0 ]; then
+  nreq=0
+  for f in "${FILES[@]}"; do
+    [ -f "$f" ] || continue
+    nreq=$((nreq + $(jq '[.cases[]? | select((.tags // []) | index("required"))] | length' "$f" 2>/dev/null || echo 0)))
+  done
+  if [ "$nreq" -eq 0 ]; then
+    if [ "$STRICT" -eq 1 ]; then emit ERROR "no case tagged \"required\" — eval-gate can only judge the mean; tag the safety-critical cases"
+    else printf 'NOTE\tno case tagged "required" — eval-gate judges the mean only (tag safety-critical cases; --strict makes this an error)\n'; fi
+  fi
+fi
+
 # ── --red: does the case measure anything? (opt-in, executes setup locally) ──
 if [ "$RED" -eq 1 ] && [ "$errors" -eq 0 ]; then
   # PROTECTED_RE has exactly one definition — never restate the path list here.
@@ -197,6 +222,8 @@ if [ "$RED" -eq 1 ] && [ "$errors" -eq 0 ]; then
           file_exists)   tot=$((tot + 1)); [ -e "$W/$v" ] && pre=$((pre + 1)) ;;
           file_contains) tot=$((tot + 1)); p="${v%%::*}"; n="${v#*::}"
                          [ -f "$W/$p" ] && grep -qF "$n" "$W/$p" && pre=$((pre + 1)) ;;
+          log_contains)  tot=$((tot + 1)); p="${v%%::*}"; n="${v#*::}"
+                         ( cd "$W" && cat $p 2>/dev/null | jq -es "any(.[]; $n)" >/dev/null 2>&1 ) && pre=$((pre + 1)) ;;
         esac
       done < <(jq -j --arg id "$id" '.cases[] | select(.id == $id) | .assert[] | (.type|tostring) + "\u0000" + (.value|tostring) + "\u0000"' "$f")
       # An llm-rubric still grades the agent, so all-green determinism is not

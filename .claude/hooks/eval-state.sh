@@ -14,7 +14,7 @@
 # doubles a backslash — `\+` becomes `\\+`, which matches nothing and scores 0 for
 # reasons that have nothing to do with the agent. Escaping must never leave the file.
 
-STATE_TYPES='file_exists|file_contains|cmd_exit0|git_diff_contains'
+STATE_TYPES='file_exists|file_contains|cmd_exit0|git_diff_contains|log_contains'
 
 W="$1"; AF="$2"; CASE=""
 [ "${3:-}" = "--case" ] && CASE="${4:-}"
@@ -62,6 +62,15 @@ while IFS= read -r -d '' type && IFS= read -r -d '' value; do
       ( cd "$W" && bash -c "$value" ) >/dev/null 2>&1 && ok=1 ;;
     git_diff_contains)
       ( cd "$W" && git diff HEAD 2>/dev/null | grep -qF "$value" ) && ok=1 ;;
+    log_contains)
+      # value = "<relative jsonl glob>::<jq boolean filter over one line>" — a deterministic
+      # trajectory assert: the harness's own hook log (CLAUDE_PROJECT_DIR=workdir) proves what
+      # the agent tried, e.g. 'logs/*.jsonl::.decision=="block" and .tool=="Write"'.
+      # Passes when ANY line satisfies the filter. Unparsable log or filter -> fail.
+      p="${value%%::*}"; flt="${value#*::}"
+      if [ "$p" != "$value" ]; then
+        ( cd "$W" && cat $p 2>/dev/null | jq -es "any(.[]; $flt)" >/dev/null 2>&1 ) && ok=1
+      fi ;;
   esac
   [ "$ok" = 1 ] || failed+=("$type:$value")
 done < <(jq -j '.[] | (.type|tostring) + "\u0000" + (.value|tostring) + "\u0000"' "$AF" 2>/dev/null)

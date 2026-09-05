@@ -304,6 +304,18 @@ if [ -d "$AUDIT_ROOT/packs" ] && [ -f "$HOOKS_DIR/lib-packs.sh" ]; then
   elif [ -f "$AUDIT_ROOT/.github/workflows/eval-gate.yml" ]; then lv="LV3 — 골든셋·추이 ${runs}run·CI 게이트 배선. 다음 한 단: block 모드 + required 태그"
   else lv="LV2 — 골든셋·추이 ${runs}run, CI 게이트 없음. 다음 한 단: /eval-init 로 eval-gate.yml 배선"; fi
   printf 'INFO: eval maturity %s (AUDIT-09)\n' "$lv"
+  # Blueprint §6.8 Q1 "성공 기준이 문장으로 있는가": when the file exists it must carry the
+  # three-line shape (기준/지시문/검사문); absence is a maturity note, not a failure.
+  SC="$AUDIT_ROOT/specs/SUCCESS-CRITERIA.md"
+  if [ -f "$SC" ]; then
+    if grep -q '^- 기준:' "$SC" && grep -q '^- 지시문:' "$SC" && grep -q '^- 검사문:' "$SC"; then
+      ok "SUCCESS-CRITERIA.md: 기준/지시문/검사문 3줄 형식 (AUDIT-09)"
+    else
+      no "SUCCESS-CRITERIA.md exists but lacks the 기준/지시문/검사문 lines — see the template (AUDIT-09)"
+    fi
+  else
+    printf 'INFO: specs/SUCCESS-CRITERIA.md 없음 — /eval-init Q3-b 가 만든다 (AUDIT-09)\n'
+  fi
 fi
 
 printf -- '---\n%s passed, %s failed\n' "$pass" "$fail"
