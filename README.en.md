@@ -6,7 +6,7 @@
 
 # Claude Harness (language-agnostic drop-in)
 
-[한국어](README.md) · Current version **v0.8.0** · Changes: [CHANGELOG.md](CHANGELOG.md) · Course: [HARNESS_GUIDE.md](HARNESS_GUIDE.md) (Korean)
+[한국어](README.md) · Current version **v0.9.0** · Changes: [CHANGELOG.md](CHANGELOG.md) · Course: [HARNESS_GUIDE.md](HARNESS_GUIDE.md) (Korean)
 
 A guardrail template that stops coding-agent rule violations with **hook exit 2 blocking** — not persuasion.
 Drop it into your project root and it works immediately.
@@ -426,6 +426,7 @@ MIT — see [LICENSE](LICENSE). The vendored `ponytail` keeps its own license (`
 
 | Version | Date | Summary |
 |---------|------|---------|
+| v0.9.0 | 2026-09-05 | pack integrity AUDIT-09, skill wiring, doc sync (LP5) |
 | v0.8.0 | 2026-08-06 | interactive eval-init setup + deterministic regression gate |
 | v0.7.0 | 2026-08-03 | harden gates after adversarial audit |
 | v0.6.0 | 2026-07-23 | add per-session token usage report |

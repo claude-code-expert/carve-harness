@@ -4,6 +4,23 @@
 
 > **규칙**: `VERSION` 파일이 바뀌는 커밋에는 반드시 해당 버전 항목(`[X.Y.Z]`)이 이 파일에 함께 스테이징되어야 한다 — `.githooks/pre-commit`이 기계적으로 차단, 작성은 `/version-changelog` 스킬. 배포 절차는 `RELEASE.md`.
 
+## [0.9.0] - 2026-09-05
+
+### Added
+- feat(audit): pack integrity AUDIT-09, skill wiring, doc sync (LP5)
+- feat(eval): language-agnostic scorecard eval-score.sh (LP4)
+- feat(packs): golden-set starters, slim rules, judge examples (LP3)
+- feat(install): language-pack selection, pack subcommand (LP2)
+- feat(packs): add language-pack manifests and reader (LP0)
+- feat(eval): add golden-set preflight validator
+
+### Fixed
+- fix(eval): restore lost run 1 in score trend
+- fix(eval): make golden-set preflight machine-portable
+
+### Changed
+- refactor(hooks): move stack gates into .claude/stacks/*.sh (LP1)
+
 ## [0.8.0] - 2026-08-06
 
 ### Added
