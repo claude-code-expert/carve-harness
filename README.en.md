@@ -19,10 +19,11 @@ Drop it into your project root and it works immediately.
 | **Feedback** | Stop hook blocks "done" claims while build/type/lint/tests fail — incremental, changed stacks only (Java, Node/TS, Python, Go, Rust, bash; each runs only when its toolchain is installed, bringing CI's `npm run lint` local) |
 | **State** | Handoff auto-saved at session end/compaction (real TODOs and decisions), restored at start |
 | **Observability** | Every hook verdict logged to `logs/*.jsonl` (PII masked), with report/rotation. The session-start banner lists every loaded component, and all hook messages carry a unified `[carve-harness:<hook>]` prefix |
-| **Self-audit** | `/harness-audit` — 47 mechanical checks PASS/FAIL the harness configuration itself |
+| **Self-audit** | `/harness-audit` — 48 mechanical checks PASS/FAIL the harness configuration itself |
 | **Verify loop** | `/verify-loop` — grades each claimed implementation 0–100 against real code, feeds gaps back to rework anything under 95, loops until every item passes. Stop hook blocks "done" while any item is unresolved → [verify-loop guide](docs/md/verify-loop-guide.md) |
+| **Quantitative eval** | `/eval` — re-runs a fixed golden set k times for pass@k/pass^k, a score trend and regression detection. `carve-validate` separates golden-set config errors first, at zero agent cost |
 
-**Inventory**: 14 hooks (5 event gates · 2 libraries · 7 CLI/helpers) · 14 slash commands · 7 agents · 10 skills · 8 rule files (+8 stack references in `docs/rules/`) · 3 workflows · 20 test suites (283 cases) — full lists in the [component tables](#full-component-list-skills--commands--hooks) below
+**Inventory**: 15 hooks (5 event gates · 2 libraries · 8 CLI/helpers) · 14 slash commands · 7 agents · 10 skills · 8 rule files (+8 stack references in `docs/rules/`) · 3 workflows · 21 test suites (326 cases) — full lists in the [component tables](#full-component-list-skills--commands--hooks) below
 
 **Cross-agent**: hook blocking is Claude Code-only. Cursor/Codex/etc. follow `AGENTS.md` as the canonical rules, with `.githooks/pre-commit` as the final gate at commit time.
 
@@ -41,7 +42,7 @@ curl -fsSL https://raw.githubusercontent.com/claude-code-expert/carve-harness/ma
 - Existing files are never touched (reported as SKIP) — installed paths are recorded in `.claude/harness-manifest.txt`.
 - **Exception: `.claude/settings.json` is merged, not skipped** — your existing config (`permissions`, `model`, own hooks) is preserved while the harness's 6 hook events plus LSP/plugin declarations are registered via jq (idempotent). Skipping it would leave the hooks unregistered and every gate (banner, guard, verify) inert.
 - **LSP + plugins auto-declared**: settings.json declares the `vtsls` (TypeScript/React/JavaScript LSP), `jdtls` (Java LSP), `ponytail`, and `frontend-design` (design-direction skill) plugins along with their marketplaces (`claude-code-lsps` · `ponytail` · `claude-code-plugins`) — Claude Code installs them after a trust prompt at session start. Server binaries are separate: `bash install.sh setup` offers a global npm install of vtsls; jdtls needs `brew install jdtls` (JDK required). Missing binaries are reported as NOTE lines at the end of install.
-- The installer ends by running `/harness-audit` — 47 PASS means all gates are live.
+- The installer ends by running `/harness-audit` — 48 PASS means all gates are live.
 
 **On any full install** (project-aware `[1]`, non-interactive `curl | bash`/env, or manual with everything selected) the installer prints the banner below at the end, pointing you to run `/carve-harness-create` in a session (it fires **only via the slash command**, not a natural-language request). The installer output is in Korean:
 
@@ -123,14 +124,15 @@ Once installed, the gates are automatic — protected-path writes are blocked, o
 
 | Command | Purpose |
 |---------|---------|
-| `/harness-audit` | 47-check PASS/FAIL of the harness configuration |
+| `/harness-audit` | 48-check PASS/FAIL of the harness configuration |
 | `/plan` `/verify` `/review` `/commit` | SC breakdown · SC verification · code review · commit→pull→push with your message |
 | `/verify-loop <goal>` | For multi-requirement work — grades each item 0–100 and reworks until all pass 95 |
 | `/eval-init` | **Once, after install** — analyzes the project and fixes the eval/quality gates through an interview, then builds the golden set |
 | `/eval` | Re-score the golden set → pass@k/pass^k · append to the score trend · regression vs baseline |
+| `bash .claude/hooks/carve-validate.sh [--red]` | Golden-set preflight — structural validation at zero agent cost; `--red` also checks that a case measures anything at all |
 | `bash .claude/hooks/eval-gate.sh --mode report\|block [--delta N]` | Judge regression from the score trend alone (no LLM). `block` exits 1 past the tolerance — this is what CI calls |
 | `bash .claude/hooks/logs-report.sh [days]` | hook verdict log summary (`--rotate N` to rotate · `--tokens N` per-session token usage) |
-| `npm test` / `npm run test:install` | all 20 hook test suites / installer component-selection suite |
+| `npm test` / `npm run test:install` | all 21 hook test suites (326 cases) / installer component-selection suite |
 
 > **Order right after install**: `/carve-harness-create` (trim to your stack) → three domain invariants in `CLAUDE.md` → use it normally for a week or two → `/eval-init` (a golden set only means something once real failures exist).
 
@@ -211,17 +213,40 @@ To specify items yourself, use the workflow: include `carve-verify-loop` or `ult
 **What** — where the verify loop measures *per-task* completeness, golden-set eval tracks the quality of a fixed case set *over time*. It runs each case in `specs/goldenset/*.json` (input → rubric) k times and scores it, so after changing a prompt/agent/skill/rule you can confirm in numbers that outputs didn't get worse.
 
 ```
-Load   specs/goldenset/*.json → cases (input · assert · k)
-Run    per case, k runs → deterministic asserts (contains·regex·negations) + llm-rubric
-Score  compute pass@k (capability) · pass^k (consistency) → append suiteScore to specs/eval-score.json
-       → flag [REGRESSION] if it drops more than delta (default 3pt) below the previous baseline
+Validate  carve-validate.sh preflight — separate config errors before the run (zero agent calls)
+          on failure the run never starts (cost protection)
+Load      specs/goldenset/*.json → cases (input · assert · k · version)
+Run       per case, k runs → text asserts (contains·regex·negations) + state asserts + llm-rubric
+          cases with state asserts or setup run in a temp dir outside the repo (answers stay hidden)
+Score     compute pass@k (capability) · pass^k (consistency) → append suiteScore to specs/eval-score.json
+          → [REGRESSION] if it drops more than delta (default 3pt) below the baseline
+          → [VERSION CHANGED] if a case version differs from the previous run
 ```
+
+**Three grading layers** — trust increases upward. The rule is **grade the environment's state, not the agent's prose**.
+
+| Layer | Assert types | Graded by |
+|-------|--------------|-----------|
+| State | `file_exists` · `file_contains` · `cmd_exit0` · `git_diff_contains` | `eval-state.sh` (deterministic, against the real workdir) |
+| Text | `contains` · `not_contains` · `regex` · `not_regex` | pure function in the workflow |
+| Qualitative | `llm-rubric` | the `evaluator` agent (replace with a state assert wherever possible) |
 
 **How to start** — right after install the golden set is empty, so `/eval` has nothing to run. **Run `/eval-init` once**: it analyzes the project (entry points, most-churned files, blocked-event history, measured coverage), fixes the eval and quality gates through a 7-question interview, drafts a golden set, and **reviews each case's trajectory before only the approved ones land**. After that, re-score with `/eval` (or say `run carve-eval`) and grow the set via the trace-mining procedure in `eval-goldenset`.
 
 > Auto-confirming cases is deliberately blocked — a golden set an agent writes alone contains only what it already passes (self-reinforcement), which makes the metric meaningless. Critical paths, failure material and strictness are the human's call.
 
-**Effect** — scoring becomes a reproducible number, not a vibe, and prompt/rubric changes get caught as regressions. Separating pass@k (passes at least once) from pass^k (passes every time) exposes "sometimes-works" systems. CI enforcement is opt-in: `/eval-init` wires `eval-gate.sh` (a deterministic gate that reads only the score trend) in report or blocking mode. **Blocking mode is only advisable when someone actually maintains the golden set.**
+**How to use**
+
+```bash
+bash .claude/hooks/carve-validate.sh --red   # right after writing or editing a case
+```
+```
+/eval                                        # re-score everything → append trend → regression verdict
+```
+
+This repo's own 20 cases (`specs/goldenset/`) are the worked example — 5 on guard compliance, 5 on work quality, 5 hard ones, and 5 on the harness itself. Verify a case in both directions: it must fail before the work (`--red`) and pass on a correct solution.
+
+**Effect** — scoring becomes a reproducible number, not a vibe, and prompt/rubric changes get caught as regressions. Separating pass@k (passes at least once) from pass^k (passes every time) exposes "sometimes-works" systems. The preflight separates **"the golden set is broken" from "the agent failed"** — with fail-closed graders both otherwise look like a 0 — and `--red` catches meaningless cases that score green with no work done (NO-SIGNAL). CI enforcement is opt-in: `/eval-init` wires `eval-gate.sh` (a deterministic gate that reads only the score trend) in report or blocking mode. **Blocking mode is only advisable when someone actually maintains the golden set.**
 
 ## Full component list (skills · commands · hooks)
 
@@ -248,7 +273,7 @@ Score  compute pass@k (capability) · pass^k (consistency) → append suiteScore
 
 | Command | Purpose |
 |------|------|
-| `/harness-audit` | 47-check PASS/FAIL of the harness configuration |
+| `/harness-audit` | 48-check PASS/FAIL of the harness configuration |
 | `/commit-branch` | Commit + push on the current branch, Conventional Commits (never `main` directly) |
 | `/plan` | Break work into success-criteria (SC) units → `specs/` |
 | `/verify` | Verify current changes against SC · build · types · tests |
@@ -271,11 +296,12 @@ Score  compute pass@k (capability) · pass^k (consistency) → append suiteScore
 | `lib-protected` | Referenced via `source` when a hook loads (never runs directly) | Single definition of protected-path, secret and danger-command regexes (pure data) |
 | `lib-stop-guard` | Referenced via `source` by Stop hooks | Shared Stop loop-guard library |
 | `config-doctor` | On config checkups (manual/installer) | Diagnose settings/config consistency |
-| `harness-audit` | When `/harness-audit` runs (manual) | 47 read-only checks PASS/FAIL |
+| `harness-audit` | When `/harness-audit` runs (manual) | 48 read-only checks PASS/FAIL |
 | `logs-report` | When `logs-report.sh` runs (manual CLI) | JSONL verdict summary + N-day rotation + `--tokens` per-session token accounting |
 | `eval-java` | When a Java/Spring quality score is needed (manual scorer) | Deterministic Java/Spring quality probability `P∈[0,1]`, no LLM |
-| `eval-state` | When carve-eval grades state asserts (helper) | Grade golden-set state asserts (files · commands · diff) against real state — never trust self-report |
+| `eval-state` | When carve-eval grades state asserts (helper) | Grade golden-set state asserts (files · commands · diff) against real state — never trust self-report. `--case <id>` reads values straight from the golden-set file so escaping is never mangled in transit |
 | `eval-gate` | Golden-set regression verdict in CI or locally (manual CLI) | Reads only the `specs/eval-score.json` trend and judges the drop vs the previous run — no LLM. `--mode block` exits 1 on regression; a missing or malformed trend fails closed |
+| `carve-validate` | Automatically as `/eval` Phase 0 · manually after writing cases | Golden-set preflight — required fields, duplicate ids, unknown assert types, regex compilation, `k` range. `--red` runs each setup and flags NO-SIGNAL cases that are already green before the agent does anything |
 
 ## Layout
 
@@ -285,7 +311,7 @@ Score  compute pass@k (capability) · pass^k (consistency) → append suiteScore
 ├── install.sh / uninstall.sh   # install·update·rollback·setup / removal
 ├── vendor/ponytail/         # vendored ponytail mode
 ├── .githooks/              # pre-commit·commit-msg (agent-agnostic commit gate)
-├── specs/                   # state: handoffs & decision log
+├── specs/                   # state: handoffs · decision log · golden set (goldenset/)
 └── .claude/
     ├── settings.json        # 6 hook events registered
     ├── hooks/  (14 + 20 test suites)
@@ -318,6 +344,11 @@ Score  compute pass@k (capability) · pass^k (consistency) → append suiteScore
 - [ ] Clean up files added by an update on rollback (manifest diff)
 - [ ] Semantic version comparison (downgrade protection)
 - [ ] Skill trigger-phrase (description-level) duplicate detection
+- [ ] First measured golden-set run → establish the baseline (`specs/eval-score.json`)
+- [ ] Split the score by layer (state · text · rubric) to localize failures
+- [ ] Persist raw respondent output (`specs/eval-runs/`) for post-hoc regression analysis
+- [ ] Parameterize the respondent so one golden set can compare models/configs
+- [ ] CI golden-set regression gate (fail on a drop over 3pt, wired once the trend is stable)
 
 ## License
 

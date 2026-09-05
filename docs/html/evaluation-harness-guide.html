@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>lm-evaluation-harness 조사 — 용도·목표·사용법</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#FFFFFF;
+  --frame:#F1F1EE;
+  --ink:#17171A;
+  --ink-2:#54545B;
+  --ink-3:#6C6C73;
+  --line:#D6D4CE;
+  --line-2:#A9A7A1;
+  --code:#F4F3F0;
+  --mark:#1F4D6B;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;background:var(--frame);color:var(--ink);
+  font-family:"IBM Plex Sans KR","IBM Plex Sans","Noto Sans KR",sans-serif;
+  font-size:16px;line-height:1.68;
+}
+.page{max-width:900px;margin:0 auto;background:var(--paper);padding:0 0 80px;border-left:1px solid var(--line);border-right:1px solid var(--line)}
+.inner{padding:0 56px}
+code,kbd,pre,.mono{font-family:"IBM Plex Mono","JetBrains Mono",monospace}
+code{font-size:.875em;background:var(--code);padding:1px 5px;border:1px solid var(--line);word-break:break-word}
+pre{background:var(--code);border:1px solid var(--line);padding:16px 18px;overflow-x:auto;font-size:12.5px;line-height:1.62;margin:14px 0}
+pre code{background:none;border:0;padding:0;font-size:12.5px}
+a{color:var(--ink);text-decoration:underline;text-decoration-color:var(--line-2);text-underline-offset:2px}
+a:hover{text-decoration-color:var(--ink)}
+
+header.hd{border-bottom:1px solid var(--line-2);padding:56px 56px 30px}
+.eyebrow{font-family:"IBM Plex Mono",monospace;font-size:12.5px;letter-spacing:.08em;color:var(--ink-3);margin:0 0 14px}
+h1{margin:0 0 12px;font-size:34px;font-weight:600;letter-spacing:-.8px;line-height:1.24}
+.lede{margin:0 0 22px;font-size:17px;color:var(--ink-2);line-height:1.62}
+.meta{font-size:13.5px;color:var(--ink-3);margin:0;line-height:1.8}
+.meta strong{color:var(--ink-2);font-weight:500}
+
+h2{margin:54px 0 4px;font-size:23px;font-weight:600;letter-spacing:-.4px;line-height:1.3}
+h2 .no{font-family:"IBM Plex Mono",monospace;font-size:13.5px;font-weight:500;color:var(--mark);display:block;margin-bottom:6px;letter-spacing:.08em}
+h3{margin:30px 0 8px;font-size:17.5px;font-weight:600;line-height:1.4}
+h4{margin:22px 0 6px;font-size:15px;font-weight:600;color:var(--ink-2)}
+p{margin:0 0 14px}
+.sub{color:var(--ink-2);font-size:15px;margin:0 0 20px}
+
+ul,ol{margin:0 0 16px;padding-left:22px}
+li{margin-bottom:7px}
+li>ul{margin-top:7px}
+dl{margin:0 0 16px}
+dt{font-weight:600;font-size:15px;margin-top:14px}
+dd{margin:2px 0 0;color:var(--ink-2);font-size:15px}
+
+table{width:100%;border-collapse:collapse;margin:16px 0 20px;font-size:14.5px}
+th,td{text-align:left;vertical-align:top;padding:10px 12px;border-bottom:1px solid var(--line)}
+th{background:var(--code);font-weight:600;font-size:13.5px;border-bottom:1px solid var(--line-2)}
+td.k{font-weight:500;white-space:nowrap}
+td.k code{white-space:nowrap}
+
+.note{border-left:3px solid var(--line-2);padding:2px 0 2px 16px;margin:18px 0;color:var(--ink-2);font-size:15px}
+.warn{border:1px solid var(--mark);padding:14px 16px;margin:20px 0;font-size:14.5px}
+.warn .t{font-weight:600;color:var(--mark);display:block;margin-bottom:5px;font-size:14px}
+.warn p:last-child{margin-bottom:0}
+
+nav.toc{background:var(--code);border:1px solid var(--line);padding:20px 24px;margin:32px 0 0}
+nav.toc p{font-size:12.5px;font-family:"IBM Plex Mono",monospace;letter-spacing:.08em;color:var(--ink-3);margin:0 0 10px}
+nav.toc ol{margin:0;padding-left:20px;font-size:14.5px;columns:2;column-gap:32px}
+nav.toc li{margin-bottom:5px}
+
+footer{border-top:1px solid var(--line-2);margin-top:56px;padding-top:22px;font-size:13.5px;color:var(--ink-3)}
+
+@media (max-width:760px){
+  .inner,header.hd{padding-left:22px;padding-right:22px}
+  h1{font-size:26px}
+  nav.toc ol{columns:1}
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+<header class="hd">
+  <p class="eyebrow">REPO REVIEW · ELEUTHERAI</p>
+  <h1>lm-evaluation-harness</h1>
+  <p class="lede">언어 모델을 여러 학술 벤치마크에 <b>같은 조건으로</b> 돌려 점수를 내는 실행기. 모델을 만드는 도구도, 에이전트를 평가하는 도구도 아니다. "이 모델이 이 벤치마크에서 몇 점인가"를 남이 재현할 수 있게 측정하는 한 가지 일을 한다.</p>
+  <p class="meta">
+    <strong>저장소</strong> <a href="https://github.com/EleutherAI/lm-evaluation-harness">EleutherAI/lm-evaluation-harness</a> · MIT · 2020년 8월 시작<br>
+    <strong>규모</strong> 스타 13,473 · 포크 3,452 · 태스크 디렉터리 214개 · 최신 릴리스 <code>v0.4.12</code>(2026-05-11), main은 <code>0.4.13.dev0</code><br>
+    <strong>요구</strong> Python 3.10 이상<br>
+    <strong>조사 시점</strong> 2026년 7월 30일. GitHub API와 <code>main</code> 브랜치의 README·docs 원문을 직접 읽고 정리했다.
+  </p>
+  <nav class="toc">
+    <p>CONTENTS</p>
+    <ol>
+      <li><a href="#s1">30초 요약</a></li>
+      <li><a href="#s2">이게 정확히 무슨 도구인가</a></li>
+      <li><a href="#s3">무엇을 하려는 프로젝트인가</a></li>
+      <li><a href="#s4">구조 — 3개 층</a></li>
+      <li><a href="#s5">설치</a></li>
+      <li><a href="#s6">CLI 기본 사용법</a></li>
+      <li><a href="#s7">백엔드별 실행</a></li>
+      <li><a href="#s8">결과 저장·캐싱·재개</a></li>
+      <li><a href="#s9">YAML 설정 파일</a></li>
+      <li><a href="#s10">Python API</a></li>
+      <li><a href="#s11">태스크 직접 만들기</a></li>
+      <li><a href="#s12">모델 백엔드 직접 붙이기</a></li>
+      <li><a href="#s13">함정과 주의사항</a></li>
+      <li><a href="#s14">폐쇄망에서 쓰기</a></li>
+      <li><a href="#s15">이 도구가 하지 않는 일</a></li>
+      <li><a href="#s16">근거 링크</a></li>
+    </ol>
+  </nav>
+</header>
+
+<div class="inner">
+
+<h2 id="s1"><span class="no">01</span>30초 요약</h2>
+<ul>
+  <li><b>용도</b> — 60여 종의 표준 학술 벤치마크(수백 개 서브태스크)를 통일된 방식으로 실행해 모델 점수를 낸다. HuggingFace Open LLM Leaderboard의 백엔드이고, NVIDIA·Cohere·BigScience·BigCode·Nous Research·Mosaic ML 등이 내부적으로 쓴다.</li>
+  <li><b>목표</b> — 프롬프트를 공개해 <b>재현 가능하고 비교 가능한 평가</b>를 만드는 것. 이 프로젝트의 존재 이유는 벤치마크 개발이 아니라 "같은 조건"의 확보다.</li>
+  <li><b>사용법</b> — <code>lm-eval run --model &lt;백엔드&gt; --model_args ... --tasks ... </code> 한 줄이 기본. 모델 백엔드는 별도 설치(<code>pip install "lm_eval[vllm]"</code> 등), 태스크는 YAML로 정의된다.</li>
+  <li><b>확장점</b> — 태스크는 YAML로 추가하고(코드 없이 가능), 모델은 <code>LM</code> 클래스를 상속해 3개 메서드만 구현하면 붙는다.</li>
+  <li><b>주의</b> — 만든 사람들 스스로 <b>논문 간 점수 비교를 권장하지 않는다</b>. 프롬프트·few-shot 설정이 조금만 달라도 점수가 흔들리기 때문이다.</li>
+</ul>
+
+<h2 id="s2"><span class="no">02</span>이게 정확히 무슨 도구인가</h2>
+<p>이름의 "harness"가 오해를 부른다. 여기서 하네스는 <b>에이전트를 운용하는 실행 환경</b>이 아니라 <b>모델을 벤치마크에 물려 돌리는 시험대</b>를 뜻한다. 전기 회로 시험용 배선 다발(wire harness)에 가까운 쪽이다.</p>
+<p>구체적으로 하는 일은 네 단계다.</p>
+<ol>
+  <li>데이터셋에서 문제를 꺼낸다</li>
+  <li>정해진 템플릿으로 프롬프트를 만든다 (few-shot 예제 포함)</li>
+  <li>모델에 요청을 보낸다 — 요청 타입은 <b>로그확률 계산</b>이거나 <b>텍스트 생성</b>이다</li>
+  <li>응답에서 답을 추출해 채점하고 집계한다</li>
+</ol>
+<p>3번의 요청 타입이 이 도구의 성격을 결정한다. 객관식 문제는 각 보기의 로그확률을 비교해 채점하므로 생성이 필요 없다. 그래서 <b>로그확률을 주지 않는 모델(대부분의 챗 API)은 생성형 태스크만 돌릴 수 있다.</b></p>
+<table>
+  <thead><tr><th style="width:26%">output_type</th><th>동작</th></tr></thead>
+  <tbody>
+    <tr><td class="k"><code>multiple_choice</code></td><td>보기별 로그확률을 비교해 정답 선택. 생성 없음</td></tr>
+    <tr><td class="k"><code>loglikelihood</code></td><td>주어진 이어붙임 문자열의 로그확률 계산</td></tr>
+    <tr><td class="k"><code>loglikelihood_rolling</code></td><td>긴 문서 전체의 로그확률 — perplexity 계열 태스크용</td></tr>
+    <tr><td class="k"><code>generate_until</code></td><td>정지 조건까지 텍스트 생성 후 후처리·채점</td></tr>
+  </tbody>
+</table>
+
+<h2 id="s3"><span class="no">03</span>무엇을 하려는 프로젝트인가</h2>
+<p>README에 프롬프트 설계 원칙이 우선순위 목록으로 명시돼 있다. 이 목록이 프로젝트의 의도를 가장 잘 드러낸다.</p>
+<ol>
+  <li>LLM을 학습시키는 사람들 사이에 합의된 절차가 있으면 그것을 따른다</li>
+  <li>명확하고 모호하지 않은 공식 구현이 있으면 그것을 따른다</li>
+  <li>LLM을 평가하는 사람들 사이에 합의가 있으면 그것을 따른다</li>
+  <li>흔한 구현이 여럿이고 합의가 없으면, 그중 선호안을 택하되 학습 논문에 쓰인 구현을 우선한다</li>
+</ol>
+<p>즉 <b>"더 나은 평가 방법을 발명한다"가 아니라 "이미 쓰이는 방법을 정확히 재현한다"</b>가 목표다. 원래 출발점도 GPT-3 논문(<i>Language Models are Few-Shot Learners</i>)의 결과와 비교하는 것이었다.</p>
+<p>그러면서도 프로젝트 스스로 한계를 인정한다. 다른 그룹의 절차와 최대한 맞추려는 이유가 "사람들이 우리가 말려도 어차피 논문 간 점수를 비교하기 때문에, 그때 생기는 피해를 줄이려는 것"이라고 적혀 있다. <b>비교 가능성을 만들려는 도구가 비교의 위험성을 함께 경고한다</b>는 점이 이 프로젝트의 태도다.</p>
+
+<h2 id="s4"><span class="no">04</span>구조 — 3개 층</h2>
+<p>코드를 읽기 전에 이 세 층만 구분하면 전체가 잡힌다.</p>
+<dl>
+  <dt>모델 층 (<code>LM</code> 인터페이스)</dt>
+  <dd>토크나이저에 구애받지 않는 추상 인터페이스. 구현해야 할 메서드는 <code>loglikelihood</code>, <code>generate_until</code>, <code>loglikelihood_rolling</code> 세 개뿐이다. HF·vLLM·SGLang·OpenAI 호환 API·NeMo·Megatron-LM·OpenVINO·llama.cpp 등이 모두 이 인터페이스의 구현체다.</dd>
+
+  <dt>태스크 층 (YAML)</dt>
+  <dd>데이터셋 경로, 프롬프트 템플릿(Jinja2), 정답 추출 방식, few-shot 설정, 메트릭이 한 YAML 파일에 들어간다. <b>파이썬 코드 없이 새 태스크를 만들 수 있다.</b> 태스크는 개별 <b>subtask</b>, 묶음인 <b>group</b>(예: <code>mmlu</code> 안에 57개), 분류용 <b>tag</b>로 조직된다.</dd>
+
+  <dt>후처리·채점 층 (filter + metric)</dt>
+  <dd>모델 출력에서 답을 뽑아내는 필터 파이프라인과 채점 메트릭. 필터는 여러 파이프라인을 동시에 걸 수 있어서 <b>같은 출력에 대해 엄격한 추출과 느슨한 추출의 점수를 함께</b> 낼 수 있다.</dd>
+</dl>
+
+<h4>기본 제공 메트릭</h4>
+<p><code>acc</code>, <code>acc_norm</code>(길이 정규화), <code>acc_mutual_info</code>, <code>perplexity</code>, <code>word_perplexity</code>, <code>byte_perplexity</code>, <code>bits_per_byte</code>, <code>matthews_corrcoef</code>, <code>f1</code>, <code>bleu</code>, <code>chrf</code>, <code>ter</code>. 집계 함수는 <code>mean</code>, <code>median</code>, <code>perplexity</code>, <code>weighted_perplexity</code>, <code>bits_per_byte</code>.</p>
+
+<h2 id="s5"><span class="no">05</span>설치</h2>
+<div class="warn">
+  <span class="t">2025년 12월에 설치 방식이 바뀌었다</span>
+  <p>기본 패키지에 더 이상 <code>torch</code>·<code>transformers</code>가 들어 있지 않다. 모델 백엔드를 <b>따로 설치해야 한다.</b> 예전 문서나 블로그를 따라 하면 백엔드 없이 설치돼 실행이 안 된다.</p>
+</div>
+<pre><code>git clone --depth 1 https://github.com/EleutherAI/lm-evaluation-harness
+cd lm-evaluation-harness
+pip install -e .
+
+# 백엔드는 별도 (필요한 것만)
+pip install "lm_eval[hf]"      # HuggingFace transformers
+pip install "lm_eval[vllm]"    # vLLM
+pip install "lm_eval[api]"     # OpenAI/Anthropic/로컬 OpenAI 호환 서버
+pip install "lm_eval[hf,vllm,api]"   # 동시 설치</code></pre>
+<p>기본 의존성은 가볍다 — <code>datasets</code>, <code>numpy</code>, <code>evaluate</code>, <code>jinja2</code>, <code>sacrebleu</code>, <code>scikit-learn</code>, <code>sqlitedict</code>, <code>rouge-score</code> 등. 태스크별 추가 extras도 따로 있다(<code>math</code>, <code>ifeval</code>, <code>longbench</code>, <code>ruler</code>, <code>multilingual</code> 등).</p>
+
+<h2 id="s6"><span class="no">06</span>CLI 기본 사용법</h2>
+<p>2025년 12월 리팩터링으로 서브커맨드 체계가 됐다. 기존 단일 명령 형식도 계속 동작한다 — <code>lm-eval --model hf ...</code>를 치면 <code>run</code>이 자동으로 끼워진다.</p>
+<table>
+  <thead><tr><th style="width:24%">명령</th><th>용도</th></tr></thead>
+  <tbody>
+    <tr><td class="k"><code>lm-eval run</code></td><td>평가 실행</td></tr>
+    <tr><td class="k"><code>lm-eval ls</code></td><td>태스크·그룹·서브태스크·태그 목록 조회</td></tr>
+    <tr><td class="k"><code>lm-eval validate</code></td><td>태스크 설정 검증 — 실행 전 문법·데이터셋 접근·메트릭·필터·템플릿 확인</td></tr>
+  </tbody>
+</table>
+<pre><code># 어떤 태스크가 있는지
+lm-eval ls tasks
+lm-eval ls groups
+
+# 기본 실행
+lm-eval run --model hf --model_args pretrained=gpt2 --tasks hellaswag
+
+# few-shot 5개
+lm-eval run --model hf --model_args pretrained=gpt2 --tasks arc_easy --num_fewshot 5
+
+# 결과와 모델 출력까지 저장
+lm-eval run --model hf --model_args pretrained=gpt2 --tasks hellaswag \
+    --output_path ./results/ --log_samples
+
+# 실행 전 태스크 검증
+lm-eval validate --tasks arc_easy,arc_challenge,hellaswag</code></pre>
+
+<h4>알아둘 만한 플래그</h4>
+<table>
+  <thead><tr><th style="width:26%">플래그</th><th>설명</th></tr></thead>
+  <tbody>
+    <tr><td class="k"><code>--tasks</code> / <code>-t</code></td><td>태스크 또는 그룹 이름. 와일드카드 지원 (<code>lambada_openai_mt_*</code>)</td></tr>
+    <tr><td class="k"><code>--batch_size auto</code></td><td>디바이스에 맞는 최대 배치를 자동 탐색. <code>auto:4</code>는 4회 재계산</td></tr>
+    <tr><td class="k"><code>--limit</code> / <code>-L</code></td><td>태스크당 예제 수 제한. <b>테스트 전용</b> — 이 값으로 나온 점수는 보고하면 안 된다</td></tr>
+    <tr><td class="k"><code>--log_samples</code> / <code>-s</code></td><td>모델 입출력 전부 저장. 사후 분석의 출발점</td></tr>
+    <tr><td class="k"><code>--predict_only</code> / <code>-x</code></td><td>생성만 하고 채점은 건너뜀. 신뢰할 수 없는 코드 실행이 걸린 태스크나 별도 채점 파이프라인이 있을 때</td></tr>
+    <tr><td class="k"><code>--apply_chat_template</code></td><td>챗 템플릿 적용. 켜면 few-shot이 자동으로 멀티턴 형식이 된다</td></tr>
+    <tr><td class="k"><code>--write_out</code> / <code>-w</code></td><td>앞쪽 몇 개 문서의 프롬프트를 출력. <b>새 태스크를 만들면 반드시 이걸로 눈으로 확인할 것</b></td></tr>
+    <tr><td class="k"><code>--seed</code></td><td><code>python,numpy,torch,fewshot</code> 순. 기본값 <code>0,1234,1234,1234</code></td></tr>
+    <tr><td class="k"><code>--include_path</code></td><td>외부 태스크 YAML 디렉터리 추가</td></tr>
+    <tr><td class="k"><code>--trust_remote_code</code></td><td>HF Hub의 원격 코드 실행 허용</td></tr>
+    <tr><td class="k"><code>--confirm_run_unsafe_code</code></td><td>임의 파이썬을 실행하는 태스크를 돌릴 때 필요한 명시적 확인</td></tr>
+  </tbody>
+</table>
+
+<h4>환경 변수</h4>
+<p><code>LMEVAL_LOG_LEVEL</code>(로그 레벨), <code>LM_HARNESS_CACHE_PATH</code>(요청 캐시 경로), <code>HF_TOKEN</code>, <code>TOKENIZERS_PARALLELISM</code>.</p>
+
+<h2 id="s7"><span class="no">07</span>백엔드별 실행</h2>
+
+<h3>HuggingFace transformers</h3>
+<pre><code>lm_eval --model hf \
+    --model_args pretrained=EleutherAI/pythia-160m,revision=step100000,dtype="float" \
+    --tasks lambada_openai,hellaswag \
+    --device cuda:0 \
+    --batch_size auto:4</code></pre>
+<p><code>--model_args</code>에 넣은 값은 그대로 생성자에 전달된다. 즉 <code>AutoModel</code>로 할 수 있는 건 다 된다 — 로컬 경로(<code>pretrained=/path/to/model</code>), PEFT 어댑터(<code>peft=...</code>), 4bit 로딩(<code>load_in_4bit=True</code>), GPTQ(<code>gptqmodel=True</code>), delta 가중치 등.</p>
+
+<h4>멀티 GPU</h4>
+<table>
+  <thead><tr><th style="width:30%">방식</th><th>명령</th></tr></thead>
+  <tbody>
+    <tr><td class="k">데이터 병렬<br>(GPU마다 모델 전체 복사)</td><td><code>accelerate launch -m lm_eval --model hf ...</code><br>FSDP 샤딩과 함께 쓸 수 없다</td></tr>
+    <tr><td class="k">모델 샤딩<br>(한 GPU에 안 들어갈 때)</td><td>런처 없이 실행하고 <code>--model_args parallelize=True</code></td></tr>
+    <tr><td class="k">둘 다</td><td><code>accelerate launch --multi_gpu --num_processes N -m lm_eval ... parallelize=True</code></td></tr>
+    <tr><td class="k">텐서 병렬 (PyTorch 네이티브)</td><td><code>torchrun --nproc-per-node=4 -m lm_eval --model_args ...,tp_plan=auto</code><br><code>parallelize=True</code>와 배타적. KV 헤드 수가 TP degree로 나누어떨어져야 한다</td></tr>
+  </tbody>
+</table>
+<p><b>멀티노드는 네이티브로 지원하지 않는다.</b> 외부 추론 서버를 띄워 그쪽에 요청을 보내거나, 분산 프레임워크와 직접 통합하라고 안내한다.</p>
+
+<h3>vLLM</h3>
+<pre><code>lm_eval --model vllm \
+    --model_args pretrained={model},tensor_parallel_size={GPUs_per_model},dtype=auto,gpu_memory_utilization=0.8,data_parallel_size={replicas} \
+    --tasks lambada_openai \
+    --batch_size auto</code></pre>
+<ul>
+  <li><code>--batch_size auto</code>를 쓰는 것이 권장된다 — vLLM의 continuous batching을 살리기 위해서다</li>
+  <li><code>data_parallel_size&gt;1</code>은 복제본마다 ray 액터를 띄우므로 <code>pip install ray</code>가 필요하다</li>
+  <li><code>max_model_len=4096</code> 같은 값을 넘기면 auto 배치에서 OOM을 피하거나 속도를 얻을 수 있다</li>
+</ul>
+<div class="warn">
+  <span class="t">vLLM 결과는 HF와 다를 수 있다</span>
+  <p>프로젝트는 <b>HuggingFace 구현을 기준(reference)으로</b> 삼고, vLLM 결과의 타당성을 대조하는 스크립트(<code>scripts/model_comparator.py</code>)를 제공한다. 속도 때문에 vLLM으로 점수를 냈다면, 보고 전에 HF와 대조해 두는 편이 안전하다.</p>
+</div>
+
+<h3>OpenAI 호환 로컬 서버 — 사내 환경에서 가장 실용적인 경로</h3>
+<pre><code>lm_eval --model local-completions \
+    --tasks gsm8k \
+    --model_args model=facebook/opt-125m,base_url=http://{host}:8000/v1/completions,num_concurrent=1,max_retries=3,tokenized_requests=False,batch_size=16</code></pre>
+<p>이미 vLLM을 OpenAI 호환 서버로 띄워 운영 중이라면, 평가를 위해 모델을 다시 로드할 필요 없이 <b>운영 중인 그 서버를 그대로 평가 대상으로</b> 붙일 수 있다. 대형 모델은 이 방식이 권장된다.</p>
+<p>모델 타입 이름은 <code>local-completions</code>(Completions API) 또는 <code>local-chat-completions</code>(ChatCompletions API)다. 챗 계열은 로그확률을 주지 않으므로 <code>generate_until</code> 태스크만 가능하다.</p>
+
+<h3>그 밖의 백엔드</h3>
+<p><code>sglang</code>, <code>nemo_lm</code>, <code>megatron_lm</code>, <code>openvino</code>, <code>ipex</code>, <code>habana</code>, <code>neuronx</code>, <code>gguf</code>/<code>ggml</code>(llama.cpp), <code>mamba_ssm</code>, <code>winml</code>(ONNX Runtime GenAI, NPU 포함), <code>watsonx_llm</code>, <code>steered</code>(스티어링 벡터 적용 HF 모델), 상용 API는 <code>openai-completions</code>·<code>anthropic-chat</code>·<code>litellm</code> 등.</p>
+
+<h2 id="s8"><span class="no">08</span>결과 저장·캐싱·재개</h2>
+<table>
+  <thead><tr><th style="width:28%">플래그</th><th>동작</th></tr></thead>
+  <tbody>
+    <tr><td class="k"><code>--output_path</code></td><td>결과 JSON 저장 위치. <code>--log_samples</code>를 쓰면 필수</td></tr>
+    <tr><td class="k"><code>--log_samples</code></td><td>모델 입출력 전부 기록</td></tr>
+    <tr><td class="k"><code>--use_cache &lt;DIR&gt;</code></td><td>모델 응답을 SQLite에 캐싱. 같은 (모델, 태스크) 조합을 재실행하면 이미 평가한 샘플을 건너뛴다</td></tr>
+    <tr><td class="k"><code>--cache_requests</code></td><td>데이터셋 전처리 결과 캐싱 (<code>true</code>/<code>refresh</code>/<code>delete</code>)</td></tr>
+    <tr><td class="k"><code>--hf_hub_log_args</code></td><td>결과·샘플을 HF Hub 데이터셋으로 푸시</td></tr>
+    <tr><td class="k"><code>--wandb_args</code></td><td>W&amp;B 로깅 (<code>lm_eval[wandb]</code> 필요)</td></tr>
+  </tbody>
+</table>
+<div class="warn">
+  <span class="t">캐시는 rank에 종속된다</span>
+  <p>중단 후 재개할 때는 <b>같은 GPU 개수로</b> 다시 시작해야 한다. GPU 수가 바뀌면 캐시가 어긋난다.</p>
+</div>
+
+<h2 id="s9"><span class="no">09</span>YAML 설정 파일</h2>
+<p>플래그가 길어지면 설정 파일로 옮길 수 있다. CLI 인자가 설정 파일 값을 덮어쓴다.</p>
+<pre><code># eval_config.yaml
+model: hf
+model_args:
+  pretrained: gpt2
+  dtype: float32
+
+tasks:
+  - hellaswag
+  - arc_easy
+
+num_fewshot: 0
+batch_size: auto
+device: cuda:0
+
+output_path: ./results/gpt2/
+log_samples: true</code></pre>
+<pre><code>lm-eval run --config eval_config.yaml
+
+# 설정은 두고 일부만 덮어쓰기
+lm-eval run --config eval_config.yaml --tasks mmlu --limit 100</code></pre>
+<p>설정 키는 CLI 인자와 1:1로 대응한다. 실행 조건을 결과와 함께 버전 관리하기 좋은 형태다 — 재현성이 목적인 도구에서 이 파일이 사실상 실험 기록이 된다.</p>
+
+<h2 id="s10"><span class="no">10</span>Python API</h2>
+<p>진입점이 세 가지다. 대부분은 <code>simple_evaluate()</code>면 된다.</p>
+<pre><code>import lm_eval
+
+results = lm_eval.simple_evaluate(
+    model="hf",
+    model_args="pretrained=gpt2,dtype=float32",
+    tasks=["hellaswag", "arc_easy"],
+    num_fewshot=5,
+    batch_size=8,
+    device="cuda:0",
+)
+
+print(results["results"])</code></pre>
+<p>이미 만들어 둔 모델 객체를 그대로 넘길 수도 있다.</p>
+<pre><code>from lm_eval.models.huggingface import HFLM
+
+lm = HFLM(pretrained="gpt2", batch_size=16)
+results = lm_eval.simple_evaluate(model=lm, tasks=["hellaswag"], num_fewshot=0)</code></pre>
+<p>반환 딕셔너리에는 <code>results</code>(메트릭과 표준오차), <code>configs</code>(태스크 설정), <code>versions</code>(태스크 버전), <code>n-shot</code>, <code>n-samples</code>, 그리고 <code>log_samples=True</code>면 <code>samples</code>가 들어 있다. <b><code>versions</code>가 함께 남는 점이 중요하다</b> — 태스크 정의가 바뀌면 점수가 달라지므로, 버전 없이 점수만 남기면 나중에 비교가 불가능해진다.</p>
+<p>더 낮은 층위가 필요하면 <code>evaluate()</code>에 미리 만든 <code>task_dict</code>를 넘긴다. 설정 파일 기반으로는 <code>EvaluatorConfig</code>를 쓴다.</p>
+
+<h2 id="s11"><span class="no">11</span>태스크 직접 만들기</h2>
+<p>YAML 하나면 된다. 아래는 저장소에 실제로 들어 있는 객관식 태스크 정의다.</p>
+<pre><code># lm_eval/tasks/arc/arc_easy.yaml
+tag:
+  - ai2_arc
+task: arc_easy
+dataset_path: allenai/ai2_arc
+dataset_name: ARC-Easy
+output_type: multiple_choice
+training_split: train
+validation_split: validation
+test_split: test
+doc_to_text: "Question: {{question}}\nAnswer:"
+doc_to_target: "{{choices.label.index(answerKey)}}"
+doc_to_choice: "{{choices.text}}"
+should_decontaminate: true
+doc_to_decontamination_query: "Question: {{question}}\nAnswer:"
+metric_list:
+  - metric: acc
+    aggregation: mean
+    higher_is_better: true
+  - metric: acc_norm
+    aggregation: mean
+    higher_is_better: true
+metadata:
+  version: 1.0</code></pre>
+<p><code>doc_to_text</code>·<code>doc_to_target</code>은 Jinja2 템플릿이다. 데이터셋의 각 행이 <code>doc</code>으로 들어와 필드를 그대로 참조한다.</p>
+
+<h3>필터 파이프라인 — 이 도구에서 가장 이식할 가치가 있는 설계</h3>
+<p>생성형 태스크는 모델이 뱉은 문자열에서 답을 뽑아내야 한다. 아래 <code>gsm8k</code> 정의는 <b>같은 출력에 두 개의 추출 파이프라인을 동시에</b> 걸어 두 점수를 함께 낸다.</p>
+<pre><code># lm_eval/tasks/gsm8k/gsm8k.yaml (발췌)
+output_type: generate_until
+doc_to_text: "Question: {{question}}\nAnswer:"
+doc_to_target: "{{answer}}"
+generation_kwargs:
+  until:
+    - "Question:"
+    - "&lt;/s&gt;"
+    - "&lt;|im_end|&gt;"
+  do_sample: false
+  temperature: 0.0
+num_fewshot: 5
+filter_list:
+  - name: "strict-match"
+    filter:
+      - function: "regex"
+        regex_pattern: "#### (\\-?[0-9\\.\\,]+)"
+      - function: "take_first"
+  - name: "flexible-extract"
+    filter:
+      - function: "regex"
+        group_select: -1
+        regex_pattern: "(-?[$0-9.,]{2,})|(-?[0-9]+)"
+      - function: "take_first"
+metadata:
+  version: 3.0</code></pre>
+<p><b>왜 두 개인가.</b> <code>strict-match</code>는 모델이 지정 형식(<code>#### 숫자</code>)을 지켰을 때만 점수를 준다. <code>flexible-extract</code>는 출력 어디에 있든 마지막 숫자를 답으로 본다. 두 점수의 차이가 곧 <b>"모델이 못 푼 것"과 "형식을 안 지킨 것"의 분리</b>다. 하나만 재면 이 둘이 섞여서 원인 분석이 불가능해진다.</p>
+
+<h3>로컬 데이터셋 쓰기</h3>
+<p><code>dataset_kwargs</code>가 <code>datasets.load_dataset</code>에 그대로 전달되므로 로컬 파일을 지정할 수 있다.</p>
+<pre><code># JSON 파일
+dataset_path: json
+dataset_name: null
+dataset_kwargs:
+  data_files: /path/to/my/json
+
+# 스플릿별 arrow 파일
+dataset_path: arrow
+dataset_kwargs:
+  data_files:
+    train: /path/to/arrow/train/data-00000-of-00001.arrow
+    validation: /path/to/arrow/validation/data-00000-of-00001.arrow
+
+# save_to_disk()로 미리 받아 둔 데이터셋
+dataset_path: hellaswag
+dataset_kwargs:
+  data_dir: hellaswag_local/</code></pre>
+<p>저장소 밖에 YAML을 두려면 <code>--include_path /경로</code>로 알려주거나 <code>--tasks /경로/파일.yaml</code>을 직접 넘긴다.</p>
+
+<h2 id="s12"><span class="no">12</span>모델 백엔드 직접 붙이기</h2>
+<p><code>lm_eval.api.model.LM</code>을 상속하고 세 메서드를 구현하면 끝이다.</p>
+<pre><code>from lm_eval.api.model import LM
+
+class MyCustomLM(LM):
+    def __init__(self, model, batch_size=1):
+        super().__init__()
+        self.model = model
+        self._batch_size = batch_size
+
+    def loglikelihood(self, requests):
+        # (logprob, is_greedy) 튜플 리스트 반환
+        ...
+
+    def generate_until(self, requests):
+        # 생성 문자열 리스트 반환
+        ...
+
+    def loglikelihood_rolling(self, requests):
+        # (logprob, is_greedy) 튜플 리스트 반환
+        ...
+
+    @property
+    def batch_size(self):
+        return self._batch_size</code></pre>
+<p>그 뒤 <code>lm_eval.simple_evaluate(model=my_lm_instance, tasks=[...])</code>로 넘기면 214개 태스크 전부를 그대로 돌릴 수 있다. <b>사내 추론 서버에 특수한 프로토콜이 있어도 이 어댑터 하나만 쓰면 벤치마크 자산 전체를 재사용할 수 있다.</b></p>
+
+<h2 id="s13"><span class="no">13</span>함정과 주의사항</h2>
+<dl>
+  <dt>YAML에서 개행 문자</dt>
+  <dd>홑따옴표는 이스케이프를 처리하지 않는다. <code>until: ['\n']</code>은 역슬래시와 n 두 글자로 파싱된다. 실제 개행이 필요하면 <b>겹따옴표</b>를 써야 한다 — <code>until: ["\n"]</code>. 정지 조건이 안 먹는 원인 대부분이 이것이다.</dd>
+
+  <dt><code>--limit</code>으로 낸 점수는 점수가 아니다</dt>
+  <dd>문서에 테스트 전용이라고 명시돼 있다. 동작 확인용이지 보고용이 아니다.</dd>
+
+  <dt>GGUF 모델은 토크나이저를 따로 줘야 한다</dt>
+  <dd>별도 토크나이저를 주지 않으면 HF가 GGUF 파일에서 토크나이저를 복원하려 시도하는데, <b>몇 시간이 걸리거나 무한정 멈출 수 있다.</b> <code>tokenizer=/path/to/tokenizer</code>를 함께 넘기면 초 단위로 끝난다.</dd>
+
+  <dt>추론(thinking) 모델</dt>
+  <dd>CoT 트레이스를 채점 전에 잘라내려면 <code>enable_thinking=True</code>와 <code>think_end_token</code>을 함께 넘긴다. <code>think_end_token</code>은 필수이며, 값은 모델의 <code>tokenizer_config.json</code>에서 확인한다. vLLM·SGLang에서는 문자열만 되고, HF 백엔드는 토큰 ID(정수)도 받는다 — 그 토큰 문자열이 본문에 등장하는 경우를 피하려면 ID가 안전하다. <b>이 옵션은 생성형 태스크에만 쓸 수 있다.</b></dd>
+
+  <dt>챗 API로는 절반의 태스크만 돌아간다</dt>
+  <dd>로그확률을 주지 않는 모델은 <code>generate_until</code>만 가능하다. 객관식 벤치마크 점수를 챗 API로 재려면 태스크가 생성형으로 정의돼 있어야 한다.</dd>
+
+  <dt>상용 챗 API 평가 시</dt>
+  <dd>먼저 <code>--limit 10</code>으로 몇 개만 돌려 <b>답 추출과 채점이 의도대로 되는지 눈으로 확인</b>하라고 권고한다. 답 형식이 어긋나면 모델 성능과 무관하게 0점이 나온다.</dd>
+
+  <dt>논문 간 비교</dt>
+  <dd>같은 도구로 냈더라도 프롬프트·few-shot 수·태스크 버전이 다르면 비교할 수 없다. 결과에 <code>versions</code>와 <code>n-shot</code>이 함께 기록되는 이유다.</dd>
+</dl>
+
+<h2 id="s14"><span class="no">14</span>폐쇄망에서 쓰기</h2>
+<p class="sub">이 절은 저장소 문서에 없는 내용으로, 외부 네트워크가 차단된 환경에 대입한 검토다.</p>
+<h3>유리한 점</h3>
+<ul>
+  <li><b>라이선스가 MIT다.</b> 사내 반입·수정·재배포에 제약이 적다.</li>
+  <li><b>이미 운영 중인 vLLM 서버를 그대로 붙일 수 있다.</b> <code>local-completions</code> 모델 타입에 <code>base_url</code>만 내부 주소로 지정하면 된다. 평가용으로 모델을 따로 로드할 필요가 없다.</li>
+  <li><b>로컬 데이터셋이 정식 지원된다.</b> <code>dataset_path: json</code> + <code>dataset_kwargs.data_files</code> 조합으로 사내에 반입한 JSON을 그대로 태스크로 만들 수 있다.</li>
+  <li><b>기본 의존성이 가볍다.</b> torch·transformers 없이 코어만 설치할 수 있어 오프라인 휠 미러링 부담이 작다.</li>
+</ul>
+<h3>먼저 해결해야 할 것</h3>
+<ul>
+  <li><b>기본 태스크는 전부 HF Hub에서 데이터셋을 받는다.</b> <code>arc_easy</code>의 <code>dataset_path: allenai/ai2_arc</code>처럼 Hub 식별자가 하드코딩돼 있다. 폐쇄망에서는 필요한 데이터셋을 미리 받아 <code>save_to_disk()</code>로 내려 두고 <code>data_dir</code>로 가리키도록 각 YAML을 고쳐야 한다. <b>214개 전부가 아니라 실제로 쓸 몇 개만 골라 반입하는 것이 현실적이다.</b></li>
+  <li><b>일부 태스크는 임의 파이썬 코드를 실행한다.</b> <code>--confirm_run_unsafe_code</code>가 필요한 태스크가 그것이다. 반입 심사 대상이므로 어떤 태스크가 여기 해당하는지 먼저 확인해야 한다.</li>
+  <li><b><code>--trust_remote_code</code>는 기본적으로 꺼 둘 것.</b> Hub에서 코드를 받아 실행하는 옵션이라 폐쇄망 정책과 충돌한다.</li>
+  <li><b>W&amp;B·Zeno·HF Hub 로깅 기능은 쓸 수 없다.</b> 결과는 <code>--output_path</code>의 JSON으로만 남기고, 시각화는 자체 도구로 붙여야 한다.</li>
+</ul>
+
+<h3>이미 자체 하네스가 있다면 — 무엇을 가져올 것인가</h3>
+<p>이 도구는 <b>모델의 일반 능력</b>을 재는 쪽이고, 도메인 골든셋으로 <b>우리 코드베이스에서 잘 도는지</b>를 재는 자체 하네스와는 층위가 다르다. 대체 관계가 아니라 순서 관계다 — 모델 후보를 좁힐 때 이 도구를, 좁힌 뒤 실제 작업 적합성을 볼 때 자체 하네스를 쓴다.</p>
+<p>다만 설계에서 가져올 만한 것이 세 가지 있다.</p>
+<ol>
+  <li><b>이중 필터 파이프라인</b> — 엄격 추출과 느슨한 추출의 점수를 함께 내면, 모델이 못 푼 것과 형식을 안 지킨 것이 분리된다. 자체 골든셋 채점에 바로 이식할 수 있다.</li>
+  <li><b>태스크 버전 기록</b> — 결과에 <code>versions</code>를 함께 남기는 규약. 골든셋을 고칠 때마다 버전을 올리지 않으면 과거 점수와의 비교가 조용히 무의미해진다.</li>
+  <li><b>설정 파일과 결과의 동시 커밋</b> — 실행 조건을 YAML로 고정해 결과와 같이 버전 관리하는 방식.</li>
+</ol>
+
+<h2 id="s15"><span class="no">15</span>이 도구가 하지 않는 일</h2>
+<table>
+  <thead><tr><th style="width:30%">항목</th><th>실제</th></tr></thead>
+  <tbody>
+    <tr><td class="k">에이전트 평가</td><td>도구 사용, 다단계 작업, 파일 조작 같은 에이전트 행동을 평가하는 도구가 아니다. 단발 요청·응답 채점이 대상이다</td></tr>
+    <tr><td class="k">멀티모달</td><td><code>hf-multimodal</code>·<code>vllm-vlm</code> 모델 타입과 <code>mmmu</code> 태스크가 프로토타입으로 있지만, 프로젝트 스스로 <a href="https://github.com/EvolvingLMMs-Lab/lmms-eval">lmms-eval</a>을 권한다</td></tr>
+    <tr><td class="k">멀티노드 실행</td><td>네이티브 미지원. 외부 추론 서버를 쓰거나 직접 통합해야 한다</td></tr>
+    <tr><td class="k">모델 학습·튜닝</td><td>범위 밖. 평가만 한다</td></tr>
+    <tr><td class="k">점수의 절대적 해석</td><td>도구가 보장하는 것은 "같은 절차"이지 "옳은 절차"가 아니다. 벤치마크 자체의 타당성은 별개 문제다</td></tr>
+  </tbody>
+</table>
+
+<h2 id="s16"><span class="no">16</span>근거 링크</h2>
+<table>
+  <thead><tr><th style="width:44%">문서</th><th>내용</th></tr></thead>
+  <tbody>
+    <tr><td><a href="https://github.com/EleutherAI/lm-evaluation-harness">저장소 메인 / README</a></td><td>개요, 설치, 백엔드별 실행, 지원 API 표, extras 목록</td></tr>
+    <tr><td><a href="https://github.com/EleutherAI/lm-evaluation-harness/blob/main/docs/interface.md">docs/interface.md</a></td><td>CLI 레퍼런스 — <code>run</code>/<code>ls</code>/<code>validate</code>, 전체 플래그, 환경 변수</td></tr>
+    <tr><td><a href="https://github.com/EleutherAI/lm-evaluation-harness/blob/main/docs/config_files.md">docs/config_files.md</a></td><td>YAML 설정 파일 스키마</td></tr>
+    <tr><td><a href="https://github.com/EleutherAI/lm-evaluation-harness/blob/main/docs/python-api.md">docs/python-api.md</a></td><td><code>simple_evaluate()</code>, <code>EvaluatorConfig</code>, <code>evaluate()</code>, 커스텀 모델</td></tr>
+    <tr><td><a href="https://github.com/EleutherAI/lm-evaluation-harness/blob/main/docs/task_guide.md">docs/task_guide.md</a></td><td>태스크 설정 파라미터 전체, 필터 API, 기본 제공 메트릭</td></tr>
+    <tr><td><a href="https://github.com/EleutherAI/lm-evaluation-harness/blob/main/docs/new_task_guide.md">docs/new_task_guide.md</a></td><td>새 태스크 만들기, 로컬 데이터셋 사용법</td></tr>
+    <tr><td><a href="https://github.com/EleutherAI/lm-evaluation-harness/blob/main/docs/model_guide.md">docs/model_guide.md</a></td><td>모델 백엔드 구현 가이드</td></tr>
+    <tr><td><a href="https://github.com/EleutherAI/lm-evaluation-harness/blob/main/docs/API_guide.md">docs/API_guide.md</a></td><td>API 모델·로컬 추론 서버 연동</td></tr>
+    <tr><td><a href="https://github.com/EleutherAI/lm-evaluation-harness/blob/main/docs/footguns.md">docs/footguns.md</a></td><td>흔한 함정 — YAML 따옴표 문제 등</td></tr>
+    <tr><td><a href="https://github.com/EleutherAI/lm-evaluation-harness/blob/main/lm_eval/tasks/arc/arc_easy.yaml">arc_easy.yaml</a> · <a href="https://github.com/EleutherAI/lm-evaluation-harness/blob/main/lm_eval/tasks/gsm8k/gsm8k.yaml">gsm8k.yaml</a></td><td>본문에 인용한 실제 태스크 정의</td></tr>
+    <tr><td><a href="https://doi.org/10.5281/zenodo.10256836">Zenodo DOI</a></td><td>인용용 — 저장소에 <code>CITATION.bib</code>가 있다</td></tr>
+  </tbody>
+</table>
+<p class="sub">GitHub 링크 12건(저장소·docs 8건·태스크 YAML 2건·lmms-eval)은 HTTP 200 응답을 확인했다. Zenodo DOI는 조사 환경의 네트워크 정책상 자동 확인을 하지 못했다. 저장소 통계와 릴리스 정보는 GitHub API에서 직접 조회한 값이다.</p>
+
+<footer>
+  이 문서는 공개 저장소의 README와 <code>docs/</code> 원문, GitHub API 조회 결과를 한국어로 재정리한 요약·분석본이다. 코드·설정 예시는 저장소 원문에서 가져왔으며 해당 저작권은 EleutherAI에 있다(MIT).<br>
+  정리 시점: 2026년 7월 30일 · 기준 리비전: <code>main</code>(<code>0.4.13.dev0</code>). 활발히 개발 중인 저장소이므로 실제 적용 전에 최신 문서를 확인할 것.
+</footer>
+
+</div>
+</div>
+</body>
+</html>
