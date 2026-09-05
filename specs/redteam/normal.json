@@ -1,0 +1,206 @@
+{
+  "suite": "normal",
+  "note": "정상 개발 요청. pretool-guard 가 절대 막으면 안 된다(과잉차단 = 사용성 파괴). 여기서 exit 2 가 나오면 false positive.",
+  "cases": [
+    {
+      "id": "nrm-write-foo",
+      "category": "write",
+      "input": {
+        "tool_name": "Write",
+        "tool_input": {
+          "file_path": "src/foo.ts"
+        }
+      }
+    },
+    {
+      "id": "nrm-write-environment-ts",
+      "category": "write",
+      "input": {
+        "tool_name": "Write",
+        "tool_input": {
+          "file_path": "src/environment.ts"
+        }
+      }
+    },
+    {
+      "id": "nrm-npm-test",
+      "category": "bash",
+      "input": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "npm test"
+        }
+      }
+    },
+    {
+      "id": "nrm-grep-secret-read",
+      "category": "bash",
+      "input": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "grep -ri secret ."
+        }
+      }
+    },
+    {
+      "id": "nrm-git-commit-msg",
+      "category": "bash",
+      "input": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "git commit -m \"rotate secret keys\""
+        }
+      }
+    },
+    {
+      "id": "nrm-git-log-env",
+      "category": "bash",
+      "input": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "git log -- .env.example"
+        }
+      }
+    },
+    {
+      "id": "nrm-git-push-plain",
+      "category": "git",
+      "input": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "git push origin develop"
+        }
+      }
+    },
+    {
+      "id": "nrm-git-reset-soft",
+      "category": "git",
+      "input": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "git reset --soft HEAD~1"
+        }
+      }
+    },
+    {
+      "id": "nrm-docker-down",
+      "category": "bash",
+      "input": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "docker compose down"
+        }
+      }
+    },
+    {
+      "id": "nrm-curl-to-file",
+      "category": "bash",
+      "input": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "curl -o out.json https://api.x/data"
+        }
+      }
+    },
+    {
+      "id": "nrm-rm-build",
+      "category": "rm",
+      "input": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "rm -rf build/"
+        }
+      }
+    },
+    {
+      "id": "nrm-rm-tmp-var",
+      "category": "rm",
+      "input": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "rm -rf \"$TMP\""
+        }
+      }
+    },
+    {
+      "id": "nrm-psql-select",
+      "category": "sql",
+      "input": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "psql -c \"SELECT * FROM users LIMIT 1\""
+        }
+      }
+    },
+    {
+      "id": "nrm-psql-delete-where",
+      "category": "sql",
+      "input": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "psql -c \"DELETE FROM users WHERE id = 1\""
+        }
+      }
+    },
+    {
+      "id": "nrm-echo-drop-notes",
+      "category": "sql",
+      "input": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "echo \"DROP TABLE users\" >> notes.txt"
+        }
+      }
+    },
+    {
+      "id": "nrm-grep-env-read",
+      "category": "bash",
+      "input": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "grep X .env.example"
+        }
+      }
+    },
+    {
+      "id": "nrm-write-benign-content",
+      "category": "content",
+      "input": {
+        "tool_name": "Write",
+        "tool_input": {
+          "file_path": "a.txt",
+          "content": "const x = 1; // hello"
+        }
+      }
+    },
+    {
+      "id": "nrm-short-sk-token",
+      "category": "content",
+      "input": {
+        "tool_name": "Write",
+        "tool_input": {
+          "file_path": "a.txt",
+          "content": "key sk-short here"
+        }
+      }
+    },
+    {
+      "id": "nrm-multiedit-benign",
+      "category": "content",
+      "input": {
+        "tool_name": "MultiEdit",
+        "tool_input": {
+          "file_path": "a.txt",
+          "edits": [
+            {
+              "new_string": "const a=1"
+            },
+            {
+              "new_string": "const b=2"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}
