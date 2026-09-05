@@ -26,6 +26,11 @@ if [ "${1:-}" = "--red" ]; then RED=1; shift; fi
 
 K_MAX=10   # keep in sync with K_MAX in .claude/workflows/carve-eval.js
 
+# The harness source tree, derived from this script's own location. NOT $PWD (the
+# setup subshell cds into a throwaway dir) and NOT CLAUDE_PROJECT_DIR (run-all.sh
+# repoints that at a temp log root to isolate observability side effects).
+ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+
 if ! command -v jq >/dev/null 2>&1; then
   echo "ERROR	jq not found — carve-validate requires jq (vendor/bin/jq)"
   echo "---"
@@ -166,7 +171,7 @@ if [ "$RED" -eq 1 ] && [ "$errors" -eq 0 ]; then
   fi
   for f in "${FILES[@]}"; do
     [ -f "$f" ] || continue
-    while IFS=$'\t' read -r id setup; do
+    while IFS= read -r -d '' id && IFS= read -r -d '' setup; do
       [ -n "$id" ] || continue
       # The hook sees the setup as a literal command; this shell never does.
       # Reuse the single-source regex instead of guessing at the path list.
@@ -175,26 +180,40 @@ if [ "$RED" -eq 1 ] && [ "$errors" -eq 0 ]; then
         emit ERROR "$f: $id: setup writes under a protected path — pretool-guard blocks it when carve-eval runs it, so the fixture can never be built. 픽스처를 보호 경로 밖에 두라"
       fi
       W=$(mktemp -d)
-      if [ -n "$setup" ] && ! ( cd "$W" && bash -c "$setup" ) >/dev/null 2>&1; then
+      # CARVE_SRC = the harness source a setup copies hooks from. Golden sets fall
+      # back to a hardcoded absolute path when it is unset, so without this the case
+      # only builds on the machine that authored it. carve-eval exports the same.
+      if [ -n "$setup" ] \
+        && ! ( cd "$W" && CARVE_SRC="${CARVE_SRC:-$ROOT}" bash -c "$setup" ) >/dev/null 2>&1; then
         emit ERROR "$f: $id: setup script failed — the case can never run"
         rm -rf "$W"; continue
       fi
       tot=0; pre=0
-      while IFS=$'\t' read -r t v; do
+      # NUL-delimited, not @tsv — @tsv escapes backslashes, so a cmd_exit0 regex
+      # would be graded in a form it never runs in (the bug this file exists to catch).
+      while IFS= read -r -d '' t && IFS= read -r -d '' v; do
         case "$t" in
           cmd_exit0)     tot=$((tot + 1)); ( cd "$W" && bash -c "$v" ) >/dev/null 2>&1 && pre=$((pre + 1)) ;;
           file_exists)   tot=$((tot + 1)); [ -e "$W/$v" ] && pre=$((pre + 1)) ;;
           file_contains) tot=$((tot + 1)); p="${v%%::*}"; n="${v#*::}"
                          [ -f "$W/$p" ] && grep -qF "$n" "$W/$p" && pre=$((pre + 1)) ;;
         esac
-      done < <(jq -r --arg id "$id" '.cases[] | select(.id == $id) | .assert[] | [.type, .value] | @tsv' "$f")
-      if [ "$tot" -gt 0 ] && [ "$pre" -eq "$tot" ]; then
+      done < <(jq -j --arg id "$id" '.cases[] | select(.id == $id) | .assert[] | (.type|tostring) + "\u0000" + (.value|tostring) + "\u0000"' "$f")
+      # An llm-rubric still grades the agent, so all-green determinism is not
+      # "nothing measures this". Tamper-detection cases (do the forbidden thing →
+      # asserts prove the gate is still intact) are green at t=0 by design; the
+      # rubric carries the signal. Report it, but do not call it NO-SIGNAL.
+      has_rubric=$(jq -r --arg id "$id" \
+        '[.cases[] | select(.id == $id) | .assert[] | select(.type == "llm-rubric")] | length' "$f" 2>/dev/null)
+      if [ "$tot" -gt 0 ] && [ "$pre" -eq "$tot" ] && [ "${has_rubric:-0}" -eq 0 ]; then
         emit ERROR "$f: $id: NO-SIGNAL — 결정론 assert ${tot}건이 에이전트 작업 없이 전부 통과(프록시 충족). 태스크 완수를 요구하는 positive assert를 추가하라"
+      elif [ "$tot" -gt 0 ] && [ "$pre" -eq "$tot" ]; then
+        emit WARN "$f: $id: 결정론 assert ${tot}건이 t=0에 전부 통과 — 변조 탐지형이면 정상이나, 신호는 llm-rubric에만 의존한다"
       else
         printf 'RED\t%s: %s: 사전통과 %s/%s\n' "$f" "$id" "$pre" "$tot"
       fi
       rm -rf "$W"
-    done < <(jq -r '.cases[] | [.id, (.setup // "")] | @tsv' "$f" 2>/dev/null)
+    done < <(jq -j '.cases[] | (.id|tostring) + "\u0000" + ((.setup // "")|tostring) + "\u0000"' "$f" 2>/dev/null)
   done
 fi
 

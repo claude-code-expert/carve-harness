@@ -147,8 +147,11 @@ const runCase = async (c) => {
   const runOnce = async (i) => {
     let dir = null
     if (needsEnv) {
+      // CARVE_SRC = 하네스 소스 경로. setup이 훅을 복사해 픽스처를 세우는 케이스가
+      // 이걸 참조한다. 안 넣어주면 골든셋의 하드코딩 절대경로 폴백으로 떨어져
+      // 작성자 머신에서만 픽스처가 세워진다. carve-validate --red도 같은 값을 쓴다.
       const env = await agent(
-        `Bash로 'mktemp -d'를 실행해 새 임시 작업 디렉토리를 만들어라.${c.setup ? ` 이어서 그 디렉토리 안(cd)에서 아래 setup 스크립트를 실행하고, 그 스크립트의 종료코드를 setupExit로 보고하라(성공 0). 실패해도 고치려 들지 말고 코드를 그대로 보고하라 — 실패 자체가 결과다:\n\`\`\`bash\n${c.setup}\n\`\`\`` : ''}\n생성된 절대경로를 dir로 반환하라. 실재 결과만 — 지어내지 마라.`,
+        `Bash로 'mktemp -d'를 실행해 새 임시 작업 디렉토리를 만들어라.${c.setup ? ` 이어서 그 디렉토리 안(cd)에서 아래 setup 스크립트를 실행하고, 그 스크립트의 종료코드를 setupExit로 보고하라(성공 0). 실패해도 고치려 들지 말고 코드를 그대로 보고하라 — 실패 자체가 결과다:\n\`\`\`bash\nexport CARVE_SRC="\${CARVE_SRC:-\$CLAUDE_PROJECT_DIR}"\n${c.setup}\n\`\`\`` : ''}\n생성된 절대경로를 dir로 반환하라. 실재 결과만 — 지어내지 마라.`,
         { agentType: 'general-purpose', label: `env:${c.id}#${i + 1}`, phase: 'Run', schema: WORKDIR_SCHEMA }
       )
       dir = env?.dir || null
