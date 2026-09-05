@@ -65,8 +65,9 @@ your-project/
     │   ├── session-handoff.sh   # [상태] 저장/복원
     │   ├── log-event.sh         # [관측] JSONL append
     │   ├── lib-protected.sh     # 패턴 단일 소스 (가드·pre-commit 공유)
-    │   └── harness-audit.sh     # [자가감사] 47체크
-    ├── rules/             # 스택별 규칙 (glob 자동 로드)
+    │   └── harness-audit.sh     # [자가감사] AUDIT-01~09 (이 리포 67체크)
+    ├── stacks/            # 스택 정의 1파일 = 검증 게이트·포맷·채점 어댑터 (언어팩 단위 설치)
+    ├── rules/             # 스택별 규칙 (glob 자동 로드, 언어팩과 함께)
     ├── commands/          # /plan /verify /review 등 슬래시 커맨드
     ├── agents/            # 검증 전담 서브에이전트 (생성/검증 분리)
     └── skills/            # 절차 지식 패키지
@@ -197,9 +198,10 @@ AUDIT-05  규칙 위생: 빈 파일 · 중복
 AUDIT-06  스킬: 프런트매터 · 이름 충돌
 AUDIT-07  게이트웨이 룰 ↔ Stop 게이트(GATE-04) 매핑 (게이트웨이 하네스만)
 AUDIT-08  eval-java 스코어러 ↔ ArchUnit 템플릿·빌드 스니펫 동반 (orphan 도구 방지)
+AUDIT-09  언어팩 무결성: 설치 팩마다 경로 실재 · 스택 파일 · 골든셋 스타터 · LSP 토글 + Eval 성숙도 LV 안내
 ```
 
-각 게이트에는 **테스트 스위트**도 붙인다 — 이 레포는 20 스위트 283건 (차단은 exit 2, 통과는 exit 0을 어서션).
+각 게이트에는 **테스트 스위트**도 붙인다 — 이 레포는 26 스위트 419건 (차단은 exit 2, 통과는 exit 0을 어서션. 툴체인은 PATH 스텁으로 흉내 내 게이트 로직만 잰다).
 
 ### 6단계. 패키징 — 드롭인·업데이트·롤백
 
@@ -257,12 +259,12 @@ $ tail -3 logs/$(date -u +%F).jsonl
 ### 4.4 직접 해보기
 
 ```bash
-bash .claude/hooks/harness-audit.sh                        # 47 PASS / exit 0
-for t in .claude/hooks/tests/*.test.sh; do bash "$t"; done  # 20 스위트 283건 green
+bash .claude/hooks/harness-audit.sh                        # 67 PASS / exit 0 (설치 팩 수에 따라 변동)
+for t in .claude/hooks/tests/*.test.sh; do bash "$t"; done  # 26 스위트 419건 green
 bash .claude/hooks/logs-report.sh 7                         # 최근 7일 판정 요약
 ```
 
-음성 대조(가드를 일부러 부수면 감사가 잡는가): `settings.json`에서 `NotebookEdit`을 매처에서 빼보라 → audit이 AUDIT-02 FAIL + 비영 종료. (테스트 스위트가 이런 케이스 전부를 자동화해 둠 — `harness-audit.test.sh` 14건.)
+음성 대조(가드를 일부러 부수면 감사가 잡는가): `settings.json`에서 `NotebookEdit`을 매처에서 빼보라 → audit이 AUDIT-02 FAIL + 비영 종료. (테스트 스위트가 이런 케이스 전부를 자동화해 둠 — `harness-audit.test.sh` 23건.)
 
 ---
 

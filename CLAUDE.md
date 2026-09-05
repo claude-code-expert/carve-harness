@@ -29,9 +29,11 @@
   - 이유: 왜 그렇게 했는지
   - 주의: 주의할 점
 
-## 스택 감지
+## 스택 감지 (설치된 언어팩만 존재)
 - `**/*.java` → `.claude/rules/java-spring/`
 - `**/*.ts`, `**/*.tsx` → `.claude/rules/react-next/`
+- `**/*.py` → `.claude/rules/python/` · `**/*.go` → `.claude/rules/go/` · `**/*.rs` → `.claude/rules/rust/`
+- 검증 게이트·포맷·채점은 `.claude/stacks/<pack>.sh`가 정의 — 팩 추가/제거는 `bash install.sh pack add|remove`
 
 ## 참고
 - @AGENTS.md · @.claude/rules/common/

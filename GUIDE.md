@@ -2,8 +2,8 @@
 
 > Claude Code 드롭인 하네스 — 전체 사용 설명 + 설치 내역.
 > 대상: 이 하네스를 쓰거나 다른 프로젝트에 이식하려는 사용자.
-> 기준: 릴리스 **v0.8.0** (v1 하드닝 + 크로스에이전트 + update/rollback/setup + 게이트웨이 검증 v2 + Java/Spring 결정적 evaluator v3 + 설치 구성 선택·fable 오케스트레이터 팀 + verify-loop·carve-eval + 강한 모델 기준 감량 + 적대적 감사 게이트 경화 + `/eval-init` 평가 게이트 셋업). `/harness-audit` = 0 failed(이 리포 67체크).
-> 최종 갱신: 2026-08-06.
+> 기준: 릴리스 **v0.8.0** + 언어팩 체계(LP0~LP5, 미릴리스 — `docs/md/language-packs/`): 스택 정의 파일(`.claude/stacks/`)·팩 선택 설치(`packs/`, `install.sh pack`)·팩별 골든셋 스타터·범용 채점기 `eval-score.sh`·AUDIT-09. 이전 릴리스 누적: v1 하드닝 + 크로스에이전트 + update/rollback/setup + 게이트웨이 검증 v2 + Java/Spring 결정적 evaluator v3 + 설치 구성 선택·fable 오케스트레이터 팀 + verify-loop·carve-eval + 강한 모델 기준 감량 + 적대적 감사 게이트 경화 + `/eval-init`. `/harness-audit` = 0 failed(이 리포 67체크).
+> 최종 갱신: 2026-09-06.
 
 초기 뼈대 매뉴얼·외부 도구 설치 리스트(구 `docs/md/`)는 v0.6.x에서 제거됐다(git 히스토리 보존). **현재 상태는 이 GUIDE를 정본으로 본다.**
 
@@ -11,7 +11,7 @@
 
 ## 1. 이 하네스가 하는 일
 
-하네스의 **3기둥**을 파일로 구현하고, v1에서 각 기둥의 강제 누수를 막았다. 언어 무관(Java/Spring·React/Next·Python 등) — 훅이 파일 확장자/스택을 감지한다.
+하네스의 **3기둥**을 파일로 구현하고, v1에서 각 기둥의 강제 누수를 막았다. 언어 무관 — 스택별 판정은 `.claude/stacks/<pack>.sh` 한 파일이 정의하고(TypeScript·Java/Spring·Python·Go·Rust·bash), 언어팩(`packs/`) 단위로 설치·제거된다. 훅은 파일 확장자·변경 경로로 스택을 감지한다.
 
 | 기둥 | 구현 | v1에서 강해진 점 |
 |------|------|------------------|
@@ -151,7 +151,7 @@ harness/
 | `review.md` | `/review` | 변경분을 타입·보안·예외·상태관리 관점 검토. 예: `/review` |
 | `commit.md` | `/commit` | commitlint 준수 커밋 메시지 준비. **자동호출 비활성**(`disable-model-invocation`) — 사용자만. 예: `/commit` |
 | `commit-branch.md` | `/commit-branch` | 현재 브랜치에 Conventional Commits로 커밋 + 푸시. `main` 직접·`--no-verify` 금지. 자동호출 비활성. 예: `/commit-branch` |
-| `harness-audit.md` | `/harness-audit` | 하네스 구성 48체크 PASS/FAIL(§7). 예: `/harness-audit` |
+| `harness-audit.md` | `/harness-audit` | 하네스 구성 PASS/FAIL(§7, AUDIT-01~09). 예: `/harness-audit` |
 | `eval.md` | `/eval` | carve-eval 워크플로 실행(골든셋 채점). 예: `/eval` |
 | `verify-loop.md` | `/verify-loop` | carve-verify-loop 워크플로(수정→검증 반복). 예: `/verify-loop` |
 | `ponytail*.md` (6) | `/ponytail…` | ponytail 모드 제어·audit·debt·gain·review·help |
@@ -192,7 +192,7 @@ harness/
 | `version-changelog/` | 자동/`/version-changelog` | 릴리스 시 VERSION·CHANGELOG·README 버전이력 동시 갱신. **VERSION만 바꾸면 pre-commit 차단** |
 | `anti-ai-slop/` | 자동/`/anti-ai-slop` | 이미지·HTML·SVG 생성 전 발동 — 그라데이션·글로우·장식 모션 차단 게이트 |
 | `carve-guide/` | `/carve-guide` | 하네스 HTML 산출물 작성(디자인 시스템·anti-slop 게이트·theme-factory/frontend-design 검토·1000px 임베드 안전). §릴리스 인벤토리 갱신 모드는 리포 전용. v0.0.13부터 배포 |
-| `carve-harness-create/` | `/carve-harness-create` | 프로젝트 스택 분석 → 맞지 않는 규칙·에이전트·스킬을 KEEP/PRUNE 표로 제안, 1회 확인 후 `install.sh prune` 실행. 명시 호출 전용(`disable-model-invocation`). 의존성 간선(eval-java↔archunit·fable↔워크플로) 미분리 |
+| `carve-harness-create/` | `/carve-harness-create` | 프로젝트 스택 분석 → 언어팩은 `install.sh pack list` 대조로 add/remove 제안, 팩 밖 구성(에이전트·스킬)은 KEEP/PRUNE 표 → 1회 확인 후 `install.sh pack …`/`prune` 실행. 명시 호출 전용(`disable-model-invocation`). 팩 내부 간선(eval-java↔archunit)은 자동 동반 |
 | `checklist-loop/` | 자동 | Stop 게이트(checklist-gate.sh)와 연동되는 체크리스트 작성·소진 루프 |
 | `eval-goldenset/` | 자동/`/eval-goldenset` | 골든셋 형식·리워드 해킹 점검표·트레이스 마이닝 **절차 정본**(SOP). carve-eval의 채점 기준 |
 | `eval-init/` | `/eval-init` | 그 SOP의 **실행기** — 프로젝트 분석 → 인터뷰 7문항으로 평가·품질 게이트 확정 → 골든셋 초안 → 궤적 검사 후 승인분만 편입 → CI 배선 → baseline 기록. 설치 후 1회성, 명시 호출 전용 |
@@ -205,7 +205,7 @@ harness/
 
 > 플러그인 `frontend-design`(디자인 방향)·`ponytail`(간결화)은 스킬이 아니라 `settings.json` 선언으로 배포된다(§5.1 참고).
 
-### 5.4 룰 (`.claude/rules/` 8파일 자동적용 + `docs/rules/` 상세본 8파일 수동 참조)
+### 5.4 룰 (`.claude/rules/` 11파일 자동적용 + `docs/rules/` 상세본 10파일 수동 참조 — 스택 규칙은 언어팩과 함께 설치)
 
 | 경로 | glob | 내용 |
 |------|------|------|
@@ -214,10 +214,13 @@ harness/
 | `common/git-workflow.md` | 항상 | Conventional Commits, force push 금지 |
 | `safety.md` | 항상 | 위험동작(DB 파괴·git·프로덕션) 승인 게이트 |
 | `database.md` | 항상 | id/타임스탬프·soft delete·N+1·마이그레이션 |
-| `docs/rules/code-convention/dev-stack-*.md` (8) | 수동 참조 | java-spring·react·nextjs·typescript·javascript·python·fastapi·orm 스택 표준(상세본 — `.claude/rules/` 밖이라 자동 로드 안 됨, 필요 시 Read) |
+| `docs/rules/code-convention/dev-stack-*.md` (10) | 수동 참조 | java-spring·react·nextjs·typescript·javascript·python·fastapi·orm·go·rust 스택 표준(상세본 — `.claude/rules/` 밖이라 자동 로드 안 됨, 필요 시 Read) |
 | `java-spring/patterns.md` | `**/*.java` | 계층 분리·생성자 주입·LAZY·트랜잭션 |
 | `java-spring/gateway-testing.md` | 게이트웨이 파일 | 5기능 검증 SC·테스트 피라미드·도구 스택 (GATE-04가 강제) |
 | `react-next/patterns.md` | `**/*.ts,tsx` | Hooks·key·서버상태 분리 |
+| `python/patterns.md` | `**/*.py` | PEP 8·타입 힌트·bare except 금지·컨텍스트 매니저·시크릿은 env (python 팩) |
+| `go/patterns.md` | `**/*.go` | gofmt/vet·오류 반환 `%w`·ctx 첫 인자·고루틴 종료 조건 (go 팩) |
+| `rust/patterns.md` | `**/*.rs` | rustfmt/clippy·라이브러리 `unwrap` 금지·`unsafe` 금지·`Result`+`?` (rust 팩) |
 
 > 룰 상세본: `docs/rules/code-convention/dev-stack-*.md`. 파일 판별·게이트 매핑은 `harness-audit`(AUDIT-03/07)이 점검.
 
@@ -242,6 +245,16 @@ curl -fsSL https://raw.githubusercontent.com/claude-code-expert/carve-harness/ma
 - 전체 설치 후 동작하므로 절단은 선택 — 상시 로드 규칙(rules/)이 세션 시작 토큰을 늘리는 걸 스택 맞춤으로 줄인다.
 - 절단 단위·의존성 간선(eval-java↔archunit·squad 커맨드↔에이전트·fable 워크플로↔에이전트)·ALWAYS-KEEP 코어는 `.claude/skills/carve-harness-create/SKILL.md` 참조. 코어(훅·settings·크로스에이전트 진입·safety/common 규칙)는 `prune`이 제거 거부.
 
+**언어팩** (설치 시 선택, 사후 조정):
+```
+설치 → 구성 선택 뒤 "언어팩 선택" 한 줄 질문 (감지된 팩이 기본, 엔터 = 감지분)
+      비대화형: HARNESS_PACKS=auto|none|all|typescript,python   (미지정+tty 없음 = auto)
+사후 → bash install.sh pack list | add <name> | remove <name>   (remove는 백업 → rollback 복원)
+검증 → harness-audit AUDIT-09: 설치 팩마다 경로 실재·스택 파일·스타터 유효·LSP 토글 일치
+```
+- 팩 = `.claude/rules/<stack>/` + `.claude/stacks/<pack>.sh`(검증 게이트·포맷·채점 어댑터) + `specs/goldenset/starters/<lang>.json` + `docs/evaluator/<lang>-example/` + LSP 플러그인. 정의는 `packs/<name>.pack`(평문 경로 목록 + `detect`/`lsp`).
+- 미선택 팩은 파일이 없다 — 규칙 로드도, 게이트 실행도, 감사 항목도 없다. 단계별 설계·SC는 `docs/md/language-packs/LP0~LP5-*.md`.
+
 **GSD SDD 흐름** (설치돼 있음):
 ```
 /gsd:new-project → /gsd:plan-phase N → /gsd:execute-phase N → /gsd:verify-work
@@ -255,7 +268,8 @@ curl -fsSL https://raw.githubusercontent.com/claude-code-expert/carve-harness/ma
         frontend/*.tsx → prettier
         .env 수정 시도 → pretool-guard exit 2 차단
         코드에 sk-... 하드코딩 → GUARD-04 내용 스캔 exit 2 차단
-3) 응답 종료: stop-verify 가 변경된 스택만 빌드/타입체크 (증분)
+3) 응답 종료: stop-verify 가 변경된 스택만 빌드/타입체크 (증분 — 판정은 .claude/stacks/{java-spring,typescript}.sh)
+   PR 전: bash .claude/hooks/eval-score.sh → specs/SCORE.json (G1 빌드·G2 테스트·G3 안전 거부권)
 4) /review → security-reviewer 인가·시크릿 점검
 5) /verify → specs/ SC 대조
 6) 세션 종료/압축 → session-handoff 가 실제 TODO·결정 담아 HANDOFF.md 저장
@@ -405,11 +419,13 @@ Slack/위키에 그대로:
 |------|------|------|------------------------|
 | Node/TS | prettier·eslint·tsc·vitest/jest | `pnpm add -D prettier eslint typescript vitest` | 포맷 + `tsc --noEmit` + 테스트 |
 | Java/Spring | gradle(+spotless·jacoco) | 프로젝트 `gradlew` 동봉(Gradle wrapper) | `./gradlew compileJava test` (게이트웨이는 `*GatewayIntegration*` 증분) |
-| Python | ruff·pytest | `pip install ruff pytest` (또는 `uv`) | `ruff check` + `pytest` |
+| Python | ruff·pytest(+pytest-cov) | `pip install ruff pytest pytest-cov` (또는 `uv`) | `ruff check` + `pytest` · 포맷 `ruff format` · 커버리지는 `eval-score` |
+| Go | go 툴체인 | golang.org/dl | `go build ./...` + `go vet` + `go test ./...` · 포맷 `gofmt` |
+| Rust | cargo(+clippy·llvm-cov 선택) | rustup | `cargo check` + `cargo test` · 포맷 `rustfmt` · lint `clippy`(있을 때) |
 | 게이트웨이(Java) | WireMock·Testcontainers | `build.gradle`에 의존성 추가 (룰 `gateway-testing.md` 참조) | 통합 테스트 실 컨테이너 검증 |
 | Java/Spring evaluator | JaCoCo·ArchUnit·PMD·Checkstyle·SpotBugs | `.claude/rules/java-spring/archunit/build-eval.gradle.kts` 배선 + `HarnessArchRulesTest.java` 복사 | `eval-java.sh`가 리포트 파싱 → 결정적 P±오차 (LLM 없음). ArchUnit이 patterns.md 규칙을 실행 검증화 |
 
-> 스택 도구가 없으면 게이트는 **조용히 통과**(best-effort) — 하네스가 없는 도구를 강요하지 않는다. 있으면 자동으로 문다.
+> 스택 도구가 없으면 게이트는 **조용히 통과**(best-effort) — 하네스가 없는 도구를 강요하지 않는다. 있으면 자동으로 문다. 어느 스택이 설치됐는지는 언어팩이 정한다(`bash install.sh pack list`); `eval-score.sh`는 못 잰 항목을 `skipped`로 명시한다.
 
 ### 9.2 선택 — 워크플로 강화 (전역/네트워크 → 승인 후 수동)
 
@@ -429,7 +445,7 @@ Slack/위키에 그대로:
 
 ## 10. 검증 / 한계
 
-- 훅 14개 `bash -n` clean · 테스트 20 스위트(283건) 전부 통과(`npm test`) · `/harness-audit` 47 PASS. (2026-08-06 실검증)
+- 훅 17개 + 스택 파일 6개 `bash -n` clean · 테스트 26 스위트(419건) 전부 통과(`npm test`) · `/harness-audit` 67 PASS. (2026-09-06 실검증. Java·Go 골든셋 스타터의 정답 증명은 로컬 런타임 부재로 SKIP — CI에서 실행)
 - **한계(적대적 감사로 실측한 천장, 2026-08-03)**: ① Bash 쓰기 가드는 명령 표면만 — 변수 간접(`F=.env; … > $F`)·인터프리터 경유(`python3 -c`) 미탐 ② 시크릿 스캔은 리터럴 매칭 — base64·분할 조립 미탐 ③ 위험 명령은 셸 alias/함수로 감싸면 미탐, `curl -o f && bash f` 미탐 ④ Stop 게이트는 6스택(Java·Node·Python·Go·Rust·bash)만, 각 스택 툴체인 설치 시에만 작동 ⑤ checklist 게이트는 삭제·threshold 하향은 막지만 **거짓 채점 내용**은 못 막음 ⑥ 코드 `TODO/FIXME` 스캔 범위 밖 재현: 우회 프로브 34종(`redteam-probe.sh`), 추적: `specs/HANDOFF.md`.
 - 훅/스킬 규약은 Claude Code 버전에 따라 바뀔 수 있음 — 도입 전 `/hooks`·`/plugins`로 현행 확인, `code.claude.com/docs` 대조.
 

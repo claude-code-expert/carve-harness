@@ -28,6 +28,24 @@
 
 **크로스 에이전트**: 훅 차단은 Claude Code 전용. Cursor/Codex 등은 `AGENTS.md` 정본 + `.githooks/pre-commit`이 커밋 시점에 최종 차단.
 
+## 어떤 프로젝트에 맞나
+
+이 하네스는 **훅으로 강제**한다. 강제 지점이 있는 환경에서만 제값을 한다.
+
+| 조건 | 왜 필요한가 | 없으면 |
+|---|---|---|
+| **Claude Code**로 개발 | PreToolUse·Stop 훅이 exit 2로 차단하는 유일한 자리 | Cursor·Codex·Aider는 `AGENTS.md` 규칙 + `.githooks/pre-commit`만 — 커밋 시점 차단으로 후퇴 |
+| **git 저장소** | 증분 검증(변경 스택 판별)·커밋 게이트·update/rollback 백업 | 전체 검증으로 후퇴, 커밋 게이트 없음 |
+| **jq** | 모든 훅이 stdin JSON을 jq로 읽는다(부재 시 fail-closed) | 설치기가 `~/.local/bin/jq` 배치를 시도, 실패하면 설치 중단 |
+| 지원 스택 + **툴체인** | Stop 게이트·채점기는 `tsc/npm`·`gradlew`·`ruff/pytest`·`go`·`cargo`를 **실제로 실행**한다 | 툴체인 없는 스택은 best-effort 스킵(차단 아님) — `eval-score`는 `skipped`로 명시 |
+| 골든셋을 **유지할 사람** | `/eval`·CI 차단 모드는 케이스를 사람이 검수해야 의미가 있다 | 게이트·검증 루프까지만 쓰고 `/eval`은 보류 |
+
+**잘 맞는 프로젝트** — TypeScript/React/Next · Java/Spring · Python/FastAPI · Go · Rust 중 하나 이상으로 된 서비스 코드베이스. 테스트 러너가 있고 PR 단위로 일하며 에이전트가 하루에도 여러 번 코드를 쓴다. 게이트웨이·결제·인증처럼 "틀리면 사고"인 경로가 있으면 검증 루프와 골든셋이 특히 값을 한다.
+
+**부분 동작** — 툴체인이 CI에만 있고 로컬엔 없는 팀(로컬 게이트 스킵, `eval-gate`는 CI에서 동작) · 단일 스크립트·노트북 리포(보호 경로·시크릿·위험 명령 가드만 유효) · 모노레포(스택별 게이트는 되지만 감지는 루트와 `backend/`·`frontend/` 같은 한 단계 하위까지).
+
+**맞지 않음** — Ruby·PHP·C#·Swift·Dart 주력(게이트 없음 — `GUIDE.md` §8.2대로 스택 파일 1개면 붙는다) · git 없는 디렉토리 · Windows 네이티브 셸(WSL 필요) · 에이전트가 코드를 거의 안 쓰는 리서치·문서 저장소(검증 루프·골든셋이 잴 게 없다).
+
 
 > **데모**: <a href="https://claude-code-expert.github.io/carve-harness/docs/html/harness-demo/index.html" target="_blank" rel="noopener noreferrer">하네스 적용 전/후 화면 비교 (새 창)</a> — 같은 프롬프트로 만든 미적용(slop) vs 적용(클린) HTML을 나란히 놓고, 어떤 규칙이 무엇을 바꿨는지 표로 정리.
 
@@ -45,6 +63,28 @@ curl -fsSL https://raw.githubusercontent.com/claude-code-expert/carve-harness/ma
 - **LSP·플러그인 자동 선언**: settings.json이 `vtsls`(TypeScript·React·JavaScript LSP)·`jdtls`(Java LSP)·`ponytail`·`frontend-design`(디자인 방향 스킬) 플러그인과 각 마켓플레이스(`claude-code-lsps`·`ponytail`·`claude-code-plugins`)를 선언한다 — 세션 시작 시 Claude Code가 신뢰 승인 후 자동 설치. 서버 실행 파일은 별도: vtsls는 `bash install.sh setup`에서 npm 전역 설치 제안, jdtls는 `brew install jdtls`(JDK 필요). 미설치면 install 끝에 NOTE로 안내된다.
 - 설치 끝에 `/harness-audit` 자동 실행 — 0 failed면 전 게이트 활성(체크 수는 설치 팩에 따라 다르다).
 - **언어팩 선택**: 대화형이면 구성 선택 뒤 한 줄 질문(감지된 팩이 기본, 엔터 = 감지분). 비대화형 `HARNESS_PACKS=auto|none|all|typescript,python`(미지정 = auto). 사후 `bash install.sh pack list|add <name>|remove <name>`.
+
+### 언어팩
+
+설치는 **감지된 언어만** 깐다. 팩 하나 = 규칙(`.claude/rules/<stack>/`) + 검증 게이트·포맷터·채점 어댑터(`.claude/stacks/<pack>.sh`) + 골든셋 스타터 4건(`specs/goldenset/starters/`) + LLM-judge 예시(`docs/evaluator/`) + LSP 플러그인 토글. 미선택 팩은 파일이 없으므로 규칙도 게이트도 로드되지 않는다.
+
+| 팩 | 감지 마커 | 게이트·포맷 | LSP |
+|---|---|---|---|
+| `typescript` | `package.json` · `tsconfig.json` | `tsc --noEmit` · `lint`/`test` 스크립트 · prettier | vtsls |
+| `java-spring` | `gradlew` · `build.gradle(.kts)` · `pom.xml` | gradle compile/test(게이트웨이 파일만 바뀌면 `*GatewayIntegration*` 증분) · spotless · `eval-java` 스코어러 | jdtls |
+| `python` | `pyproject.toml` · `requirements.txt` · `setup.py/cfg` | ruff check · pytest · ruff format | pyright |
+| `go` | `go.mod` | go build/vet/test · gofmt | gopls |
+| `rust` | `Cargo.toml` | cargo check/test · rustfmt | rust-analyzer |
+| `database` | 의존성 매니페스트의 ORM(prisma·drizzle·typeorm·sqlalchemy·JPA·gorm·diesel·sqlx…) | 규칙만(`database.md`·ORM 상세본) | — |
+
+```bash
+HARNESS_PACKS=auto bash install.sh                 # 감지분 (tty 없는 설치의 기본)
+HARNESS_PACKS=typescript,python bash install.sh    # 지정
+HARNESS_PACKS=none bash install.sh                 # 코어만 — 언어 게이트 없이 가드·핸드오프·감사만
+bash install.sh pack list                           # 팩 | 설치 | 감지 | 요약 (누락 경로 표시)
+bash install.sh pack add go                         # 나중에 추가 (온라인 또는 HARNESS_SRC_DIR)
+bash install.sh pack remove java-spring             # 제거 → 백업, bash install.sh rollback 으로 복원
+```
 
 **전체 설치면**(맞춤 구축 `[1]` · `curl | bash`·env 비대화형 · 수동에서 전부 선택) 설치 끝에 아래 배너가 출력된다 — 세션에서 `/carve-harness-create` 실행을 안내한다(자연어 요청이 아니라 **슬래시 커맨드로만** 발동):
 
@@ -138,9 +178,24 @@ bash uninstall.sh --yes    # 실제 제거 (manifest 범위만, 원래 있던 �
 | `bash install.sh pack list\|add\|remove` | 언어팩 상태표 / 추가 / 제거(백업 → `rollback`) |
 | `bash .claude/hooks/eval-score.sh` | 빌드 건강도 채점표 `specs/SCORE.json` — G1 빌드·G2 테스트·G3 안전(거부권) + lint·회귀·커버리지, LLM 없음 |
 
-> **설치 직후 순서**: `/carve-harness-create`(스택 맞춤 정리) → `CLAUDE.md`에 도메인 불변식 3줄 → 1~2주 그냥 사용 → `/eval-init`(실패 소재가 쌓인 뒤라야 골든셋이 의미 있다).
-
 커스터마이징(보호 경로·포맷터·검증 명령·새 스택)·전체 레퍼런스는 **`GUIDE.md`** 참고.
+
+## 전체 워크플로 — 도구 세트를 언제 무엇으로 쓰나
+
+| 단계 | 언제 | 무엇을 | 게이트 / 산출물 |
+|---|---|---|---|
+| 0 설치 | 처음 1회 | `curl … \| bash` → 언어팩 감지 → `harness-audit` 자동 | 훅 6이벤트 등록 · `.claude/harness-manifest.txt` · `harness-packs` |
+| 1 맞춤 | 설치 직후 | `/carve-harness-create` — 감지 대조로 팩 add/remove 제안 + 불필요 에이전트·스킬 prune(1회 확인) | `install.sh pack …` / `prune` (백업 → `rollback`) |
+| 2 도메인 규칙 | 설치 직후 | `bash install.sh setup` 또는 `CLAUDE.md` "도메인 규칙"에 불변식 3줄("주문 금액 음수 불가" 등) | 코드 패턴은 훅이 못 본다 — 규칙은 **테스트로 강제** |
+| 3 일상 개발 | 매 응답 | 그냥 코딩. 보호 경로·시크릿·위험 명령은 PreToolUse가 차단, 저장 즉시 포맷, 응답 종료 시 **변경된 스택만** 빌드·린트·테스트 | exit 2 차단 · `logs/*.jsonl` 판정 기록 |
+| 4 계획·검증 | 기능 단위 | `/plan` → 구현 → `/verify` · `/review`(security-reviewer 위임 가능) | `specs/` 완료 기준(SC) |
+| 5 검증 루프 | 요구 항목이 많을 때 | `/verify-loop <목표>` — 항목별 코드 대조 0~100, 95 미만만 gap 되먹여 재작업 | `specs/checklist.json` · 미달 잔존 시 `checklist-gate`가 완료 차단 |
+| 6 건강도 점수 | PR 전·리뷰 시 | `bash .claude/hooks/eval-score.sh` — 빌드·테스트·안전(거부권) + lint·회귀·커버리지 | `specs/SCORE.json` (못 잰 항목은 `skipped`) |
+| 7 골든셋 셋업 | 1~2주 사용 뒤 1회 | `/eval-init` — 인터뷰 7문항, 설치 팩의 스타터를 시드로 궤적 검사 후 승인분만 편입 | `specs/goldenset/*.json` · `.github/workflows/eval-gate.yml`(report) |
+| 8 회귀 추적 | 프롬프트·규칙·모델을 바꿀 때 | `carve-validate --red` → `/eval` → `eval-gate --mode report\|block` | `specs/eval-score.json` 추이 · `[REGRESSION]`·`[VERSION CHANGED]` |
+| 9 운영 | 주기 | `logs-report.sh 7`로 차단·실패 이력 마이닝 → 케이스 증설 · `/harness-audit` · `install.sh update` | 실패가 골든셋 문항이 되는 복리 루프 |
+
+세션 경계는 자동이다 — 종료·압축 시 `specs/HANDOFF.md` 저장, 시작 시 복원 + 로드 구성 배너. 단계 6~8은 없어도 0~5만으로 가드·게이트가 전부 동작한다.
 
 ## 오케스트레이션 · 검증 루프
 
@@ -354,7 +409,10 @@ bash .claude/hooks/carve-validate.sh --red   # 케이스를 쓰거나 고친 직
 - [ ] rollback 시 신규 추가 파일 정리 (manifest diff)
 - [ ] 시맨틱 버전 비교 (다운그레이드 방지)
 - [ ] 스킬 트리거 문구(description) 수준 중복 검사
-- [ ] 골든셋 첫 실측 run → baseline 확보 (`specs/eval-score.json` 생성)
+- [x] 골든셋 첫 실측 run → baseline 확보 (`specs/eval-score.json` 4 run)
+- [x] 언어팩 선택 설치(typescript·java-spring·python·go·rust·database) + `install.sh pack` + AUDIT-09
+- [x] 언어 무관 빌드 건강도 채점표 `eval-score.sh`(블루프린트 §5.7)
+- [ ] 추이 파일 결정론 append(`eval-trend.sh`) · target 어댑터(`claude -p`·`exec:`)로 CI 실채점 · required 태그·극단 점수·stale 판정
 - [ ] 채점 축 분리 리포트 (상태·텍스트·루브릭 점수 병기 — 실패 층위 식별)
 - [ ] 응답자 출력 원문 보존 (`specs/eval-runs/` — 회귀 사후 분석)
 - [ ] 응답자 구성 파라미터화 (같은 골든셋으로 모델·구성 간 비교)
