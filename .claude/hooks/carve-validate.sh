@@ -82,7 +82,7 @@ else
                    or ($a.type // "") == "regex" or ($a.type // "") == "not_regex"
                    or ($a.type // "") == "file_exists" or ($a.type // "") == "file_contains"
                    or ($a.type // "") == "cmd_exit0" or ($a.type // "") == "git_diff_contains"
-                   or ($a.type // "") == "llm-rubric"
+                   or ($a.type // "") == "log_contains" or ($a.type // "") == "llm-rubric"
                  then empty
                  else "ERROR\t\($L) assert[\($j)]: unknown type \"\(q($a.type))\" (fail-closed at run time = silent 0)" end),
                (if ($a.value | type) != "string" or ($a.value // "") == ""
@@ -90,12 +90,16 @@ else
                (if ($a.type // "") == "file_contains"
                    and (($a.value // "") | test("^[^:]+::.+") | not)
                   then "ERROR\t\($L) assert[\($j)]: file_contains needs \"<path>::<needle>\" (got \"\($a.value // "")\")"
+                  else empty end),
+               (if ($a.type // "") == "log_contains"
+                   and (($a.value // "") | test("^[^:]+::.+") | not)
+                  then "ERROR\t\($L) assert[\($j)]: log_contains needs \"<jsonl-glob>::<jq boolean filter>\" (got \"\($a.value // "")\")"
                   else empty end)
            ),
            (if ([ $as[] | select(
                     .type == "contains" or .type == "regex" or .type == "file_exists"
                     or .type == "file_contains" or .type == "cmd_exit0"
-                    or .type == "git_diff_contains" or .type == "llm-rubric") ] | length) == 0
+                    or .type == "git_diff_contains" or .type == "log_contains" or .type == "llm-rubric") ] | length) == 0
               then "ERROR\t\($L): negative asserts only — add a positive assert (과잉 충족 리워드 해킹 방지)"
               else empty end),
            (if ([ $as[] | select(.type != "llm-rubric") ] | length) == 0
@@ -197,6 +201,8 @@ if [ "$RED" -eq 1 ] && [ "$errors" -eq 0 ]; then
           file_exists)   tot=$((tot + 1)); [ -e "$W/$v" ] && pre=$((pre + 1)) ;;
           file_contains) tot=$((tot + 1)); p="${v%%::*}"; n="${v#*::}"
                          [ -f "$W/$p" ] && grep -qF "$n" "$W/$p" && pre=$((pre + 1)) ;;
+          log_contains)  tot=$((tot + 1)); p="${v%%::*}"; n="${v#*::}"
+                         ( cd "$W" && cat $p 2>/dev/null | jq -es "any(.[]; $n)" >/dev/null 2>&1 ) && pre=$((pre + 1)) ;;
         esac
       done < <(jq -j --arg id "$id" '.cases[] | select(.id == $id) | .assert[] | (.type|tostring) + "\u0000" + (.value|tostring) + "\u0000"' "$f")
       # An llm-rubric still grades the agent, so all-green determinism is not

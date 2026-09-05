@@ -17,31 +17,11 @@ const THRESHOLD = ARGS.threshold ?? 70       // per-case pass line (0..100)
 const DELTA = ARGS.delta ?? 3                // regression tolerance vs baseline (points)
 const K_MAX = 10                             // per-case run cap (runaway guard)
 
-// <grade-helper> — pure deterministic grader. tests/carve-eval.test.sh extracts & evals THIS block.
-// contains/regex + negations; llm-rubric is graded by the evaluator agent, STATE
-// types by .claude/hooks/eval-state.sh against the run workdir (환경 상태 채점 —
-// 에이전트의 말이 아니라 상태를 믿는다). Fail-closed.
-const STATE_TYPES = ['file_exists', 'file_contains', 'cmd_exit0', 'git_diff_contains']
-const gradeAssertions = (output, asserts) => {
-  const failed = []
-  for (const a of asserts || []) {
-    if (a.type === 'llm-rubric' || STATE_TYPES.includes(a.type)) continue
-    const val = String(a.value ?? '')
-    let ok
-    try {
-      switch (a.type) {
-        case 'contains':     ok = output.includes(val); break
-        case 'not_contains': ok = !output.includes(val); break
-        case 'regex':        ok = new RegExp(val).test(output); break
-        case 'not_regex':    ok = !new RegExp(val).test(output); break
-        default:             ok = false            // unknown assert type = fail-closed
-      }
-    } catch (_e) { ok = false }                    // invalid regex = fail-closed
-    if (!ok) failed.push(`${a.type}:${val}`)
-  }
-  return { passed: failed.length === 0, failed }
-}
-// </grade-helper>
+// 채점은 전부 .claude/hooks/eval-run.sh 가 한다(텍스트 assert는 node JS 정규식, 상태 assert는
+// eval-state.sh, llm-rubric 은 pending 으로 돌려주고 여기서 evaluator 가 판정). 이 워크플로는
+// 오케스트레이션만 — assert 값·점수가 LLM 프롬프트를 거쳐 재직렬화되지 않는다.
+const TARGET = ARGS.target ?? 'session'   // session | claude | exec:<cmd>  (eval-run.sh --target 계약)
+const EVID = 'specs/eval-runs/current'     // 실행 근거(응답 원문 + assert별 판정) — Score 후 run-<N> 으로 개명
 
 const GOLDENSET_SCHEMA = {
   type: 'object',
@@ -100,7 +80,23 @@ const WORKDIR_SCHEMA = {
   properties: { dir: { type: 'string' }, setupExit: { type: 'number' } },
   required: ['dir'],
 }
-const STATE_SCHEMA = { type: 'object', properties: { failed: { type: 'array', items: { type: 'string' } } }, required: ['failed'] }
+const GRADE_SCHEMA = {
+  type: 'object',
+  properties: {
+    green: { type: ['boolean', 'null'] },
+    failed: { type: 'array', items: { type: 'string' } },
+    pendingRubric: { type: 'array', items: { type: 'string' } },
+  },
+  required: ['failed', 'pendingRubric'],
+}
+const RUN_SCHEMA = {
+  type: 'object',
+  properties: {
+    runs: { type: 'array', items: GRADE_SCHEMA },
+    error: { type: ['string', 'null'] },
+  },
+  required: ['runs'],
+}
 const VALIDATE_SCHEMA = {
   type: 'object',
   properties: { exitCode: { type: 'number' }, output: { type: 'string' } },
@@ -135,89 +131,78 @@ log(`골든셋 ${cases.length}개 케이스 로드 (케이스 임계 ${THRESHOLD
 
 // ── Phase 2: Run each case k times, grade (deterministic + llm-rubric) ──
 phase('Run')
+const relay = (cmd, label, schema) => agent(
+  `Bash로 \`${cmd}\` 를 실행하고 stdout의 JSON을 그대로 반환하라. 판단을 보태거나 지어내지 마라. 스크립트가 exit 1이면 stderr 첫 줄을 error 필드로 반환하라.`,
+  { agentType: 'general-purpose', label, phase: 'Run', effort: 'low', schema }
+)
+const judgeRubrics = async (c, r) => {
+  // llm-rubric 은 결정론 채점기가 pending 으로 넘긴 것만 evaluator 가 본다. 출력 원문은 세션 응답자면
+  // 메모리에, 외부 target 이면 근거 파일(EVID/<id>#<label>.json 의 output)에 있다.
+  const src = r.text != null ? `출력:\n${r.text}` : `출력은 파일 ${EVID}/${c.id}#${r.label}.json 의 output 필드를 Read로 읽어라.`
+  for (const rubric of r.pendingRubric || []) {
+    const v = await agent(
+      `아래 출력이 기준을 충족하는지 판정하라(pass/fail + 이유). 기준: ${rubric}\n\n${src}`,
+      { agentType: 'evaluator', label: `rubric:${c.id}#${r.label}`, phase: 'Run', schema: RUBRIC_SCHEMA }
+    )
+    if (!v?.pass) return { ok: false, why: `llm-rubric:${rubric}` }
+  }
+  return { ok: true }
+}
 const runCase = async (c) => {
   const k = Math.max(1, Math.min(Number(c.k) || 1, K_MAX))
-  const llmAsserts = (c.assert || []).filter((a) => a.type === 'llm-rubric')
-  const stateAsserts = (c.assert || []).filter((a) => STATE_TYPES.includes(a.type))
-  const needsEnv = stateAsserts.length > 0 || !!c.setup
-  const allStateFailed = stateAsserts.map((a) => `${a.type}:${a.value}`)
+  const base = { suite: c.suite || 'default', id: c.id, caseVersion: c.version ?? null, k }
+  if (!c.file) return { ...base, greens: 0, pass_at_k: false, pass_pow_k: false, caseScore: 0, failed: ['case:file-unknown'] }
 
-  // 실행 1회 체인: 격리 workdir(리포 밖 — 골든셋 assert 비노출) → respondent →
-  // eval-state.sh 상태 채점(자기 보고 불신) → 정리. env/채점 실패는 fail-closed.
-  const runOnce = async (i) => {
-    let dir = null
-    if (needsEnv) {
-      // CARVE_SRC = 하네스 소스 경로. setup이 훅을 복사해 픽스처를 세우는 케이스가
-      // 이걸 참조한다. 안 넣어주면 골든셋의 하드코딩 절대경로 폴백으로 떨어져
-      // 작성자 머신에서만 픽스처가 세워진다. carve-validate --red도 같은 값을 쓴다.
-      const env = await agent(
-        `Bash로 'mktemp -d'를 실행해 새 임시 작업 디렉토리를 만들어라.${c.setup ? ` 이어서 그 디렉토리 안(cd)에서 아래 setup 스크립트를 실행하고, 그 스크립트의 종료코드를 setupExit로 보고하라(성공 0). 실패해도 고치려 들지 말고 코드를 그대로 보고하라 — 실패 자체가 결과다:\n\`\`\`bash\nexport CARVE_SRC="\${CARVE_SRC:-\$CLAUDE_PROJECT_DIR}"\n${c.setup}\n\`\`\`` : ''}\n생성된 절대경로를 dir로 반환하라. 실재 결과만 — 지어내지 마라.`,
-        { agentType: 'general-purpose', label: `env:${c.id}#${i + 1}`, phase: 'Run', schema: WORKDIR_SCHEMA }
+  let runs
+  if (TARGET !== 'session') {
+    // 외부 target(headless claude / 임의 명령): setup→응답→채점 전부 스크립트. k 회 반복도 스크립트가.
+    const r = await relay(`bash .claude/hooks/eval-run.sh run '${c.file}' '${c.id}' --target '${TARGET}' --k ${k} --out '${EVID}'`, `run:${c.id}`, RUN_SCHEMA)
+    if (!r || r.error) return { ...base, greens: 0, pass_at_k: false, pass_pow_k: false, caseScore: 0, failed: [r?.error ?? 'run:missing'] }
+    runs = (r.runs || []).map((x, i) => ({ ...x, label: x.label ?? String(i + 1) }))
+  } else {
+    // 세션 응답자(워크플로 서브에이전트): setup 과 채점은 스크립트, 응답만 에이전트.
+    const runOnce = async (i) => {
+      const label = String(i + 1)
+      let env = null
+      if (c.setup || (c.assert || []).some((a) => a.type !== 'llm-rubric' && !['contains', 'not_contains', 'regex', 'not_regex'].includes(a.type))) {
+        env = await relay(`bash .claude/hooks/eval-run.sh setup '${c.file}' '${c.id}'`, `env:${c.id}#${label}`, WORKDIR_SCHEMA)
+        if (!env?.dir) return { label, green: false, failed: ['env:mktemp-failed'], pendingRubric: [] }
+        // setup 실패를 그냥 두면 픽스처 없는 워크디렉토리에서 assert가 우수수 실패해 "에이전트가 못했다"로
+        // 위장된다. 원인을 원인으로 보고한다(디렉토리는 스크립트가 남겨둔다).
+        if (c.setup && env.setupExit !== 0) return { label, green: false, failed: [`env:setup-failed(exit ${env.setupExit ?? '?'}) at ${env.dir}`], pendingRubric: [] }
+      }
+      const prompt = env?.dir
+        ? `작업 디렉토리는 ${env.dir} 이다. 모든 파일 작업은 그 디렉토리 안에서만 하라. 이 저장소의 specs/ 와 .claude/ 는 읽지 마라(평가 기준 비노출).\n\n${c.prompt}`
+        : c.prompt
+      const out = await agent(prompt, { agentType: 'general-purpose', label: `run:${c.id}#${label}`, phase: 'Run' })
+      const text = typeof out === 'string' ? out : ''
+      const dir = env?.dir ?? null
+      // 채점: 응답 텍스트를 임시 파일에 그대로 옮기고 스크립트가 원본 골든셋 파일에서 assert 를 읽는다.
+      const g = await agent(
+        `다음을 순서대로 수행하라: (1) 아래 "응답" 블록의 텍스트를 \`mktemp\` 파일에 **그대로**(변형·요약 금지) 저장 (2) Bash로 \`bash .claude/hooks/eval-run.sh grade '${c.file}' '${c.id}' '${dir ?? '$(mktemp -d)'}' --output <그 파일> --out '${EVID}' --label ${label}\` 실행 (3) stdout의 JSON을 그대로 반환. 판단을 보태지 마라.\n\n응답:\n${text}`,
+        { agentType: 'general-purpose', label: `grade:${c.id}#${label}`, phase: 'Run', effort: 'low', schema: GRADE_SCHEMA }
       )
-      dir = env?.dir || null
-      // setup 실패를 그냥 두면 픽스처 없는 워크디렉토리에서 assert가 우수수 실패해
-      // "에이전트가 못했다"로 위장된다. 원인을 원인으로 보고한다.
-      if (!dir) return { text: '', stateFailed: ['env:mktemp-failed'] }
-      if (c.setup && env?.setupExit !== 0) {
-        // 워크디렉토리는 일부러 지우지 않는다 — setup이 왜 깨졌는지 볼 수 있어야 한다.
-        return { text: '', stateFailed: [`env:setup-failed(exit ${env?.setupExit ?? '?'}) at ${dir}`] }
-      }
+      return { label, text, green: g?.green ?? false, failed: g?.failed ?? ['grade:missing'], pendingRubric: g?.pendingRubric ?? [] }
     }
-    const prompt = dir
-      ? `작업 디렉토리는 ${dir} 이다. 모든 파일 작업은 그 디렉토리 안에서만 하라. 이 저장소의 specs/ 와 .claude/ 는 읽지 마라(평가 기준 비노출).\n\n${c.prompt}`
-      : c.prompt
-    const out = await agent(prompt, { agentType: 'general-purpose', label: `run:${c.id}#${i + 1}`, phase: 'Run' })
-    let stateFailed = []
-    if (stateAsserts.length && dir) {
-      // assert 값을 프롬프트로 릴레이하지 않는다 — LLM을 한 번 경유할 때마다 JSON 재직렬화로
-      // 백슬래시가 두 배가 되어(`\+`→`\\+`) 정규식이 영구 미매칭된다. 채점기가 원본 파일에서
-      // 직접 읽게 하고, 여기서는 파일 경로와 id만 넘긴다.
-      if (!c.file) {
-        stateFailed = allStateFailed.length ? allStateFailed : ['state:file-unknown']
-      } else {
-        const v = await agent(
-          `다음을 순서대로 수행하라: (1) Bash로 \`bash .claude/hooks/eval-state.sh '${dir}' '${c.file}' --case '${c.id}'\` 실행 (2) stdout의 JSON을 파싱해 failed 배열을 그대로 반환 (3) \`rm -rf '${dir}'\` 로 작업 디렉토리 정리. 스크립트 출력 외의 판단을 보태거나 지어내지 마라.`,
-          { agentType: 'general-purpose', label: `state:${c.id}#${i + 1}`, phase: 'Run', schema: STATE_SCHEMA }
-        )
-        stateFailed = Array.isArray(v?.failed) ? v.failed : allStateFailed
-      }
-    } else if (dir) {
-      await agent(`Bash로 \`rm -rf '${dir}'\` 를 실행해 임시 작업 디렉토리를 정리하고 done만 반환하라.`,
-        { agentType: 'general-purpose', label: `clean:${c.id}#${i + 1}`, phase: 'Run', effort: 'low' })
-    }
-    return { text: typeof out === 'string' ? out : '', stateFailed }
+    runs = await parallel(Array.from({ length: k }, (_, i) => () => runOnce(i)))
   }
 
-  // k independent respondent runs — pass@k(능력)와 pass^k(일관성)를 분리 측정하려면 반복이 필요.
-  const outputs = await parallel(Array.from({ length: k }, (_, i) => () => runOnce(i)))
   let greens = 0
   const failSamples = []
-  for (const r of outputs) {
-    const text = r?.text ?? ''
-    const det = gradeAssertions(text, c.assert)
-    const stateFailed = r ? r.stateFailed : allStateFailed.length ? allStateFailed : ['run:missing']
-    let llmOk = true
-    for (const a of llmAsserts) {
-      const v = await agent(
-        `아래 출력이 기준을 충족하는지 판정하라(pass/fail + 이유). 기준: ${a.value}\n\n출력:\n${text}`,
-        { agentType: 'evaluator', label: `rubric:${c.id}`, phase: 'Run', schema: RUBRIC_SCHEMA }
-      )
-      if (!v?.pass) { llmOk = false; break }
+  for (const r of runs) {
+    let green = r?.green === true
+    if (r?.green === null) {                     // 결정론 전부 통과, llm-rubric 만 남음 → evaluator
+      const j = await judgeRubrics(c, r)
+      green = j.ok
+      if (!green && failSamples.length < 2) failSamples.push(j.why)
+    } else if (!green && failSamples.length < 2) {
+      failSamples.push((r?.failed || []).join('; ') || 'run:missing')
     }
-    const green = det.passed && stateFailed.length === 0 && llmOk
     if (green) greens += 1
-    else if (failSamples.length < 2) {
-      failSamples.push([...det.failed, ...stateFailed].join('; ') || 'llm-rubric fail')
-    }
   }
   const caseScore = Math.round((greens / k) * 100)   // 일관성률(green/k)
   // caseVersion — 케이스 정의가 바뀌면 과거 run과 같은 문제를 푼 점수가 아니다.
-  // 이 값 없이 점수만 쌓으면 추이 비교가 조용히 무의미해진다.
-  return {
-    suite: c.suite || 'default', id: c.id, caseVersion: c.version ?? null, k, greens,
-    pass_at_k: greens >= 1, pass_pow_k: greens === k,
-    caseScore, failed: failSamples,
-  }
+  return { ...base, greens, pass_at_k: greens >= 1, pass_pow_k: greens === k, caseScore, failed: failSamples }
 }
 const graded = (await pipeline(cases, runCase)).filter(Boolean)
 
@@ -267,6 +252,11 @@ const persisted = await agent(
     schema: { type: 'object', properties: { run: { type: ['number', 'null'] }, version: { type: ['string', 'null'] }, suiteScore: { type: ['number', 'null'] }, error: { type: ['string', 'null'] } } } }
 )
 if (persisted?.error) log(`[TREND NOT SAVED] ${persisted.error} — 점수는 위 리포트에만 있다. 추이를 고친 뒤 재실행하라.`)
+// 실행 근거를 run 번호로 봉인 — 블루프린트 R10 "트랜스크립트를 읽기 전엔 점수를 믿지 않는다".
+const savedRun = persisted?.run ?? runOrdinal
+await agent(`Bash로 \`[ -d '${EVID}' ] && mv '${EVID}' 'specs/eval-runs/run-${savedRun}' ; echo done\` 을 실행하고 done 만 반환하라.`,
+  { agentType: 'general-purpose', label: `seal-evidence#${savedRun}`, phase: 'Score', effort: 'low' })
+log(`실행 근거: specs/eval-runs/run-${savedRun}/ (응답 원문 + assert별 판정) · target=${TARGET}`)
 
 log(`suite ${suiteScore}/100 (run #${runOrdinal}, 케이스 ${graded.length}건)`)
 if (comparable.length) {
