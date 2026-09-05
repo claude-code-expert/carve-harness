@@ -84,7 +84,7 @@
 
 ## 9. 스택 감지 · 도메인 규칙
 
-- `**/*.java` → `.claude/rules/java-spring/` · `**/*.ts,tsx` → `.claude/rules/react-next/` · 공통 → `.claude/rules/common/` · 스택 표준 상세본 → `docs/rules/code-convention/`(자동 로드 아님 — 필요 시 해당 스택 파일만 읽어라).
+- `**/*.java` → `.claude/rules/java-spring/` · `**/*.ts,tsx` → `.claude/rules/react-next/` · `**/*.py` → `.claude/rules/python/` · `**/*.go` → `.claude/rules/go/` · `**/*.rs` → `.claude/rules/rust/` (설치된 언어팩만 존재) · 공통 → `.claude/rules/common/` · 스택 표준 상세본 → `docs/rules/code-convention/`(자동 로드 아님 — 필요 시 해당 스택 파일만 읽어라). 스택별 검증 게이트·포맷·채점 어댑터는 `.claude/stacks/<pack>.sh` 한 파일이 정의한다.
 - 프로젝트 도메인 불변식·금지사항은 `CLAUDE.md`에 추가한다(예: "주문 금액 음수 불가", "결제 승인 없이 배송상태 변경 금지"). 다른 에이전트는 그 규칙도 준수.
 
 ---

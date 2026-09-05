@@ -140,6 +140,36 @@ CLAUDE_PROJECT_DIR="$r" bash "$AUDIT" >/dev/null 2>&1
 [ $? -ne 0 ] && ok "skill w/o frontmatter -> non-zero (AUDIT-06)" || no "skill frontmatter non-zero"
 rm -rf "$r"
 
+# (15) AUDIT-09: an installed pack with a missing path -> non-zero; complete -> zero; LSP off -> non-zero.
+#      The copy gets packs/ + a harness-packs record naming python, and python's paths.
+mkpackroot() {
+  local r; r=$(mkroot)
+  cp -r "$REPO/packs" "$r/packs"
+  mkdir -p "$r/docs/rules/code-convention" "$r/docs/evaluator" "$r/specs/goldenset/starters"
+  cp "$REPO/docs/rules/code-convention/dev-stack-python.md" "$REPO/docs/rules/code-convention/dev-stack-fastapi.md" "$r/docs/rules/code-convention/"
+  cp -r "$REPO/docs/evaluator/python-example" "$r/docs/evaluator/python-example"
+  cp "$REPO/specs/goldenset/starters/python.json" "$r/specs/goldenset/starters/python.json"
+  printf 'python\n' > "$r/.claude/harness-packs"
+  jq '.enabledPlugins["pyright@claude-code-lsps"] = true' "$r/.claude/settings.json" > "$r/s.tmp" && mv "$r/s.tmp" "$r/.claude/settings.json"
+  printf '%s' "$r"
+}
+r=$(mkpackroot)
+out=$(CLAUDE_PROJECT_DIR="$r" bash "$AUDIT" 2>&1); rc=$?
+[ "$rc" -eq 0 ] && printf '%s' "$out" | grep -q 'pack python: every path present' \
+  && ok "complete python pack -> audit passes (AUDIT-09)" || no "complete pack audit (rc $rc): $(printf '%s' "$out" | grep FAIL | head -2)"
+printf '%s' "$out" | grep -q 'INFO: eval maturity LV' && ok "eval maturity readout printed (AUDIT-09)" || no "maturity readout missing"
+rm -rf "$r/.claude/stacks/python.sh"
+out=$(CLAUDE_PROJECT_DIR="$r" bash "$AUDIT" 2>&1); rc=$?
+[ "$rc" -ne 0 ] && printf '%s' "$out" | grep -q 'pack python: missing paths' \
+  && ok "pack path removed -> non-zero, names the path (AUDIT-09)" || no "missing pack path not caught ($rc)"
+rm -rf "$r"
+r=$(mkpackroot)
+jq '.enabledPlugins["pyright@claude-code-lsps"] = false' "$r/.claude/settings.json" > "$r/s.tmp" && mv "$r/s.tmp" "$r/.claude/settings.json"
+out=$(CLAUDE_PROJECT_DIR="$r" bash "$AUDIT" 2>&1); rc=$?
+[ "$rc" -ne 0 ] && printf '%s' "$out" | grep -q 'LSP pyright@claude-code-lsps not enabled' \
+  && ok "installed pack with LSP off -> non-zero (AUDIT-09)" || no "LSP mismatch not caught ($rc)"
+rm -rf "$r"
+
 # (10) isolation: live files unchanged after all mutations (hash compare — commit-independent).
 if [ "$(_livesnap)" = "$PRE_SNAP" ]; then
   ok "live config unchanged by test (isolation)"

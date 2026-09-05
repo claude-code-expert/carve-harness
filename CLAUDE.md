@@ -20,18 +20,20 @@
   (예: "주문 금액 음수 불가", "결제 승인 없이 배송상태 변경 금지")
 
 ## 응답 언어 프로토콜 (필수)
-- Write the working summary / explanation in English first.
-- Then state the final conclusion in Korean (한글로 최종 결론).
-- Order is fixed: English summary → Korean conclusion, each exactly once.
-- When error output or quoted English text appears, add a brief Korean note for that part only.
-- On task completion, the Korean conclusion covers, in one block, once:
-  - What changed (무엇을 변경했는지)
-  - Why (왜 그렇게 했는지)
-  - Caveats (주의할 점)
+- 사용자 응답은 **한국어**로만 쓴다. 영어 요약을 앞에 두지 않는다.
+- 코드·명령·파일명·에러 원문·기술 용어는 원문(English) 그대로 둔다.
+- 에러 출력이나 영어 인용문이 있으면 그 부분에만 한 줄 한국어 설명을 붙인다.
+- 응답은 **핵심 요약**으로 시작한다: 결과·판정을 첫 줄에, 근거는 그 아래에. 과정 서술 금지.
+- 작업 완료 시 마지막 블록에 한 번만, 아래 3항목을 요약한다:
+  - 변경: 무엇을 변경했는지
+  - 이유: 왜 그렇게 했는지
+  - 주의: 주의할 점
 
-## 스택 감지
+## 스택 감지 (설치된 언어팩만 존재)
 - `**/*.java` → `.claude/rules/java-spring/`
 - `**/*.ts`, `**/*.tsx` → `.claude/rules/react-next/`
+- `**/*.py` → `.claude/rules/python/` · `**/*.go` → `.claude/rules/go/` · `**/*.rs` → `.claude/rules/rust/`
+- 검증 게이트·포맷·채점은 `.claude/stacks/<pack>.sh`가 정의 — 팩 추가/제거는 `bash install.sh pack add|remove`
 
 ## 참고
 - @AGENTS.md · @.claude/rules/common/

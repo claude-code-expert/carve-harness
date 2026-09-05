@@ -29,6 +29,12 @@
 #               --keep-file <경로>(반복) · --remove-file <경로> · --dry-run(미리보기)
 #               제거분은 logs/harness-backup/v<현재>/ 백업 → rollback으로 복원. 코어는 제거 거부.
 #               /carve-harness-create 스킬이 프로젝트 분석 후 자동 호출한다.
+#   [pack]      언어팩 관리 — 설치본에서 실행
+#               bash install.sh pack list                 설치/감지 상태표
+#               bash install.sh pack add <name>...        팩 경로 추가(네트워크 또는 HARNESS_SRC_DIR)
+#               bash install.sh pack remove <name>...     팩 경로 제거(백업 → rollback 복원)
+#               설치 시 선택: HARNESS_PACKS=auto|none|all|typescript,python (미지정+tty 없음 = auto 감지,
+#               HARNESS_COMPONENTS 만 지정 = all, 대화형은 구성 선택 뒤 한 줄 질문)
 #   [bootstrap] 하네스 파일이 이미 있으면 → 머신 준비만
 #               1) vendor 체크섬 검증  2) .claude/bin 배치(jq·shellcheck)
 #               3) jq 없으면 ~/.local/bin/jq  4) 훅 권한 + core.hooksPath
@@ -86,7 +92,7 @@ merge_settings_hooks() {  # $1=harness settings (source)  $2=user settings (in p
 }
 
 MODE="${1:-install}"
-case "$MODE" in install|update|rollback|setup|prune) ;; *) fail "알 수 없는 모드: $MODE (install|update|rollback|setup|prune)" ;; esac
+case "$MODE" in install|update|rollback|setup|prune|pack) ;; *) fail "알 수 없는 모드: $MODE (install|update|rollback|setup|prune|pack)" ;; esac
 
 # ── [setup] 대화형 초기 설정 ──────────────────────────────────────────────────
 # 입력은 /dev/tty (curl|bash에서도 동작). 테스트는 HARNESS_SETUP_STDIN=1 로 stdin 주입.
@@ -216,12 +222,12 @@ run_setup() {
 # 설치 대상 목록 — uninstall.sh는 설치 시 기록되는 manifest만 신뢰한다.
 # 구성(component) 5종 + core. 설치 시 선택 가능, core는 항상 설치.
 MD_PATHS=( CLAUDE.md AGENTS.md .cursorrules codex.md .claude/CLAUDE.md .claude/rules docs/rules specs/README.md )
-HOOK_PATHS=( .claude/settings.json .claude/hooks .githooks )
+HOOK_PATHS=( .claude/settings.json .claude/hooks .claude/stacks .githooks )   # stacks: 게이트 스택 정의(팩 단위 prune)
 SKILL_PATHS=( .claude/skills )
 DEV_SKILLS=""   # 배포 제외 스킬 목록(공백 구분). 현재 없음 — carve-guide는 v0.0.13부터 배포 포함. 훅과 build_items·strip이 이 목록을 참조
 CMD_PATHS=( .claude/commands )
 ORCH_PATHS=( .claude/agents .claude/workflows docs/md/orchestration.md docs/md/fable-team-guide.md docs/md/verify-loop-guide.md )
-CORE_PATHS=( VERSION install.sh uninstall.sh vendor )
+CORE_PATHS=( VERSION install.sh uninstall.sh vendor packs )   # packs: 언어팩 정의(pack list/add/remove가 읽음)
 HARNESS_PATHS=(
   "${MD_PATHS[@]}" "${HOOK_PATHS[@]}" "${SKILL_PATHS[@]}" "${CMD_PATHS[@]}"
   "${ORCH_PATHS[@]}" "${CORE_PATHS[@]}"
@@ -232,7 +238,7 @@ COMPFILE="$HERE/.claude/harness-components"   # 선택 기록 — update가 신�
 
 comp_of() { # $1=경로 → 구성 이름
   case "$1" in
-    .claude/hooks*|.githooks*|.claude/settings.json) echo hooks ;;
+    .claude/hooks*|.claude/stacks*|.githooks*|.claude/settings.json) echo hooks ;;
     .claude/skills*)   echo skills ;;
     .claude/commands*) echo commands ;;
     .claude/agents*|.claude/workflows*|docs/md/*) echo orchestrator ;;
@@ -241,6 +247,92 @@ comp_of() { # $1=경로 → 구성 이름
   esac
 }
 comp_in() { case " $COMPONENTS " in *" $1 "*) return 0 ;; *) return 1 ;; esac; }
+
+# ── 언어팩 (packs/<name>.pack) ───────────────────────────────────────────────
+# 팩 = 규칙·스택 정의·채점기·골든셋 스타터·LSP 토글 세트. 선택한 팩의 경로만 설치되고,
+# 미선택 팩 경로는 복사 직후 prune 경로로 제거된다(백업 없음 — 방금 복사한 파일이므로).
+# 기록: .claude/harness-packs (한 줄 한 팩). update는 설치된 팩의 신규 파일만 받는다.
+PACKS=""                                       # 선택된 팩 이름(공백 구분)
+HAVE_PACKS=0                                   # 1 = 이번 실행에서 팩 집합이 확정됨(LSP 토글 대상)
+PACKFILE="$HERE/.claude/harness-packs"
+load_packs_lib() { # $1=소스 루트 → lib-packs.sh 소싱 + PACKS_DIR. 없으면 rc 1(구버전 소스 = 팩 개념 없음)
+  [ -f "$1/.claude/hooks/lib-packs.sh" ] && [ -d "$1/packs" ] || return 1
+  PACKS_DIR="$1/packs"; export PACKS_DIR
+  # shellcheck source=/dev/null
+  source "$1/.claude/hooks/lib-packs.sh"
+}
+pack_selected() { case " $PACKS " in *" $1 "*) return 0 ;; *) return 1 ;; esac; }
+pack_of_path() { # $1=경로 → 소속 팩 이름(하위 경로 포함). 없으면 rc 1
+  local n p
+  for n in $(pack_list); do
+    while IFS= read -r p; do
+      [ -n "$p" ] || continue
+      case "$1" in "$p"|"$p"/*) echo "$n"; return 0 ;; esac
+    done < <(pack_paths "$n")
+  done
+  return 1
+}
+installed_packs() { tr '\n' ' ' < "$PACKFILE" 2>/dev/null; }
+validate_packs() { # $PACKS 정리 — 미지 팩은 WARN 후 제거
+  local v="" n
+  for n in $PACKS; do
+    if [ -f "$(pack_file "$n")" ]; then v="$v $n"; else say "WARN: 알 수 없는 언어팩 무시: $n"; warn=1; fi
+  done
+  PACKS="${v# }"
+}
+select_packs() { # → $PACKS. env HARNESS_PACKS(all|none|auto|a,b) > 구성 env(전체) > 맞춤(auto) > 질문 > auto
+  local all det n mark
+  all=$(pack_list | tr '\n' ' '); all="${all% }"
+  det=$(pack_detect "$HERE" | tr '\n' ' '); det="${det% }"
+  case "${HARNESS_PACKS:-}" in
+    all)  PACKS="$all" ;;
+    none) PACKS="" ;;
+    auto) PACKS="$det" ;;
+    "")
+      if [ -n "${HARNESS_COMPONENTS:-}" ]; then PACKS="$all"        # 구성 env 설치 → 무변경(회귀 가드)
+      elif [ "$AUTO_PROJECT" = 1 ]; then PACKS="$det"              # 맞춤 구축 → 감지분(질문 없음)
+      elif { : < "$ASK_IN"; } 2>/dev/null; then
+        say "── 언어팩 선택 ── (감지: ${det:-없음})"
+        for n in $all; do
+          mark=' '; case " $det " in *" $n "*) mark='x' ;; esac
+          say "  [$mark] $(printf '%-12s' "$n") $(pack_meta "$n" summary)"
+        done
+        ask "엔터=감지분 · a=전체 · 0=없음 · 이름 콤마목록(예: typescript,python): "
+        case "$REPLY" in
+          "") PACKS="$det" ;; a|all) PACKS="$all" ;; 0|none) PACKS="" ;;
+          *)  PACKS=$(printf '%s' "$REPLY" | tr ',' ' ') ;;
+        esac
+      else PACKS="$det"; fi ;;                                       # tty 없음 → 감지분(라이트웨이트 기본)
+    *) PACKS=$(printf '%s' "$HARNESS_PACKS" | tr ',' ' ') ;;
+  esac
+  validate_packs
+  say "언어팩: ${PACKS:-없음}"
+}
+pack_lsp_toggle() { # settings.json enabledPlugins — 선택 팩의 LSP on, 나머지 팩의 LSP off
+  local S="$HERE/.claude/settings.json" n lsp v tmp
+  [ -f "$S" ] && command -v jq >/dev/null 2>&1 || return 0
+  for n in $(pack_list); do
+    lsp=$(pack_meta "$n" lsp); [ -n "$lsp" ] || continue
+    pack_selected "$n" && v=true || v=false
+    tmp=$(mktemp)
+    jq --arg k "$lsp" --argjson v "$v" '.enabledPlugins[$k] = $v' "$S" > "$tmp" 2>/dev/null && mv "$tmp" "$S" || rm -f "$tmp"
+  done
+  say "OK: settings.json enabledPlugins — 언어팩 LSP 토글 (on: ${PACKS:-없음})"
+}
+pack_exclude_unselected() { # 미선택 팩 경로를 설치본에서 제거(백업 없음) + manifest 정리
+  local n p rm_list
+  rm_list=$(mktemp)
+  for n in $(pack_list); do
+    pack_selected "$n" && continue
+    while IFS= read -r p; do
+      [ -n "$p" ] && [ -e "$HERE/$p" ] && printf '%s\n' "$p" >> "$rm_list"
+    done < <(pack_paths "$n")
+  done
+  if [ -s "$rm_list" ]; then
+    prune_run "/dev/null" "$rm_list" 0 0 1
+  fi
+  rm -f "$rm_list"
+}
 
 # ── 구성 선택: 체크박스 TUI ──────────────────────────────────────────────────
 # 전체 항목을 섹션별로 펼쳐 표시. ↑↓/jk 이동 · 스페이스 토글(섹션 행=하위 일괄) ·
@@ -461,7 +553,7 @@ prune_expand_manifest() {
   while IFS= read -r p; do
     [ -n "$p" ] || continue
     case "$p" in
-      .claude/skills|.claude/commands|.claude/agents|.claude/hooks)
+      .claude/skills|.claude/commands|.claude/agents|.claude/hooks|.claude/stacks)
         if [ -d "$HERE/$p" ]; then
           for f in "$HERE/$p"/*; do [ -e "$f" ] && printf '%s\n' "$p/${f##*/}"; done
         else printf '%s\n' "$p"; fi ;;
@@ -494,9 +586,9 @@ prune_update_compfile() {
     done < "$MANIFEST"; } | sort -u > "$COMPFILE"
 }
 
-# $1=keepfile $2=removefile $3=keepmode(1/0) $4=dry(1/0)
+# $1=keepfile $2=removefile $3=keepmode(1/0) $4=dry(1/0) $5=nobak(1/0, 설치 직후 팩 제외용 — 백업 생략)
 prune_run() {
-  local keepf="$1" removef="$2" keepmode="$3" dry="$4"
+  local keepf="$1" removef="$2" keepmode="$3" dry="$4" nobak="${5:-0}"
   if [ "$keepmode" = 1 ] && [ ! -s "$keepf" ]; then
     fail "빈 keep-list — 전체 제거 방지. 최소 1개 --keep-file/--keep-list 필요"
   fi
@@ -521,6 +613,9 @@ prune_run() {
     if [ "$remove" = 1 ]; then
       if [ ! -e "$HERE/$p" ]; then say "SKIP: $p (이미 없음)"; continue; fi
       if [ "$dry" = 1 ]; then say "WOULD REMOVE: $p"; printf '%s\n' "$p" >> "$tmp"; removed=$((removed + 1)); continue; fi
+      if [ "$nobak" = 1 ]; then
+        rm -rf "${HERE:?}/$p"; say "EXCLUDED: $p (언어팩 미선택)"; removed=$((removed + 1)); continue
+      fi
       mkdir -p "$BAK/$(dirname "$p")"
       cp -R "$HERE/$p" "$BAK/$p" 2>/dev/null
       rm -rf "${HERE:?}/$p"
@@ -532,8 +627,15 @@ prune_run() {
   done < "$work"
   rm -f "$work"
   if [ "$dry" = 1 ]; then rm -f "$tmp"; say "── dry-run: $removed 개 제거 예정 (변경 없음) ──"; return; fi
+  # 기록 파일도 백업 — rollback이 파일만 되살리고 manifest는 옛 상태로 두면 uninstall 범위에서 빠진다.
+  if [ "$nobak" != 1 ] && [ "$removed" -gt 0 ]; then
+    mkdir -p "$BAK/.claude"
+    cp "$MANIFEST" "$BAK/.claude/harness-manifest.txt" 2>/dev/null
+    [ -f "$PACKFILE" ] && cp "$PACKFILE" "$BAK/.claude/harness-packs" 2>/dev/null
+  fi
   mv "$tmp" "$MANIFEST"
   prune_update_compfile
+  [ "$nobak" = 1 ] && { say "── 언어팩 제외: $removed 개 경로 미설치 ──"; return; }
   say "── prune 완료: $removed 개 제거 · 백업 logs/harness-backup/v$OLDV/ (rollback 복원 가능) ──"
 }
 
@@ -584,11 +686,54 @@ if [ "$MODE" = "prune" ]; then
   [ "$DRY" = 1 ] && exit 0   # dry-run은 bootstrap/audit 생략
 fi
 
+# ── [pack] ───────────────────────────────────────────────────────────────────
+# bash install.sh pack list | add <name>... | remove <name>...
+# list: 설치/감지 상태표(변경 없음). remove: prune 경로(백업·rollback 가능). add: 소스에서 팩 경로 복사.
+NEED_FETCH_PACK=0; PACK_ADD=""
+if [ "$MODE" = "pack" ]; then
+  [ -f "$MANIFEST" ] || fail "manifest 없음 — 설치된 하네스가 아님. install.sh(설치)를 먼저 실행"
+  load_packs_lib "$HERE" || fail "packs/ 또는 lib-packs.sh 없음 — 언어팩을 모르는 설치본(install.sh update 먼저)"
+  PACK_CMD="${2:-list}"
+  if [ $# -ge 2 ]; then shift 2; else shift $#; fi
+  PACKS=$(installed_packs); PACKS="${PACKS% }"
+  case "$PACK_CMD" in
+    list)
+      det=$(pack_detect "$HERE" | tr '\n' ' ')
+      say "언어팩         설치  감지  요약"
+      for n in $(pack_list); do
+        i=' '; pack_selected "$n" && i='x'
+        d=' '; case " $det " in *" $n "*) d='x' ;; esac
+        m=$(pack_check "$n" "$HERE" 2>/dev/null | grep -c .)
+        extra=""; [ "$i" = x ] && [ "$m" != 0 ] && extra=" — 누락 ${m}경로(install.sh pack add $n 로 복구)"
+        say "  $(printf '%-12s' "$n") [$i]   [$d]   $(pack_meta "$n" summary)$extra"
+      done
+      exit 0 ;;
+    remove)
+      [ $# -gt 0 ] || fail "pack remove <name>..."
+      rm_list=$(mktemp)
+      for n in "$@"; do
+        [ -f "$(pack_file "$n")" ] || fail "알 수 없는 언어팩: $n"
+        pack_paths "$n" >> "$rm_list"
+        PACKS=$(printf '%s\n' $PACKS | grep -vx "$n" | tr '\n' ' '); PACKS="${PACKS% }"
+      done
+      prune_run "/dev/null" "$rm_list" 0 0; rm -f "$rm_list"
+      printf '%s\n' $PACKS | grep -v '^$' > "$PACKFILE"
+      HAVE_PACKS=1 ;;   # bootstrap로 fall-through → LSP 토글 + audit
+    add)
+      [ $# -gt 0 ] || fail "pack add <name>..."
+      for n in "$@"; do [ -f "$(pack_file "$n")" ] || fail "알 수 없는 언어팩: $n"; done
+      PACK_ADD="$*"; NEED_FETCH_PACK=1 ;;
+    *) fail "pack: list | add <name>... | remove <name>..." ;;
+  esac
+fi
+
 # ── [fetch / update] ─────────────────────────────────────────────────────────
 NEED_FETCH=0
 if [ "$MODE" = "update" ]; then
   [ -f "$MANIFEST" ] || fail "manifest 없음 — 설치된 하네스가 아님. install.sh(설치)를 먼저 실행"
   NEED_FETCH=1
+elif [ "$MODE" = "pack" ] && [ "$NEED_FETCH_PACK" = 1 ]; then
+  NEED_FETCH=1   # pack add: 소스(네트워크 또는 HARNESS_SRC_DIR)에서 팩 경로를 받는다
 elif [ "$MODE" = "install" ] && [ ! -f "$HERE/.claude/hooks/pretool-guard.sh" ]; then
   NEED_FETCH=1
 elif [ "$MODE" = "install" ] && [ -n "${HARNESS_COMPONENTS:-}" ]; then
@@ -611,7 +756,25 @@ if [ "$NEED_FETCH" -eq 1 ]; then
   fi
   [ -f "$SRC/.claude/hooks/pretool-guard.sh" ] || fail "소스에 하네스 없음: $SRC"
 
-  if [ "$MODE" = "update" ]; then
+  if [ "$MODE" = "pack" ]; then
+    # pack add — 팩 경로만 복사(기존 파일 SKIP), manifest·harness-packs 갱신. 나머지는 bootstrap이 마무리.
+    load_packs_lib "$SRC" || fail "소스에 언어팩 정의 없음: $SRC"
+    for n in $PACK_ADD; do
+      while IFS= read -r p; do
+        [ -n "$p" ] && [ -e "$SRC/$p" ] || continue
+        if [ -e "$HERE/$p" ]; then
+          say "SKIP: $p 이미 존재"
+        else
+          mkdir -p "$HERE/$(dirname "$p")" && cp -R "$SRC/$p" "$HERE/$p" && say "OK: $p"
+        fi
+        grep -qx "$p" "$MANIFEST" 2>/dev/null || printf '%s\n' "$p" >> "$MANIFEST"
+      done < <(pack_paths "$n")
+      case " $PACKS " in *" $n "*) ;; *) PACKS="$PACKS $n" ;; esac
+    done
+    PACKS="${PACKS# }"; printf '%s\n' $PACKS | grep -v '^$' | sort -u > "$PACKFILE"
+    HAVE_PACKS=1
+    say "OK: 언어팩 추가 — $PACK_ADD (설치 팩: $PACKS)"
+  elif [ "$MODE" = "update" ]; then
     NEWV=$(cat "$SRC/VERSION" 2>/dev/null | tr -d '[:space:]')
     [ -n "$NEWV" ] || fail "소스에 VERSION 없음 — 업데이트 불가"
     OLDV=$(cat "$VSTAMP" 2>/dev/null | tr -d '[:space:]'); OLDV="${OLDV:-unknown}"
@@ -630,6 +793,16 @@ if [ "$NEED_FETCH" -eq 1 ]; then
     while IFS= read -r fp; do
       [ -n "$fp" ] && UP_PATHS+=("$fp")
     done < "$MANIFEST"
+    # 언어팩: 설치된 팩의 경로만 신규 파일 대상. 기록 없는 설치본(팩 개념 이전)은 전체가 깔려 있으므로 전체.
+    if load_packs_lib "$SRC"; then
+      HAVE_PACKS=1
+      if [ -f "$PACKFILE" ]; then PACKS=$(installed_packs); else PACKS=$(pack_list | tr '\n' ' '); fi
+      PACKS="${PACKS% }"
+      [ -f "$PACKFILE" ] || printf '%s\n' $PACKS > "$PACKFILE"
+      for pk in $PACKS; do
+        while IFS= read -r pp; do [ -n "$pp" ] && UP_PATHS+=("$pp"); done < <(pack_paths "$pk")
+      done
+    fi
     for p in "${UP_PATHS[@]}"; do
       [ -e "$SRC/$p" ] || continue
       if grep -qx "$p" "$MANIFEST" 2>/dev/null; then
@@ -651,6 +824,10 @@ if [ "$NEED_FETCH" -eq 1 ]; then
           say "SKIP: $p ($c 구성 미선택 — 추가하려면 install 재실행)"
           continue
         fi
+        if [ "$HAVE_PACKS" = 1 ] && pk=$(pack_of_path "$p") && ! pack_selected "$pk"; then
+          say "SKIP: $p (언어팩 $pk 미설치 — 추가하려면 install.sh pack add $pk)"
+          continue
+        fi
         mkdir -p "$HERE/$(dirname "$p")"
         cp -R "$SRC/$p" "$HERE/$p"
         printf '%s\n' "$p" >> "$MANIFEST"
@@ -664,6 +841,20 @@ if [ "$NEED_FETCH" -eq 1 ]; then
   else
     choose_setup_mode         # 최상단: 맞춤 구축(전체+정리) vs 수동 선택
     select_components
+    HAVE_PACKS=0
+    if load_packs_lib "$SRC"; then
+      HAVE_PACKS=1
+      select_packs            # 구성 뒤에 묻는다 — 체크박스 TUI가 키 입력을 먼저 소비하므로
+      # 선택 팩의 경로 중 coarse 복사에 안 들어오는 것(docs/evaluator/* 등)을 설치 목록에 추가.
+      for pk in $PACKS; do
+        while IFS= read -r pp; do
+          [ -n "$pp" ] || continue
+          c=$(comp_of "$pp"); { [ "$c" = "core" ] || comp_in "$c"; } || continue
+          case " ${SELECTED_PATHS[*]:-} " in *" $pp "*) continue ;; esac
+          SELECTED_PATHS+=("$pp")
+        done < <(pack_paths "$pk")
+      done
+    fi
     mkdir -p "$HERE/.claude"   # 나머지 경로는 복사 루프가 생성 — 미리 만들면 SKIP 오탐
     touch "$MANIFEST"          # 재실행으로 구성 추가 시 기존 기록 보존
     for p in ${SELECTED_PATHS[@]+"${SELECTED_PATHS[@]}"} "${CORE_PATHS[@]}"; do
@@ -682,7 +873,7 @@ if [ "$NEED_FETCH" -eq 1 ]; then
         # file and fail-closed EVERY commit. Fill only MISSING children instead.
         # ponytail: one-level heal — nested partial hook subdirs are not a real case.
         case "$p" in
-          .claude/hooks | .githooks)
+          .claude/hooks | .claude/stacks | .githooks)
             if [ -d "$SRC/$p" ] && [ -d "$HERE/$p" ]; then
               healed=0
               for hc in "$SRC/$p"/*; do
@@ -710,6 +901,13 @@ if [ "$NEED_FETCH" -eq 1 ]; then
     printf '%s\n' $COMPONENTS > "$COMPFILE"
     [ -f "$SRC/VERSION" ] && tr -d '[:space:]' < "$SRC/VERSION" > "$VSTAMP"
 
+    # 언어팩: 미선택 팩 경로 제거(coarse 복사에 딸려온 것) + 선택 기록(재실행 시 합집합)
+    if [ "$HAVE_PACKS" = 1 ]; then
+      pack_exclude_unselected
+      { installed_packs | tr ' ' '\n'; printf '%s\n' $PACKS; } | grep -v '^$' | sort -u > "$PACKFILE"
+      PACKS=$(installed_packs); PACKS="${PACKS% }"
+    fi
+
     # 맞춤 구축: 세션에서 /carve-harness-create가 읽고 지우는 마커 (jq 불요, 평문 3줄)
     if [ "$AUTO_PROJECT" = 1 ]; then
       { echo pending
@@ -727,6 +925,7 @@ if [ "$NEED_FETCH" -eq 1 ]; then
         echo '.claude/harness-version'
         echo '.claude/harness-components'
         echo '.claude/harness-create-pending'
+        echo '.claude/harness-packs'
         echo 'specs/HANDOFF.md'
         echo '# <<< harness <<<'
       } >> "$HERE/.gitignore"
@@ -816,6 +1015,9 @@ fi
 if [ -n "$MERGE_SETTINGS_SRC" ] && [ -f "$MERGE_SETTINGS_SRC" ]; then
   merge_settings_hooks "$MERGE_SETTINGS_SRC" "$HERE/.claude/settings.json"
 fi
+
+# (4.44) 언어팩 LSP 토글 — install / pack add·remove / update 에서 팩 집합이 확정된 경우만.
+[ "$HAVE_PACKS" = 1 ] && pack_lsp_toggle
 
 # (4.45) LSP 서버 바이너리 — settings.json이 선언한 vtsls/jdtls 플러그인은
 # 마켓플레이스 신뢰 승인 후 자동 설치되지만, 서버 실행 파일은 PATH에 있어야 한다.

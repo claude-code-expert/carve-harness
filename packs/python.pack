@@ -1,0 +1,13 @@
+# python.pack — Python / FastAPI language pack
+name: python
+label: Python / FastAPI
+summary: ruff/pytest gate · LSP pyright
+detect: pyproject.toml requirements.txt setup.py setup.cfg
+lsp: pyright@claude-code-lsps
+# ── install paths ──
+docs/rules/code-convention/dev-stack-python.md
+docs/rules/code-convention/dev-stack-fastapi.md
+docs/evaluator/python-example
+.claude/stacks/python.sh
+.claude/rules/python
+specs/goldenset/starters/python.json

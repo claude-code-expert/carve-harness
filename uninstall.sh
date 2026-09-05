@@ -51,7 +51,16 @@ if [ "$APPLY" -eq 1 ]; then
       && rm -f "$HERE/.gitignore.hbak"
     say "OK: .gitignore 하네스 블록 제거"
   fi
-  rm -f "$MANIFEST" "$HERE/.claude/harness-version" "$HERE/.claude/harness-components"
+  # 파일 단위 manifest(프루닝·언어팩 설치본)는 빈 디렉토리를 남긴다 — 부모를 위로 올라가며 빈 것만 제거.
+  while IFS= read -r p; do
+    [ -n "$p" ] || continue
+    d=$(dirname "$p")
+    while [ "$d" != "." ] && [ "$d" != "/" ]; do
+      rmdir "$HERE/$d" 2>/dev/null || break
+      d=$(dirname "$d")
+    done
+  done < "$MANIFEST"
+  rm -f "$MANIFEST" "$HERE/.claude/harness-version" "$HERE/.claude/harness-components" "$HERE/.claude/harness-packs"
   rmdir "$HERE/.claude" "$HERE/specs" "$HERE/.githooks" 2>/dev/null
   say "제거 완료. 남긴 것: logs/ (감사 기록), specs/ 산출물 — 필요 없으면 직접 삭제."
 else

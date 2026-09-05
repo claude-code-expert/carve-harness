@@ -1,0 +1,12 @@
+# rust.pack — Rust language pack
+name: rust
+label: Rust
+summary: cargo check/test gate · LSP rust-analyzer
+detect: Cargo.toml
+lsp: rust-analyzer@claude-code-lsps
+# ── install paths (filled in LP1/LP3) ──
+.claude/stacks/rust.sh
+.claude/rules/rust
+docs/rules/code-convention/dev-stack-rust.md
+specs/goldenset/starters/rust.json
+docs/evaluator/rust-example
