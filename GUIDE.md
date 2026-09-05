@@ -82,7 +82,10 @@ harness/
     │   ├── eval-state.sh         # 골든셋 상태 assert 채점기 (carve-eval 헬퍼)
     │   ├── carve-validate.sh     # 골든셋 프리플라이트 검증기 (--red 신호 검사)
     │   ├── eval-gate.sh          # 골든셋 회귀 게이트 (추이 비교, CI용 결정론)
-    │   └── tests/*.test.sh       # 훅별 어서션 (20 스위트)
+    │   ├── eval-score.sh         # 언어 무관 빌드 건강도 채점표 (§5.7, specs/SCORE.json)
+    │   ├── lib-packs.sh          # 언어팩 매니페스트 리더
+    │   └── tests/*.test.sh       # 훅별 어서션 (26 스위트)
+    ├── stacks/               # 스택 정의 6종 — stop-verify·posttool-format·eval-score 가 source (팩 단위 설치)
     ├── commands/             # /plan /verify /review /commit /harness-audit /eval /verify-loop /ponytail*
     ├── agents/               # evaluator·security-reviewer·pr-test-analyzer + fable 4종 (7)
     ├── skills/               # handoff · changelog · version-changelog · anti-ai-slop · carve* · checklist-loop · eval-goldenset · eval-init · theme-factory (10)
