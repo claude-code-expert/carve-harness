@@ -1,0 +1,8 @@
+[package]
+name = "judge-example"
+version = "0.1.0"
+edition = "2021"
+
+# 외부 크레이트 없이 배선만 보여주는 예시. 실서비스는 HTTP 클라이언트(reqwest 등)와
+# JSON(serde_json)을 붙인다 — Cargo.toml 의존성 추가는 하네스 승인 게이트(safety.md).
+[dependencies]

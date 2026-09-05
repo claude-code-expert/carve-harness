@@ -6,3 +6,7 @@ detect: go.mod
 lsp: gopls@claude-code-lsps
 # ── install paths (filled in LP1/LP3) ──
 .claude/stacks/go.sh
+.claude/rules/go
+docs/rules/code-convention/dev-stack-go.md
+specs/goldenset/starters/go.json
+docs/evaluator/go-example

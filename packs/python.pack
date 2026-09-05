@@ -9,3 +9,5 @@ docs/rules/code-convention/dev-stack-python.md
 docs/rules/code-convention/dev-stack-fastapi.md
 docs/evaluator/python-example
 .claude/stacks/python.sh
+.claude/rules/python
+specs/goldenset/starters/python.json
