@@ -1,0 +1,10 @@
+# database.pack — ORM / DB rules (companion pack, detected by an ORM dependency)
+name: database
+label: Database / ORM
+summary: rules database.md · ORM conventions
+detect:
+detect_grep: prisma|drizzle|typeorm|sequelize|mongoose|sqlalchemy|django|spring-boot-starter-data-jpa|jakarta\.persistence|gorm\.io|diesel|sqlx|sea-orm
+lsp:
+# ── install paths ──
+.claude/rules/database.md
+docs/rules/code-convention/dev-stack-orm.md

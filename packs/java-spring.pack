@@ -1,0 +1,11 @@
+# java-spring.pack — Java / Spring Boot language pack
+name: java-spring
+label: Java / Spring Boot
+summary: rules java-spring+ArchUnit · gradle gate · eval-java scorer · LSP jdtls
+detect: gradlew build.gradle build.gradle.kts pom.xml
+lsp: jdtls@claude-code-lsps
+# ── install paths ──
+.claude/rules/java-spring
+.claude/hooks/eval-java.sh
+docs/rules/code-convention/dev-stack-java-spring.md
+docs/evaluator/java-example

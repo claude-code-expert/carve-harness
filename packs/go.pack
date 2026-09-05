@@ -1,0 +1,7 @@
+# go.pack — Go language pack
+name: go
+label: Go
+summary: go build/vet/test gate · LSP gopls
+detect: go.mod
+lsp: gopls@claude-code-lsps
+# ── install paths (filled in LP1/LP3) ──
