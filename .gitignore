@@ -21,3 +21,6 @@ specs/eval-runs/
 .claude/bin/
 .claude/harness-manifest.txt
 .claude/settings.local.json
+
+# 오펜 정본 문서(타 제품 내부 자료) — 데모 근거로만 로컬 보관, 공개 Pages에 올리지 않음
+docs/html/open-demo/

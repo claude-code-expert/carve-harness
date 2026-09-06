@@ -35,7 +35,25 @@ This harness **enforces with hooks**. It earns its keep only where there is a pl
 - **Partial** — toolchains only in CI (local gates skip) · single-script/notebook repos (guards only) · monorepos (detection covers root and one level down).
 - **No fit** — Ruby/PHP/C#/Swift/Dart primary (one stack file attaches it, per `GUIDE.md` §8.2) · non-git directories · native Windows shell (needs WSL) · research/doc repos where the agent barely writes code.
 
-> **Demo**: <a href="https://claude-code-expert.github.io/carve-harness/docs/html/ohpen-demo/index.html" target="_blank" rel="noopener noreferrer">before/after screen comparison (new window)</a> — slop (no harness) vs clean (harness) from the same prompt.
+## Compare: with vs without the harness
+
+<a href="https://claude-code-expert.github.io/carve-harness/docs/html/ohpen-demo/index.html" target="_blank" rel="noopener noreferrer">**Open the live demo (new window)**</a> — the landing page for **ohpen**, a macOS screen-annotation app, built twice by the same agent (Claude · Fable 5.1) from the same source documents: once with no harness, once with carve applied. Both pages sit side by side at 0.44× with three diff tables.
+
+| Axis | Without harness | With harness | What caught it |
+|---|---|---|---|
+| **Visual** | check-slop **76 errors / 49 warnings** — 15 gradients · 11 colored shadows · 5 glassmorphism · 5 hover motions · 32 emoji · 11 marketing clichés | **0 errors / 3 warnings** (each justified) | `anti-ai-slop` hard gate + `check-slop.mjs` deterministic linter |
+| **Facts** | 8 claims the source doc forbids — a Windows ETA, "100% offline", memory-based "lightweight", Pro pricing tiers, a download for the unreleased v0.2.0, "all tests pass", invented OS/zoom numbers, decoration filling in for assets that don't exist | canonical copy only, undecided items (T-xx) left as labelled placeholders, download button disabled | `CLAUDE.md` no unverified completion claims · AGENTS §1 never pretend empty input was filled · source doc §14 claim boundaries |
+| **Safety · a11y** | hardcoded API key · `innerHTML` XSS · no `label`/`aria` | no forms or keys, `aria-label` · `alt` · `aria-disabled` | `safety.md` · `common/security.md` · `pretool-guard` GUARD-04 · a11y rules |
+
+**Harness components that actually fired for this job**
+
+- **`anti-ai-slop` skill (v2)** — a hard gate invoked *before* any visual work (bans gradients, glow, `blur≥20`, decorative motion, emoji bullets, card accent bars, marketing boilerplate). `references/visual-craft.md` (hierarchy, type scale, 8pt grid, contrast) is read right before authoring.
+- **`check-slop.mjs` linter + `posttool-slop` hook** — the moment an `.html/.css/.svg` file is written or edited, PostToolUse runs the linter and reports one line, `N error, M warn` (report-only). ERROR 0 is the completion bar — an exit code, not eyeballing. Run it yourself: `node .claude/hooks/check-slop.mjs <file>`.
+- **`carve-guide` skill** — the harness HTML design system (Pretendard + JetBrains Mono, neutral base + one accent, 1px borders, embed-safe anchor script).
+- **Rules · hooks** — `safety.md` · `common/security.md` (secrets, XSS), `pretool-guard` (blocks secret writes), root `CLAUDE.md` absolute bans, AGENTS §0·§1.
+- **Canon first** — the two source docs (spec 07-10 vs consolidated 09-06) disagreed in 6 places (Windows, editions, network, memory, Enter behavior, effects default); the newer canon won. The harness doesn't only make things "pretty" — it makes the agent leave blank what the document left blank.
+
+> The 3 warnings kept on the clean page (brand blue only inside the logo mark · `kbd` chip line-height · circular tool glyph) have their rationale recorded in the demo's WHY section. Warnings are judgement calls; only errors block.
 
 ## Install
 
@@ -102,7 +120,7 @@ Once installed, gates are automatic — protected-path writes are blocked, chang
 
 | Command | Purpose |
 |---------|---------|
-| `/harness-audit` | Harness config PASS/FAIL (AUDIT-01~09, 71 checks in this repo) |
+| `/harness-audit` | Harness config PASS/FAIL (AUDIT-01~09, 77 checks in this repo) |
 | `/plan` `/verify` `/review` `/commit` | SC breakdown · SC verify · code review · commit→pull→push |
 | `/verify-loop <goal>` | When there are many requirements — per-item 0–100 scoring, rework to 95 |
 | `/eval-init` · `/eval` | **One-time** golden-set setup · re-score → pass@k/pass^k · regression |
@@ -162,7 +180,7 @@ Three higher workflows sit on top of the single-session guard. None is tied to a
 
 | Command | Purpose |
 |---------|---------|
-| `/harness-audit` | Harness config PASS/FAIL (AUDIT-01~09, 71 checks) |
+| `/harness-audit` | Harness config PASS/FAIL (AUDIT-01~09, 77 checks) |
 | `/plan` `/verify` `/review` | SC breakdown → `specs/` · verify against SC/build/type/test · type/security/exception/state review |
 | `/verify-loop` | Spec→build→checklist→score loop, all items to 95 ([guide](docs/md/verify-loop-guide.md)) |
 | `/eval` | Golden-set re-score → pass@k/pass^k · trend · regression |
