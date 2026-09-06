@@ -2,7 +2,7 @@
 
 > Claude Code 드롭인 하네스 — 전체 사용 설명 + 설치 내역.
 > 대상: 이 하네스를 쓰거나 다른 프로젝트에 이식하려는 사용자.
-> 기준: 릴리스 **v0.8.0** + 언어팩 체계(LP0~LP5, 미릴리스 — `docs/md/language-packs/`): 스택 정의 파일(`.claude/stacks/`)·팩 선택 설치(`packs/`, `install.sh pack`)·팩별 골든셋 스타터·범용 채점기 `eval-score.sh`·AUDIT-09. 이전 릴리스 누적: v1 하드닝 + 크로스에이전트 + update/rollback/setup + 게이트웨이 검증 v2 + Java/Spring 결정적 evaluator v3 + 설치 구성 선택·fable 오케스트레이터 팀 + verify-loop·carve-eval + 강한 모델 기준 감량 + 적대적 감사 게이트 경화 + `/eval-init`. `/harness-audit` = 0 failed(이 리포 67체크).
+> 기준: 릴리스 **v0.8.0** + 언어팩 체계(LP0~LP5, 미릴리스 — `docs/md/language-packs/`): 스택 정의 파일(`.claude/stacks/`)·팩 선택 설치(`packs/`, `install.sh pack`)·팩별 골든셋 스타터·범용 채점기 `eval-score.sh`·AUDIT-09. 이전 릴리스 누적: v1 하드닝 + 크로스에이전트 + update/rollback/setup + 게이트웨이 검증 v2 + Java/Spring 결정적 evaluator v3 + 설치 구성 선택·fable 오케스트레이터 팀 + verify-loop·carve-eval + 강한 모델 기준 감량 + 적대적 감사 게이트 경화 + `/eval-init`. `/harness-audit` = 0 failed(이 리포 77체크).
 > 최종 갱신: 2026-09-06.
 
 초기 뼈대 매뉴얼·외부 도구 설치 리스트(구 `docs/md/`)는 v0.6.x에서 제거됐다(git 히스토리 보존). **현재 상태는 이 GUIDE를 정본으로 본다.**
@@ -72,6 +72,8 @@ harness/
     ├── hooks/                # 훅 스크립트 + 라이브러리 + 자가감사
     │   ├── pretool-guard.sh      # PreToolUse 차단
     │   ├── posttool-format.sh    # PostToolUse 포맷
+    │   ├── posttool-slop.sh      # PostToolUse anti-slop 린터 리포트 (비차단)
+    │   ├── check-slop.mjs        # anti-slop 결정론 린터 34룰 (HTML/CSS·SVG·MD)
     │   ├── stop-verify.sh        # Stop 증분 검증
     │   ├── session-handoff.sh    # SessionStart/PreCompact/SessionEnd 핸드오프
     │   ├── log-event.sh          # JSONL append 헬퍼 (PII 마스킹)
@@ -84,7 +86,7 @@ harness/
     │   ├── eval-gate.sh          # 골든셋 회귀 게이트 (추이 비교, CI용 결정론)
     │   ├── eval-score.sh         # 언어 무관 빌드 건강도 채점표 (§5.7, specs/SCORE.json)
     │   ├── lib-packs.sh          # 언어팩 매니페스트 리더
-    │   └── tests/*.test.sh       # 훅별 어서션 (26 스위트)
+    │   └── tests/*.test.sh       # 훅별 어서션 (31 스위트)
     ├── stacks/               # 스택 정의 6종 — stop-verify·posttool-format·eval-score 가 source (팩 단위 설치)
     ├── commands/             # /plan /verify /review /commit /harness-audit /eval /verify-loop /ponytail*
     ├── agents/               # evaluator·security-reviewer·pr-test-analyzer + fable 4종 (7)
@@ -107,6 +109,8 @@ harness/
 |----|--------|------|----------|
 | `pretool-guard.sh` | PreToolUse (Write/Edit/MultiEdit/NotebookEdit/Bash) | ① jq 부재·JSON 파싱실패 → **차단**(fail-closed) ② 보호경로(`.env`·prod·시크릿·마이그레이션) 수정 차단 ③ Bash 쓰기명령이 보호경로 대상 시 차단 ④ **파일 내용 하드코딩 시크릿**(AKIA/sk-/ghp_/PEM/JWT) 차단 ⑤ **위험 명령**(force push·`reset --hard`·`--no-verify`·히스토리 재작성·`docker … down -v`·`curl\|sh`·DB 클라이언트의 DROP/TRUNCATE/WHERE 없는 DELETE) 차단 ⑥ **루프 브레이크**: 동일 툴+동일 인자 5회 연속 시 차단(다른 호출이 끼면 리셋, `logs/.recent-calls`) ⑦ **GUARD-07 자기보호**: 설치본(`harness-manifest.txt` 존재)에서 `.claude/hooks/`·`settings.json`·manifest 수정/삭제 차단 — 소스 레포는 예외 ⑧ **GUARD-08**: 보호경로 삭제(`rm`·`touch`·`shred`)와 루트/홈/프로젝트 재귀 삭제 차단, `env`/`sudo`/`VAR=` 접두 우회 커버 | 차단 **exit 2** / 허용 0 |
 | `posttool-format.sh` | PostToolUse (Write/Edit) | 확장자 감지 포맷(spotless/prettier 등); 포맷터 미설치·오류를 **JSONL에 기록**(삼키지 않음) | 0 (비차단) |
+| `posttool-slop.sh` | PostToolUse (Write/Edit, `.html`·`.htm`·`.css`·`.svg`만) | `check-slop.mjs` 실행 후 **요약 1줄만** stderr로, 상세 판정은 JSONL. `posttool-format.sh`가 출력을 죽이므로(OBS-02) 별도 훅이다. `.md`는 제외 — 문서 리포에서 카피 톤 룰이 상시 발화 | 0 (비차단·리포트 온리) |
+| `check-slop.mjs` | (수동 CLI / `posttool-slop.sh` 호출) | anti-ai-slop **결정론 린터** 34룰 — 확장자로 HTML/CSS·SVG·Markdown 디스패치. 그라데이션·글로우·모션 장식·워터마크·radius 상한·극소 폰트·**WCAG 대비 계산**·마케팅 상투어·카피 톤. 의존성 0(Node 표준 라이브러리) | 0 통과 / 1 ERROR / 2 호출 오류 |
 | `stop-verify.sh` | Stop | 스택 감지 후 빌드/타입/린트/테스트 — Java(gradle)·Node/TS(tsc·lint·test)·Python(ruff·pytest, `pyproject.toml`/`requirements.txt`/`setup.py` 중 하나면 활성)·**Go**(build·vet·test)·**Rust**(cargo check·test)·bash(shellcheck·훅 자가테스트); 각 스택은 툴체인 있을 때만 실행; `stop_hook_active` **루프 차단**; jq 부재 시 best-effort 스킵; **변경 모듈만 증분**(git diff) | 실패 **exit 2** / 통과 0 |
 | `checklist-gate.sh` | Stop (`stop-verify` 뒤) | `specs/checklist.json` 미달(<임계)·미채점 잔존 시 완료 차단. 루프 미개시면 무동작. **자가 우회 차단**: 채점 파일 삭제 시 tombstone(`specs/.checklist-active`)이 계속 차단, threshold는 하한 95로 클램프(`CARVE_CHECKLIST_FLOOR`로만 변경). **GATE-C7 유형 거부권**: `type: domain_safety` 항목은 100점이 아니면 임계 무관 차단(블루프린트 §5.5 허용 실패율 0%) | 미완 **exit 2** / 완료 0 |
 | `session-handoff.sh` | SessionStart / PreCompact / SessionEnd | start=핸드오프 복원, save=**실제 수집**(STATE.md TODO·미완료 플랜·git 카운트·DECISIONS 최근5) → `specs/HANDOFF.md` | 0 |
@@ -115,7 +119,7 @@ harness/
 | `config-doctor.sh` | (수동 CLI / 설치기) | `settings.json`·`@참조`·하네스 경로 정합 진단(권고형) | 0 (advisory) |
 | `lib-protected.sh` | (데이터) | `PROTECTED_RE`(보호경로) + `SECRETS_RE`(시크릿) 단일 정의 — 재정의 금지. `protected-extra.regex`/`secrets-extra.regex` OR-병합(업데이트 보존) | — |
 | `logs-report.sh` | (수동 CLI) | `logs/*.jsonl` 요약 리포트; `--rotate N` N일 이전 로그 삭제; `--tokens [N]` 세션별 토큰 사용량(트랜스크립트 usage 합산 — 비용 폭주 사후 인지 방지) | 0 |
-| `harness-audit.sh` | (수동 CLI / `/harness-audit`) | 하네스 구성 PASS/FAIL (§7; AUDIT-01~09, 이 리포 기준 67체크 — 설치 팩 수에 따라 변동). AUDIT-09 = 언어팩 무결성(경로·스택 파일·스타터·LSP 토글) + Eval 성숙도 LV 안내 | 실패 시 비영 |
+| `harness-audit.sh` | (수동 CLI / `/harness-audit`) | 하네스 구성 PASS/FAIL (§7; AUDIT-01~10, 이 리포 기준 77체크 — 설치 팩 수에 따라 변동). AUDIT-09 = 언어팩 무결성(경로·스택 파일·스타터·LSP 토글) + Eval 성숙도 LV 안내 | 실패 시 비영 |
 | `eval-java.sh` | (수동 CLI) | Java/Spring 결정적 출력검증 — gradle grader(compile·pass^k·JaCoCo·정적분석·ArchUnit·N+1) 파싱 → 재현 가능한 `P±오차` JSON emit. LLM 없음, jq/gradle 부재 시 "unable"(fail-closed) | 0 (unable=1) |
 | `eval-state.sh` | (carve-eval 헬퍼) | 골든셋 **상태 assert**(`file_exists`·`file_contains`·`cmd_exit0`·`git_diff_contains`)를 워크디렉토리 실상태로 결정적 채점 — 에이전트 자기 보고 불신(리워드 해킹 방지). `--case <id>`로 골든셋 원본에서 직접 읽어 이스케이프 훼손 차단. 불능 입력 fail-closed | 0 (unusable=1) |
 | `carve-validate.sh` | (수동 CLI / `/eval` Phase 0) | 골든셋 **프리플라이트** — 필수 필드(`id`·`prompt`·`version`·`assert`)·id 중복·미지 assert 타입·정규식 컴파일·`k` 범위 검증(에이전트 0회). `--red`는 setup을 실행해 "에이전트 작업 없이 이미 green"인 NO-SIGNAL 케이스와 보호경로 픽스처를 탐지 | 오류 시 1 |
@@ -448,7 +452,7 @@ Slack/위키에 그대로:
 
 ## 10. 검증 / 한계
 
-- 훅 17개 + 스택 파일 6개 `bash -n` clean · 테스트 26 스위트(419건) 전부 통과(`npm test`) · `/harness-audit` 67 PASS. (2026-09-06 실검증. Java·Go 골든셋 스타터의 정답 증명은 로컬 런타임 부재로 SKIP — CI에서 실행)
+- 훅 22개 + 스택 파일 6개 `bash -n` clean · 테스트 31 스위트(545건) 전부 통과(`npm test`) · `/harness-audit` 77 PASS. (2026-09-06 실검증. Java·Go 골든셋 스타터의 정답 증명은 로컬 런타임 부재로 SKIP — CI에서 실행)
 - **한계(적대적 감사로 실측한 천장, 2026-08-03)**: ① Bash 쓰기 가드는 명령 표면만 — 변수 간접(`F=.env; … > $F`)·인터프리터 경유(`python3 -c`) 미탐 ② 시크릿 스캔은 리터럴 매칭 — base64·분할 조립 미탐 ③ 위험 명령은 셸 alias/함수로 감싸면 미탐, `curl -o f && bash f` 미탐 ④ Stop 게이트는 6스택(Java·Node·Python·Go·Rust·bash)만, 각 스택 툴체인 설치 시에만 작동 ⑤ checklist 게이트는 삭제·threshold 하향은 막지만 **거짓 채점 내용**은 못 막음 ⑥ 코드 `TODO/FIXME` 스캔 범위 밖 재현: 우회 프로브 34종(`redteam-probe.sh`), 추적: `specs/HANDOFF.md`.
 - 훅/스킬 규약은 Claude Code 버전에 따라 바뀔 수 있음 — 도입 전 `/hooks`·`/plugins`로 현행 확인, `code.claude.com/docs` 대조.
 
