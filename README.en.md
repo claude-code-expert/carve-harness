@@ -6,7 +6,7 @@
 
 # Claude Harness (language-agnostic drop-in)
 
-[한국어](README.md) · Current version **v0.10.0** ([changes](CHANGELOG.md)) · [course](HARNESS_GUIDE.md) (Korean)
+[한국어](README.md) · Current version **v0.10.1** ([changes](CHANGELOG.md)) · [course](HARNESS_GUIDE.md) (Korean)
 
 A guardrail template that **blocks** an agent's rule violations with **hook exit 2** instead of persuading. Drop it into a project root and it works immediately.
 
@@ -228,4 +228,4 @@ MIT — [LICENSE](LICENSE). The vendored `ponytail` keeps its own license (`vend
 
 ## Version history
 
-Current **v0.10.0**. Full history in [CHANGELOG.md](CHANGELOG.md).
+Current **v0.10.1**. Full history in [CHANGELOG.md](CHANGELOG.md).
