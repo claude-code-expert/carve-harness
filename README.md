@@ -35,7 +35,25 @@
 - **부분 동작** — 툴체인이 CI에만 있는 팀(로컬 게이트 스킵) · 단일 스크립트·노트북 리포(가드만 유효) · 모노레포(루트와 한 단계 하위까지 감지).
 - **맞지 않음** — Ruby·PHP·C#·Swift·Dart 주력(`GUIDE.md` §8.2대로 스택 파일 1개면 붙는다) · git 없는 디렉토리 · Windows 네이티브 셸(WSL 필요) · 코드를 거의 안 쓰는 리서치·문서 저장소.
 
-> **데모**: <a href="https://claude-code-expert.github.io/carve-harness/docs/html/ohpen-demo/index.html" target="_blank" rel="noopener noreferrer">하네스 적용 전/후 화면 비교 (새 창)</a> — 같은 프롬프트로 만든 미적용(slop) vs 적용(클린) 비교.
+## 하네스 적용 전/후 비교하기
+
+<a href="https://claude-code-expert.github.io/carve-harness/docs/html/ohpen-demo/index.html" target="_blank" rel="noopener noreferrer">**라이브 데모 열기 (새 창)**</a> — macOS 화면 주석 앱 **오펜(ohpen)** 의 랜딩 페이지를 같은 에이전트(Claude · Fable 5.1)·같은 근거 문서로 두 번 만들었다. 하네스 없이 한 번, carve를 적용해 한 번. 0.44 배율로 나란히 놓고 세 가지 표로 대조한다.
+
+| 축 | 하네스 미적용 | 하네스 적용 | 잡은 것 |
+|---|---|---|---|
+| **시각** | check-slop **76 error / 49 warn** — 그라데이션 15·컬러 그림자 11·글래스 5·hover 모션 5·이모지 32·마케팅 상투어 11 | **0 error / 3 warn**(근거 기록) | `anti-ai-slop` 하드 게이트 + `check-slop.mjs` 결정론 린터 |
+| **사실** | 근거 문서가 금지한 주장 8건 — Windows 출시 예고·"100% 오프라인"·메모리 근거 "초경량"·Pro 요금제·미배포 v0.2.0 다운로드·"전 테스트 통과"·임의 OS/줌 수치·없는 자산을 장식으로 메움 | 정본 카피만, 미결정 항목(T-xx)은 자리표시로 비움, 다운로드 버튼 비활성 | `CLAUDE.md` 미검증 완료 선언 금지 · AGENTS §1 빈 입력 채운 척 금지 · 정본 문서 §14 표현 경계 |
+| **안전·접근성** | 하드코딩 API 키·`innerHTML` XSS·`label`/`aria` 없음 | 폼·키 없음, `aria-label`·`alt`·`aria-disabled` | `safety.md` · `common/security.md` · `pretool-guard` GUARD-04 · a11y 규칙 |
+
+**이 작업에 실제로 발동한 하네스 구성**
+
+- **`anti-ai-slop` 스킬(v2)** — 시각 작업 *전에* 발동하는 하드 게이트(그라데이션·글로우·`blur≥20`·장식 모션·이모지 불릿·카드 액센트 바·마케팅 상투어 금지). `references/visual-craft.md`(위계·타입 스케일·8pt 그리드·대비)를 작성 직전에 읽는다.
+- **`check-slop.mjs` 린터 + `posttool-slop` 훅** — `.html/.css/.svg`를 Write/Edit하는 *즉시* PostToolUse가 린터를 돌려 `N error, M warn` 한 줄을 보고한다(리포트 전용). ERROR 0이 완료 기준 — 눈대중이 아니라 종료코드. 직접 보려면 `node .claude/hooks/check-slop.mjs <파일>`.
+- **`carve-guide` 스킬** — 하네스 HTML 디자인 시스템(Pretendard + JetBrains Mono, 무채색 + 액센트 1색, 1px 보더, 임베드 안전 앵커 스크립트).
+- **규칙·훅** — `safety.md`·`common/security.md`(시크릿·XSS), `pretool-guard`(시크릿 쓰기 차단), 루트 `CLAUDE.md` 절대 금지, AGENTS §0·§1.
+- **정본 우선** — 근거 문서 두 벌(구 스펙 07-10 vs 통합본 09-06)이 6곳에서 어긋났고(Windows·에디션·네트워크·메모리·Enter 동작·효과 기본값), 최신 정본을 따랐다. 하네스는 "예쁘게"만이 아니라 "문서가 비워 둔 곳을 비워 두게" 만든다.
+
+> 적용본에 남긴 WARN 3건(브랜드 블루는 로고 마크 내부만 · `kbd` 칩 line-height · 원형 도구 글리프)은 데모 페이지 WHY 절에 판단 근거를 적어 뒀다. WARN은 판단 사항이고 ERROR만 차단이다.
 
 ## 설치
 
