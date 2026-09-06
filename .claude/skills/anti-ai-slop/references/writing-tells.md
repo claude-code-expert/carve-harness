@@ -16,18 +16,22 @@
 특정 단어가 나쁜 게 아니라, **그 단어가 판단을 대신하고 있어서** 나쁘다. "robust한 설계"는
 무엇이 어떻게 튼튼한지 말하지 않는다.
 
-**영문**: delve, tapestry, realm, testament, showcase, underscore, pivotal, multifaceted,
-meticulous, seamless(ly), robust, leverage(동사), navigate(비유), foster, elevate, unlock,
-empower, supercharge, cutting-edge, game-changer
+목록은 코드 펜스에 둔다 — 린터가 펜스 안을 건너뛰므로, 금지어를 나열하는 이 문서 자신이
+`marketing` ERROR로 잡히지 않는다.
 
-**한글**: ~을 통해, ~에 다름 아니다, 바야흐로, 화룡점정, 마침표를 찍다, 나침반이 되다,
-차원이 다른, 혁신적인, 획기적인, 압도적인
+```text
+영문: delve, tapestry, realm, testament, showcase, underscore, pivotal, multifaceted,
+      meticulous, seamless(ly), robust, leverage(동사), navigate(비유), foster, elevate,
+      unlock, empower, supercharge, cutting-edge, game-changer
+한글: ~을 통해, ~에 다름 아니다, 바야흐로, 화룡점정, 마침표를 찍다, 나침반이 되다,
+      차원이 다른, 혁신적인, 획기적인, 압도적인
+```
 
 | 지문 | 교정 |
 |---|---|
 | "robust한 에러 처리를 구현했습니다" | "타임아웃·5xx·파싱 실패 3종을 각각 재시도 없이 상위로 전파합니다" |
 | "캐시를 통해 성능을 개선했습니다" | "캐시를 넣어 P95가 820ms→210ms로 떨어졌습니다" |
-| "seamlessly integrates with your workflow" | "기존 `pre-commit` 훅 뒤에 한 줄 추가하면 됩니다" |
+| "leverages your existing workflow" | "기존 `pre-commit` 훅 뒤에 한 줄 추가하면 됩니다" |
 
 ## 2. 부풀린 삼단 구조 (rule of three)
 

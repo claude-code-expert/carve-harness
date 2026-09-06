@@ -44,7 +44,7 @@ description: 이미지·HTML·SVG·슬라이드·PDF 등 시각 산출물과 문
 - **배경 장식 금지** — 거대 반투명 워터마크, 닷·그리드 배경, 페이드 마스크, 광선.
 - **카드 컬러 액센트 바 금지** — 상·하·좌·우 어느 변이든 굵은 컬러 보더로 꾸미기(`border-top: Npx solid color`). 구분은 전체 1px 보더·여백·라벨로.
 - **이모지 불릿·장식 금지**, 뱃지/pill 남발 금지.
-- **마케팅 보일러플레이트 금지** — Seamlessly, Elevate, Unlock, Empower, Supercharge, "차원이 다른", "혁신적인" 류.
+- **마케팅 보일러플레이트 금지** — 과장 상투어 전반. 단어 목록은 린터 `marketing` 룰과 `references/writing-tells.md` §1이 정본이다(이 파일에 나열하면 규칙 문서 자신이 걸린다).
 
 ### MUST (강제)
 

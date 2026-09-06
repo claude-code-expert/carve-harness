@@ -318,5 +318,44 @@ if [ -d "$AUDIT_ROOT/packs" ] && [ -f "$HOOKS_DIR/lib-packs.sh" ]; then
   fi
 fi
 
+# ── AUDIT-10 ────────────────────────────────────────────────────────────────
+# Visual quality gate integrity. The anti-ai-slop skill routes to references/ and
+# to check-slop.mjs; both used to be cited by prose that pointed at files nobody
+# shipped. A rule you cannot run is not a rule, so the pointers are checked here:
+# the linter exists and honours its exit contract, and every references/*.md the
+# SKILL.md names is really on disk. Section self-skips where the skill is absent
+# (pruned install).
+SLOP_SKILL="$AUDIT_ROOT/.claude/skills/anti-ai-slop/SKILL.md"
+SLOP_LINTER="$HOOKS_DIR/check-slop.mjs"
+if [ -f "$SLOP_SKILL" ]; then
+  [ -f "$SLOP_LINTER" ] \
+    && ok "check-slop.mjs present (AUDIT-10)" \
+    || no "anti-ai-slop skill installed but .claude/hooks/check-slop.mjs missing (AUDIT-10)"
+
+  if [ -f "$SLOP_LINTER" ] && command -v node >/dev/null 2>&1; then
+    # exit contract: 2 on bad invocation, 1 on a MUST-NOT hit. A linter that
+    # always exits 0 passes every gate that calls it — the silent-failure shape.
+    node "$SLOP_LINTER" >/dev/null 2>&1
+    [ "$?" -eq 2 ] && ok "check-slop: no args -> exit 2 (AUDIT-10)" \
+                   || no "check-slop: no args must exit 2 (AUDIT-10)"
+    _slop_tmp=$(mktemp -d)
+    printf '<style>.a{background:linear-gradient(90deg,#a5f,#e59)}</style>' > "$_slop_tmp/probe.html"
+    node "$SLOP_LINTER" "$_slop_tmp/probe.html" >/dev/null 2>&1
+    [ "$?" -eq 1 ] && ok "check-slop: MUST-NOT hit -> exit 1 (AUDIT-10)" \
+                   || no "check-slop: gradient probe must exit 1 (AUDIT-10)"
+    rm -rf "$_slop_tmp"
+  else
+    printf 'INFO: node 없음 — check-slop 종료코드 계약 미검증 (AUDIT-10)\n'
+  fi
+
+  _slop_missing=''
+  for _ref in $(grep -oE 'references/[a-z-]+\.md' "$SLOP_SKILL" | sort -u); do
+    [ -f "$AUDIT_ROOT/.claude/skills/anti-ai-slop/$_ref" ] || _slop_missing="$_slop_missing $_ref"
+  done
+  [ -z "$_slop_missing" ] \
+    && ok "anti-ai-slop: every references/ path in SKILL.md exists (AUDIT-10)" \
+    || no "anti-ai-slop: SKILL.md points at missing files —$_slop_missing (AUDIT-10)"
+fi
+
 printf -- '---\n%s passed, %s failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]
