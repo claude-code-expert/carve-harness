@@ -6,7 +6,7 @@
 
 # Claude 하네스 (언어 무관 드롭인)
 
-[English](README.en.md) · 현재 버전 **v0.10.1** ([변경 내역](CHANGELOG.md)) · [강좌](HARNESS_GUIDE.md)
+[English](README.en.md) · 현재 버전 **v0.11.0** ([변경 내역](CHANGELOG.md)) · [강좌](HARNESS_GUIDE.md)
 
 코딩 에이전트의 규칙 위반을 "설득"이 아니라 **훅 exit 2로 차단**하는 가드레일 템플릿. 프로젝트 루트에 드롭인하면 즉시 동작한다.
 
