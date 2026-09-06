@@ -19,7 +19,7 @@ harness의 **모든 HTML 산출물**을 검증된 디자인 시스템 + 제약�
 
 HTML 착수 전 아래를 **순서대로 검토·발동**한다. 방향은 풍부하게 뽑되, 실행은 anti-slop 안에서.
 
-1. **`anti-ai-slop` (하드 게이트 · 항상 · 필수)** — 시각 작업 전 **먼저 발동**. 금지 목록(그라데이션·글로우·색그림자·`blur≥20`·장식 모션·이모지 불릿·카드 상단 컬러바·마케팅 상투어)은 **예외 없음**. 최종 산출물은 이 게이트를 통과해야 한다.
+1. **`anti-ai-slop` (하드 게이트 · 항상 · 필수)** — 시각 작업 전 **먼저 발동**. 금지 목록(그라데이션·글로우·색그림자·`blur≥20`·장식 모션·이모지 불릿·카드 상단 컬러바·마케팅 상투어)은 **예외 없음**. 크래프트 상세는 `.claude/skills/anti-ai-slop/references/visual-craft.md`, 리포트 유형이면 같은 폴더의 `html-report.md`를 작성 직전 읽는다. 최종 산출물은 §5의 린터(`check-slop.mjs`)를 ERROR 0으로 통과해야 한다.
 2. **`theme-factory` (색·폰트 방향)** — 10개 프리셋(또는 즉석 생성)에서 문서 성격에 맞는 팔레트·폰트 페어링을 **능동 선택**(기술문서=차분/무채색+청록, 랜딩=대비 강한 단색, 교육=따뜻한 중립 등). **단 anti-slop이 이긴다**: 테마의 다색·그라데이션은 버리고 **무채색 베이스 + 액센트 1색 + 폰트 페어링**만 취한다.
 3. **`frontend-design` 플러그인 (레이아웃·타이포 방향)** — 템플릿 기본값(Inter/system-ui 수렴, 밋밋한 카드 나열)을 피할 **의도적 레이아웃·위계·타이포 방향** 탐색에 쓴다. anti-slop 금지 목록과 충돌하면 **금지 목록이 이긴다**.
 
@@ -79,7 +79,12 @@ run-ai.kr는 이 HTML을 `<iframe srcdoc="…">`로 감싸고 `<head>` 최상단
 ---
 
 ## 5. 검증 (완료 선언 전 필수)
-- **anti-slop 스캔 0**: `gradient`·`backdrop-filter/blur(`·`@keyframes/animation:`·색 `box-shadow`·이모지 = 모두 0.
+- **anti-slop 린터 ERROR 0** — 눈대중 금지, 스크립트가 판정한다:
+  ```bash
+  node .claude/hooks/check-slop.mjs docs/html/<파일>.html
+  ```
+  exit 0이 완료 기준. ERROR가 있으면 해당 줄을 고쳐 재작성 후 재실행한다. WARN은 판단 사항 —
+  정당하면 근거를 응답에 남긴다. rule별 치환표는 `anti-ai-slop` SKILL.md §2.
 - **헤드리스 크롬 렌더 → PNG를 열어 육안 확인**(레이아웃·줄바꿈·표 정렬).
 - **임베드 폭 시뮬레이션**(임베드 대상일 때): 호스트 `.wrap{max-width:80%!important}` 주입을 앞에 넣고 렌더 → `getComputedStyle(.wrap).maxWidth === '1000px'` 확인.
 - **사실·카운트 정합**: 문서 수치가 정본(코드·README·CHANGELOG·VERSION)과 일치.
@@ -115,7 +120,7 @@ run-ai.kr는 이 HTML을 `<iframe srcdoc="…">`로 감싸고 `<head>` 최상단
 ---
 
 ## 불변 규칙
-- 규칙 순위: **`anti-ai-slop`(하드 게이트) > theme-factory·frontend-design(방향)**. 게이트 위반 0이 완료 기준.
+- 규칙 순위: **`anti-ai-slop`(하드 게이트) > theme-factory·frontend-design(방향)**. `check-slop.mjs` **exit 0**이 완료 기준 — 프로즈 판단이 아니라 종료코드다.
 - `.wrap` 폭은 `!important`로 고정(임베드 호스트 주입을 이김), `@media print`는 `none !important`.
 - 내부 앵커는 `preventDefault`+`scrollIntoView`(해시 미변경), 외부 링크는 `a.ext`+`window.open` — SPA 임베드 호환.
 - CSS는 인라인(외부 링크 CSP 차단 대비).

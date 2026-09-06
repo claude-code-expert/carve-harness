@@ -18,12 +18,12 @@ A guardrail template that **blocks** an agent's rule violations with **hook exit
 | **Feedback** | Stop hook blocks a completion claim on build/type/lint/test failure — incremental checks on changed stacks only (runs only when the toolchain is present) |
 | **State** | Handoff auto-saved on session end/compaction (real TODOs + decisions), restored on start |
 | **Observability** | Every hook verdict logged to `logs/*.jsonl` (PII masked). A session-start banner shows the loaded configuration |
-| **Self-audit** | `/harness-audit` — 71 mechanical checks PASS/FAIL the harness configuration itself |
+| **Self-audit** | `/harness-audit` — 77 mechanical checks PASS/FAIL the harness configuration itself |
 | **Language packs** | Only detected packs are installed — rules, verify gates, scorer adapters, golden-set starters and LSP as one set. Unselected languages have no files at all |
 | **Verify loop** | `/verify-loop` — scores each implementation claim 0–100; anything under 95 is reworked. A Stop hook blocks completion while any item is short |
 | **Quantitative eval** | `/eval` — re-runs a fixed golden set k times for pass@k/pass^k and regression |
 
-**Inventory**: 20 hooks · 6 stack definitions · 6 language packs · 14 slash commands · 7 agents · 10 skills · 11 rule files · 3 workflows · 20 golden-set starters · 30 test suites (503 cases). Full lists in the [component tables](#full-component-list-skills--commands--hooks).
+**Inventory**: 22 hooks · 6 stack definitions · 6 language packs · 14 slash commands · 7 agents · 10 skills · 11 rule files · 3 workflows · 20 golden-set starters · 31 test suites (545 cases). Full lists in the [component tables](#full-component-list-skills--commands--hooks).
 
 **Cross-agent**: hook blocking is Claude Code-only. Cursor/Codex/etc. follow `AGENTS.md` as the canonical rules, with `.githooks/pre-commit` as the final gate at commit time.
 
@@ -109,7 +109,7 @@ Once installed, gates are automatic — protected-path writes are blocked, chang
 | `bash install.sh pack list\|add\|remove` | Language-pack table / add / remove |
 | `bash .claude/hooks/eval-score.sh` | Build-health scorecard `specs/SCORE.json` (no LLM) |
 | `bash .claude/hooks/logs-report.sh [days]` | Hook verdict log summary (`--tokens` per-session tokens) |
-| `npm test` | All hook test suites — 30 suites (503 cases) |
+| `npm test` | All hook test suites — 31 suites (545 cases) |
 
 Customization (protected paths, formatters, verify commands, new stacks) and the full reference live in **`GUIDE.md`**.
 
@@ -175,6 +175,8 @@ Three higher workflows sit on top of the single-session guard. None is tied to a
 |------|---------|------|
 | `pretool-guard` | PreToolUse (before Write·Edit·Bash) | Blocks protected paths, secrets, dangerous commands + self-protection (GUARD-07) + loop break (exit 2), fail-closed |
 | `posttool-format` | PostToolUse (after a write) | Detect language by extension, format (exit 0) |
+| `posttool-slop` | PostToolUse (after writing `.html·.htm·.css·.svg`) | One-line anti-slop linter summary, non-blocking (exit 0). Full report via JSONL or a manual run |
+| `check-slop.mjs` | Manual CLI · called by `posttool-slop` | Deterministic slop linter, 34 rules (HTML/CSS · SVG · MD dispatch, WCAG contrast math). `0` clean · `1` ERROR · `2` bad invocation |
 | `stop-verify` | Stop (before completion) | Changed-stack build/type/test gate (fail exit 2) |
 | `checklist-gate` | Stop (after `stop-verify`) | Blocks completion while `checklist.json` items are <95 or unscored. `domain_safety` requires 100. Self-bypass blocked (tombstone) |
 | `session-handoff` | SessionStart·PreCompact·SessionEnd | Restore/save handoff + config banner |
