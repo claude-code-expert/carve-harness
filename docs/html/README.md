@@ -8,9 +8,9 @@
 
 | 페이지 | 내용 | 링크 |
 |---|---|---|
-| 하네스 데모 | 같은 프롬프트를 하네스 없이(slop) / 하네스로(클린) 실행한 화면 비교 + 규칙 매핑 표 | [열기](https://claude-code-expert.github.io/carve-harness/docs/html/harness-demo/index.html) |
-| ├ 미적용(slop) | 하네스 없이 만든 결과 | [열기](https://claude-code-expert.github.io/carve-harness/docs/html/harness-demo/without-harness.html) |
-| └ 적용(클린) | 하네스로 만든 결과 | [열기](https://claude-code-expert.github.io/carve-harness/docs/html/harness-demo/with-harness.html) |
+| 하네스 데모 (오펜 랜딩) | 같은 근거 문서로 오펜(macOS 화면 주석 앱) 랜딩을 하네스 없이(slop) / 하네스로(클린) 만든 결과 비교 — 시각 린터 76→0 error + 사실 경계(§14) 위반 8건 대조 | [열기](https://claude-code-expert.github.io/carve-harness/docs/html/ohpen-demo/index.html) |
+| ├ 미적용(slop) | 하네스 없이 만든 결과 (check-slop 76 error) | [열기](https://claude-code-expert.github.io/carve-harness/docs/html/ohpen-demo/without-harness.html) |
+| └ 적용(클린) | carve 적용 결과 (check-slop 0 error) | [열기](https://claude-code-expert.github.io/carve-harness/docs/html/ohpen-demo/with-harness.html) |
 | carve 워크플로 가이드 | 설치→맞춤→게이트→검증 루프→골든셋 전체 흐름 | [열기](https://claude-code-expert.github.io/carve-harness/docs/html/carve-workflow-guide.html) |
 | EDD 완전 가이드 | 평가 주도 개발(Evaluator-Driven) — 골든셋·게이트·성숙도 | [열기](https://claude-code-expert.github.io/carve-harness/docs/html/edd-complete-guide.html) |
 | 평가 하네스 가이드 | 채점기·게이트·회귀 판정 구조 | [열기](https://claude-code-expert.github.io/carve-harness/docs/html/evaluation-harness-guide.html) |
@@ -18,7 +18,7 @@
 ## 로컬에서 보기
 
 ```bash
-open docs/html/harness-demo/index.html          # macOS
+open docs/html/ohpen-demo/index.html          # macOS
 xdg-open docs/html/carve-workflow-guide.html    # Linux
 ```
 

@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>carve-harness — 오펜 랜딩, 같은 프롬프트 두 결과</title>
+<!-- 폰트: 한/영/숫자 폭이 맞아 표 정렬이 어긋나지 않는 Pretendard, 룰 id·수치는 JetBrains Mono (하네스 문서 공통 디자인 시스템) -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css">
+<style>
+  /* 청중용 비교 페이지 — anti-ai-slop 게이트 + check-slop.mjs ERROR 0. 무채색 + teal 1색. */
+  :root {
+    --ink:#0F172A; --ink-mute:#475569; --ink-faint:#64748B;
+    --bg:#FFFFFF; --surface:#F8FAFC; --surface-2:#F1F5F9;
+    --border:#E2E8F0; --border-2:#CBD5E1;
+    --accent:#0F766E; --accent-bg:#F0FDFA;
+    --warn:#B45309; --warn-bg:#FFFBEB; --good:#15803D; --good-bg:#F0FDF4;
+    --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+    --sans:"Pretendard Variable",Pretendard,-apple-system,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:var(--sans); color:var(--ink); background:var(--bg); font-size:16px; line-height:1.7; -webkit-font-smoothing:antialiased; }
+  .wrap { width:min(96vw, 1180px); margin:0 auto; padding:56px 28px 96px; }
+
+  header.head { border-bottom:1px solid var(--border); padding-bottom:24px; margin-bottom:32px; }
+  .eyebrow { font-family:var(--mono); font-size:12px; letter-spacing:0.08em; text-transform:uppercase; color:var(--accent); margin-bottom:12px; }
+  h1 { font-size:32px; line-height:1.2; font-weight:700; letter-spacing:-0.02em; }
+  .head p { color:var(--ink-mute); margin-top:12px; max-width:800px; }
+
+  h2 { font-size:25px; line-height:1.3; font-weight:700; margin:48px 0 12px; padding-bottom:8px; border-bottom:1px solid var(--border); }
+  h2 .part { font-family:var(--mono); font-size:12px; color:var(--accent); margin-right:10px; }
+  h3 { font-size:20px; line-height:1.4; font-weight:700; margin:32px 0 8px; }
+  p { margin:0 0 12px; }
+
+  .prompt { font-family:var(--mono); font-size:13px; line-height:1.7; background:var(--surface); border:1px solid var(--border); border-left:3px solid var(--accent); padding:16px 18px; white-space:pre-wrap; }
+
+  .compare { display:grid; grid-template-columns:1fr 1fr; gap:20px; margin:8px 0; }
+  .pane { border:1px solid var(--border); display:flex; flex-direction:column; min-width:0; }
+  .pane .bar { display:flex; align-items:baseline; justify-content:space-between; gap:8px; padding:12px 14px; border-bottom:1px solid var(--border); }
+  .pane .bar .t { font-weight:700; font-size:16px; }
+  .pane.off .bar { background:var(--warn-bg); }
+  .pane.on  .bar { background:var(--good-bg); }
+  .pane .bar .tag { font-family:var(--mono); font-size:12px; padding:2px 8px; border:1px solid var(--border-2); white-space:nowrap; }
+  .pane.off .bar .tag { color:var(--warn); border-color:#FDE68A; }
+  .pane.on  .bar .tag { color:var(--good); border-color:#BBF7D0; }
+  /* 1280 고정폭 랜딩을 0.44 배율로 미리보기 — 정적 축소(모션 아님) */
+  .pane .view { position:relative; height:640px; overflow:hidden; background:#fff; }
+  .pane iframe { position:absolute; left:0; top:0; width:1280px; height:1455px; border:0; transform:scale(.44); transform-origin:0 0; }
+  .pane .foot { font-size:13px; color:var(--ink-faint); padding:8px 14px; border-top:1px solid var(--border); font-family:var(--mono); display:flex; justify-content:space-between; gap:8px; }
+  .pane .foot a { color:var(--accent); text-decoration:none; border-bottom:1px solid var(--border); }
+
+  table { width:100%; border-collapse:collapse; margin:14px 0 20px; font-size:14px; line-height:1.6; }
+  th, td { border:1px solid var(--border); padding:10px 12px; text-align:left; vertical-align:top; }
+  th { background:var(--surface); font-weight:600; font-size:13px; }
+  td.off { color:var(--warn); }
+  td.on  { color:var(--good); }
+  td code, p code, li code { font-family:var(--mono); font-size:0.86em; background:var(--surface); border:1px solid var(--border); padding:1px 5px; }
+
+  .score { display:grid; grid-template-columns:1fr 1fr; gap:20px; margin:16px 0 8px; }
+  .score div { border:1px solid var(--border); padding:16px 18px; }
+  .score .k { font-family:var(--mono); font-size:32px; line-height:1.1; font-weight:600; }
+  .score .v { font-size:13px; color:var(--ink-mute); margin-top:4px; }
+  .score .off .k { color:var(--warn); }
+  .score .on .k { color:var(--good); }
+
+  .callout { border:1px solid var(--border-2); background:var(--surface); padding:16px 18px; margin:20px 0; }
+  .callout .label { font-family:var(--mono); font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:var(--ink-mute); display:block; margin-bottom:8px; }
+  .callout.accent { background:var(--accent-bg); border-color:#99F6E4; }
+  .callout.accent .label { color:var(--accent); }
+  .callout p:last-child { margin-bottom:0; }
+  ul { margin:6px 0 0 20px; } li { margin:3px 0; }
+
+  footer.foot { margin-top:64px; padding-top:22px; border-top:1px solid var(--border); font-family:var(--mono); font-size:12px; color:var(--ink-faint); }
+
+  @media (max-width:1100px){
+    .compare, .score { grid-template-columns:1fr; }
+    .pane .view { height:720px; }
+    .pane iframe { transform:scale(.7); height:1030px; }
+    .wrap { width:100%; padding:32px 20px 64px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="head">
+    <p class="eyebrow">carve-harness · 적용 전/후 비교 · 오펜 랜딩</p>
+    <h1>같은 프롬프트, 같은 근거 문서, 두 결과</h1>
+    <p>macOS 화면 주석 앱 <strong>오펜(ohpen)</strong>의 랜딩 페이지를 같은 에이전트(Claude · Fable 5.1)에게 두 번 만들게 했습니다. 한 번은 <strong>하네스 없이</strong>, 한 번은 <strong>carve 하네스를 적용해</strong>. 근거 문서(제품 정의·카피·기능·단축키·설정·FAQ·구조·디자인 토큰·표현 경계)는 두 번 다 동일하게 주었습니다.</p>
+    <p>차이는 취향이 아니라 <strong>규칙이 강제한 것</strong>입니다. 왼쪽은 시각 slop과 함께 <em>근거 문서가 금지한 사실</em>까지 채워 넣었고, 오른쪽은 anti-ai-slop 린터 ERROR 0에 더해 미결정 항목을 비워 둔 채로 정본 카피만 썼습니다.</p>
+  </header>
+
+  <section>
+    <h2><span class="part">PROMPT</span>두 버전에 동일하게 준 요청</h2>
+    <div class="prompt">오펜(macOS 트레이 상주형 화면 주석 앱) 랜딩 페이지를 단일 HTML로 만들어줘.
+근거 문서: docs/html/open-demo/landing/ — landing_page.md(정본, 2026-09-06) · landing-content-spec.md · faq.md · whats-new.md · assets/settings-full@2x.png
+구성: 네비 · 히어로 · 문제 3카드 · 해법 · 도구 8종 그리드 · 딥다이브 · 단축키 표 · 설정 매뉴얼 · CTA · FAQ · 푸터. 디자인은 자유.</div>
+  </section>
+
+  <section>
+    <h2><span class="part">RESULT</span>나란히 보기</h2>
+    <div class="score">
+      <div class="off"><div class="k">76 error · 49 warn</div><div class="v">하네스 미적용 — check-slop.mjs 판정, MUST-NOT 위반 13종</div></div>
+      <div class="on"><div class="k">0 error · 3 warn</div><div class="v">하네스 적용 — WARN 3건은 판단 근거 기록(아래 WHY)</div></div>
+    </div>
+    <div class="compare">
+      <div class="pane off">
+        <div class="bar"><span class="t">하네스 미적용</span><span class="tag">76 error</span></div>
+        <div class="view"><iframe src="without-harness.html" title="하네스 미적용 — 오펜 랜딩" loading="lazy"></iframe></div>
+        <div class="foot"><span>without-harness.html · 0.44 배율</span><a href="without-harness.html" target="_blank" rel="noopener noreferrer">원본 열기</a></div>
+      </div>
+      <div class="pane on">
+        <div class="bar"><span class="t">하네스 적용</span><span class="tag">0 error</span></div>
+        <div class="view"><iframe src="with-harness.html" title="하네스 적용 — 오펜 랜딩" loading="lazy"></iframe></div>
+        <div class="foot"><span>with-harness.html · 0.44 배율</span><a href="with-harness.html" target="_blank" rel="noopener noreferrer">원본 열기</a></div>
+      </div>
+    </div>
+    <p style="font-size:13px;color:var(--ink-mute);">미리보기는 1280px 고정폭 랜딩을 축소한 것입니다. 스크롤은 각 창 안에서, 원본은 "원본 열기"로 새 창에서 봅니다.</p>
+  </section>
+
+  <section>
+    <h2><span class="part">DIFF 1</span>시각 — 무엇이 달라졌나 (요소 → 린터 룰)</h2>
+    <table>
+      <thead><tr><th style="width:14%;">요소</th><th style="width:32%;">하네스 미적용</th><th style="width:28%;">하네스 적용</th><th style="width:26%;">린터 룰 · 근거</th></tr></thead>
+      <tbody>
+        <tr><td>배경·채움</td><td class="off">보라→핑크→주황 그라데이션 15곳, 광선 <code>blur(90px)</code>, 닷 그리드</td><td class="on">단색 <code>#1C2024</code>(앱 팔레트) + 1px 보더</td><td><code>gradient</code> ×15 · <code>watermark</code></td></tr>
+        <tr><td>제목</td><td class="off">텍스트 채움 그라데이션(클립 방식) 5곳</td><td class="on">단색 텍스트, 위계는 56/36/22px 크기·굵기</td><td><code>gradient-text</code> ×5</td></tr>
+        <tr><td>카드</td><td class="off">글래스모피즘 5 · 컬러 그림자 11 · 대형 그림자 10 · 상단 액센트 바</td><td class="on">1px 보더 + 여백, 그림자 없음</td><td><code>glassmorphism</code> <code>colored-shadow</code> <code>big-shadow</code> <code>accent-bar</code></td></tr>
+        <tr><td>모션</td><td class="off">float·pulse 키프레임, hover <code>scale</code>·<code>translateY</code>, <code>.35s</code> 전환</td><td class="on">색 변화 120ms만(버튼·링크)</td><td><code>keyframes</code> <code>hover-transform</code> ×5 <code>slow-transition</code> ×5 <code>motion-decor</code></td></tr>
+        <tr><td>모서리</td><td class="off">radius 20~28px, pill 8곳</td><td class="on">카드·버튼 8 · kbd 6 · 글리프 4</td><td><code>radius-cap</code> ×3 · <code>pill</code>(warn)</td></tr>
+        <tr><td>아이콘·불릿</td><td class="off">이모지 32개(제목·카드·체크 불릿·푸터)</td><td class="on">무채색 번호(01·02·03)와 단순 글리프</td><td><code>emoji</code> ×32(warn) — 전부 장식</td></tr>
+        <tr><td>카피</td><td class="off">영문·한글 마케팅 상투어 11건, 느낌표 다수</td><td class="on">정본 문서 카피 그대로, 구체 수치(24–96px, 1.2×–2.0×)</td><td><code>marketing</code> ×11 · <code>exclamation</code></td></tr>
+        <tr><td>폰트</td><td class="off"><code>system-ui</code> 기본 수렴</td><td class="on">Pretendard + JetBrains Mono, 선택 이유 주석</td><td><code>font-default</code>(warn)</td></tr>
+        <tr><td>정렬·색</td><td class="off">전 섹션 중앙 정렬, 유채색 6종</td><td class="on">히어로만 중앙, 본문 좌측 · 액센트 1색(앱 펜 색)</td><td><code>centered-everything</code> <code>multi-accent</code>(warn)</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2><span class="part">DIFF 2</span>사실 — 근거 문서가 금지한 것을 썼나</h2>
+    <p>이번 데모에서 새로 드러나는 차이입니다. 근거 문서 <code>landing_page.md</code> §0.2·§14는 "홈페이지가 단정해도 되는 것"과 "절대 쓰면 안 되는 것"을 항목별로 정해 두었고, 미결정 14건(T-01~T-14)은 임의로 채우지 말라고 명시합니다. 시각 게이트는 이걸 잡지 못합니다. 잡는 건 <strong>규칙</strong>입니다.</p>
+    <table>
+      <thead><tr><th style="width:16%;">주제</th><th style="width:30%;">하네스 미적용 (문서 위반)</th><th style="width:28%;">하네스 적용</th><th style="width:26%;">막은 규칙</th></tr></thead>
+      <tbody>
+        <tr><td>플랫폼</td><td class="off">"Windows도 곧 지원", Windows 10/11 Coming Soon, 단축키에 Ctrl 조합 병기</td><td class="on">"macOS 전용 · Apple Silicon". Windows 언급 없음, 키 표기 macOS 단일</td><td>§14.1 플랫폼 — Windows 빌드 부재, 일정 암시 금지</td></tr>
+        <tr><td>네트워크</td><td class="off">"100% 오프라인 · 서버 없음"</td><td class="on">"네트워크 통신은 트레이 메뉴를 열 때의 업데이트 확인뿐"</td><td>§14.1 네트워크 — 업데이트 확인 1회 존재, "전혀 안 쓴다" 금지</td></tr>
+        <tr><td>성능·용량</td><td class="off">"초경량 45MB · 메모리 80MB"</td><td class="on">"브라우저 런타임을 통째로 끌고 다니지 않는 네이티브 앱", "Dock을 차지하지 않음"</td><td>§14.1·§14.2 — 실측 약 208MB, 메모리 근거 금지 → 동작 특성으로</td></tr>
+        <tr><td>비용·에디션</td><td class="off">Free/Pro/Team 요금제, "모든 도구 잠금 해제", 클라우드 동기화(Pro)</td><td class="on">"무료 오픈소스(MIT)", 에디션·요금 언급 없음</td><td>§14.1 비용 — 단일 빌드, 기능 구분 코드 경로 없음</td></tr>
+        <tr><td>버전·다운로드</td><td class="off">"v0.2.0 출시", <code>ohpen-0.2.0.dmg</code> 링크 4곳</td><td class="on">"현재 배포 v0.1.6 · v0.2.0 링크는 배포 후", 버튼 <code>aria-disabled</code></td><td>§14.1 버전 · T-02 — 미배포 버전 다운로드 표현 금지</td></tr>
+        <tr><td>품질 근거</td><td class="off">"1,000+ 테스트 전부 통과", "50K+ 사용자", "별점 4.9"</td><td class="on">수치 미게재</td><td>§14.3 — Playwright 245 중 39 실패, "전부 통과" 금지 · <code>CLAUDE.md</code> 미검증 완료 선언 금지</td></tr>
+        <tr><td>스펙 수치</td><td class="off">"macOS 10.13+", "줌 최대 4배", "AI 손떨림 보정", "무제한 모니터"</td><td class="on">최소 OS 미기입(T-04), 줌 1.2×–2.0×, 속도 기반 스무딩, 모니터당 오버레이 1개</td><td>§0.3 미결정 항목 임의 기입 금지 · §5 실동작 기준</td></tr>
+        <tr><td>자산</td><td class="off">없는 GIF·캡처 자리를 장식으로 메움</td><td class="on">T-05/06/07 점선 자리표시 + 항목 번호, 설정 캡처는 재촬영 예정(T-11) 명기</td><td>AGENTS §1 — 비어 있는 입력을 채운 척 금지</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2><span class="part">DIFF 3</span>안전·접근성</h2>
+    <table>
+      <thead><tr><th style="width:16%;">항목</th><th style="width:34%;">하네스 미적용</th><th style="width:26%;">하네스 적용</th><th style="width:24%;">막은 규칙 / 도구</th></tr></thead>
+      <tbody>
+        <tr><td>시크릿</td><td class="off">뉴스레터 위젯에 API 키 하드코딩, 결과 문구에 키 출력</td><td class="on">정적 랜딩에 입력 폼·키 없음(수집·전송 없음 약속과 정합)</td><td><code>safety.md</code> · <code>common/security.md</code> · <code>pretool-guard</code> GUARD-04</td></tr>
+        <tr><td>XSS</td><td class="off">사용자 입력을 <code>innerHTML</code>로 렌더</td><td class="on">동적 렌더 없음(앵커 스크롤 스크립트만)</td><td>AGENTS §0 미검증 HTML 렌더 금지</td></tr>
+        <tr><td>접근성</td><td class="off"><code>label</code>·<code>aria</code> 없음, 이미지 대체 텍스트 없음</td><td class="on"><code>nav aria-label</code>, 자리표시 <code>role="img"</code> + <code>aria-label</code>, 캡처 <code>alt</code>, 비활성 버튼 <code>aria-disabled</code></td><td>스택 규칙 a11y · WCAG AA 대비(린터 <code>contrast-aa</code>)</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2><span class="part">WHY</span>핵심 — "취향"이 아니라 "게이트"</h2>
+    <div class="callout accent">
+      <span class="label">이 데모가 말하는 것</span>
+      <p>오른쪽 결과는 운 좋게 잘 나온 게 아닙니다. 시각 작업 <em>전에</em> <code>anti-ai-slop</code> 스킬이 발동되고, 파일을 쓰는 <em>즉시</em> PostToolUse 훅이 <code>check-slop.mjs</code>를 돌려 ERROR 수를 보고하며, ERROR 0이 될 때까지 재작성하도록 강제됩니다. 눈대중이 아니라 종료코드가 완료 기준입니다.</p>
+      <p style="margin-top:8px;">사실 경계는 다른 층에서 막힙니다. <code>CLAUDE.md</code>의 "미검증 완료 선언 금지", AGENTS의 "빈 입력을 채운 척 금지", 그리고 근거 문서 자체의 §14 표현 경계를 <strong>정본으로 읽고 따르는 규칙</strong>입니다. 왼쪽은 문서를 읽고도 마케팅 관성으로 덮어썼고, 오른쪽은 문서가 비워 둔 곳을 비워 두었습니다.</p>
+    </div>
+
+    <h3>이번에 실제로 작동한 하네스 구성</h3>
+    <ul style="color:var(--ink-mute);">
+      <li><strong>스킬</strong> — <code>anti-ai-slop</code>(하드 게이트 + <code>references/visual-craft.md</code> 크래프트), <code>carve-guide</code>(디자인 시스템·임베드 안전)</li>
+      <li><strong>훅</strong> — <code>posttool-slop</code>(쓰기 직후 린터 요약, 리포트 전용) · <code>check-slop.mjs</code>(결정론 판정, 의존성 0) · <code>pretool-guard</code>(시크릿 쓰기 차단)</li>
+      <li><strong>규칙</strong> — <code>safety.md</code> · <code>common/security.md</code> · 루트 <code>CLAUDE.md</code> 절대 금지 · AGENTS §0·§1</li>
+      <li><strong>정본 우선</strong> — <code>landing_page.md</code>(2026-09-06)가 구 스펙(07-10)과 어긋나는 6곳(Windows·에디션·네트워크·메모리·Enter 동작·효과 기본값)은 최신 정본을 따름</li>
+    </ul>
+
+    <h3>적용본에 남긴 WARN 3건과 판단</h3>
+    <table>
+      <thead><tr><th style="width:22%;">룰</th><th style="width:38%;">지적</th><th>유지한 이유</th></tr></thead>
+      <tbody>
+        <tr><td><code>multi-accent</code></td><td>유채색 3종(<code>#E5484D</code> <code>#D2383D</code> <code>#0090FF</code>)</td><td>브랜드 블루는 로고 마크 안에서만 — 정본 §12.1이 "아이콘 안에서만" 허용. 두 번째는 액센트의 hover 명도 변형(같은 색상).</td></tr>
+        <tr><td><code>line-height-body</code></td><td>13px 텍스트 line-height 1</td><td><code>kbd</code> 인라인 칩의 값이지 본문이 아님. 본문은 17/28.</td></tr>
+        <tr><td><code>pill</code></td><td>radius 50%</td><td>"원형 박스" 도구 글리프 — 원형 그 자체가 의미.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <footer class="foot">
+    docs/html/ohpen-demo/ · carve-harness v0.10.1 · anti-ai-slop v2 (check-slop.mjs) · 작업: Claude (Fable 5.1) · 좌: without-harness.html(무가드) · 우: with-harness.html(carve 적용)
+  </footer>
+
+</div>
+</body>
+</html>
