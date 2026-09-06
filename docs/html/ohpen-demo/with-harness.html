@@ -1,0 +1,449 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>오펜 — 화면 위에, 바로 그리세요</title>
+<!-- 폰트: 한국어 카피의 자간·낱글자 균형과 무게 대비가 커 위계를 크기+굵기만으로 만들 수 있는 Pretendard Variable, 단축키·수치는 0/O·1/l 구분이 명확한 JetBrains Mono (landing_page.md §12.2) -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  /* 하네스 적용 — anti-ai-slop 하드 게이트 + check-slop.mjs ERROR 0 + carve-guide.
+     토큰은 앱 팔레트와 단일 소스(landing_page.md §12.1). 다크 단일 테마, 무채색 + 액센트 1색(앱 기본 펜 색).
+     카피는 landing_page.md(2026-09-06 정본)를 그대로 옮겼고, 미결정 항목(T-xx)은 임의로 채우지 않았다. */
+  :root {
+    --bg: #1C2024;
+    --surface: #2B2D30;
+    --border: rgba(255,255,255,.08);
+    --line: rgba(255,255,255,.05);
+    --text: #EDEEF0;
+    --muted: #9BA1A6;
+    --accent: #E5484D;
+    --accent-hover: #D2383D;
+    --kbd-bg: #17191C;
+    --sans: "Pretendard Variable", Pretendard, -apple-system, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+    --s2: 8px; --s3: 16px; --s4: 24px; --s5: 40px; --s6: 64px; --s7: 96px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { background: var(--bg); }
+  body { font-family: var(--sans); color: var(--text); background: var(--bg); font-size: 17px; line-height: 28px; -webkit-font-smoothing: antialiased; }
+  a { color: inherit; text-decoration: none; }
+  h1, h2, h3 { letter-spacing: -0.01em; }
+  h1 { font-size: 56px; line-height: 68px; font-weight: 700; letter-spacing: -0.02em; }
+  h2 { font-size: 36px; line-height: 48px; font-weight: 700; }
+  h3 { font-size: 22px; line-height: 32px; font-weight: 600; }
+  .cap { font-size: 14px; line-height: 22px; color: var(--muted); }
+  .lead { font-size: 17px; line-height: 28px; color: var(--muted); }
+
+  /* 1280 고정 컨테이너, 좌우 80 → 콘텐츠 1120 (§11.1). 1280 미만은 가운데 정렬로만 유지 */
+  .container { width: 1280px; margin: 0 auto; padding: 0 80px; }
+  @media (max-width: 1279px) { .container { width: 100%; padding: 0 24px; } }
+  section { padding: var(--s7) 0; border-bottom: 1px solid var(--border); }
+  section > .container > h2 { margin-bottom: var(--s2); }
+  section > .container > .lead { margin-bottom: var(--s5); }
+
+  kbd { font-family: var(--mono); font-size: 13px; line-height: 1; background: var(--kbd-bg); border: 1px solid var(--border); border-radius: 6px; padding: 3px 8px; white-space: nowrap; }
+  .num { font-family: var(--mono); }
+
+  .btn { display: inline-block; font-size: 17px; line-height: 28px; font-weight: 600; padding: 14px 28px; border-radius: 8px; border: 1px solid transparent; transition: background-color 120ms ease, border-color 120ms ease; }
+  .btn-primary { background: var(--accent); color: #FFFFFF; }
+  .btn-primary:hover { background: var(--accent-hover); }
+  .btn-primary[aria-disabled="true"] { background: var(--surface); color: var(--muted); border-color: var(--border); cursor: not-allowed; }
+  .btn-secondary { border-color: rgba(255,255,255,.2); color: var(--text); }
+  .btn-secondary:hover { border-color: rgba(255,255,255,.4); }
+
+  /* 미결정 자산 자리 — 임의 이미지로 채우지 않고 항목 번호를 남긴다 */
+  .tbd { border: 1px dashed rgba(255,255,255,.2); border-radius: 8px; display: flex; align-items: center; justify-content: center; text-align: center; padding: var(--s4); }
+  .tbd span { font-family: var(--mono); font-size: 13px; line-height: 20px; color: var(--muted); }
+
+  /* S0 네비 */
+  .nav { height: 64px; border-bottom: 1px solid var(--border); }
+  .nav .container { height: 100%; display: flex; align-items: center; justify-content: space-between; }
+  .wordmark { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 20px; }
+  .wordmark .mark { width: 28px; height: 28px; border-radius: 6px; background: #0090FF; position: relative; }
+  .wordmark .mark::after { content: ""; position: absolute; left: 8px; top: 8px; width: 12px; height: 12px; border-radius: 2px; background: #FFFFFF; }
+  .nav ul { display: flex; align-items: center; gap: var(--s4); list-style: none; }
+  .nav ul a { font-size: 15px; line-height: 24px; color: var(--muted); transition: color 120ms ease; }
+  .nav ul a:hover { color: var(--text); }
+  .nav .btn { font-size: 15px; line-height: 24px; padding: 8px 16px; }
+
+  /* S1 히어로 — 유일하게 중앙 정렬 (§11.2) */
+  .hero { text-align: center; padding: var(--s7) 0 var(--s6); }
+  .hero h1 { max-width: 760px; margin: 0 auto var(--s3); }
+  .hero .lead { max-width: 640px; margin: 0 auto var(--s5); }
+  .hero .actions { display: flex; gap: 12px; justify-content: center; margin-bottom: var(--s3); }
+  .hero .cap { margin-bottom: var(--s6); }
+  .hero .visual { width: 960px; max-width: 100%; height: 480px; margin: 0 auto; }
+
+  /* S2 문제 · S4 기능 그리드 — 카드 = 1px 보더, radius 8, 그림자 없음 */
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--s4); }
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--s4); }
+  .card { border: 1px solid var(--border); border-radius: 8px; padding: 32px; background: transparent; }
+  .card h3 { margin-bottom: 12px; }
+  .card p { color: var(--muted); }
+  .card .n { font-family: var(--mono); font-size: 13px; line-height: 20px; color: var(--muted); margin-bottom: var(--s3); }
+  .tool { padding: 24px; }
+  .tool .glyph { width: 24px; height: 24px; border: 2px solid var(--text); border-radius: 4px; margin-bottom: var(--s3); }
+  .tool .glyph.round { border-radius: 50%; }
+  .tool .glyph.line { height: 2px; border: 0; background: var(--text); margin-top: 11px; margin-bottom: 27px; }
+  .tool h3 { font-size: 17px; line-height: 28px; margin-bottom: 4px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .tool p { font-size: 15px; line-height: 24px; }
+
+  /* S3 해법 — 좌 480 / 우 592 */
+  .split { display: grid; grid-template-columns: 480px 592px; gap: 48px; align-items: start; }
+  .split ol { list-style: none; counter-reset: sol; }
+  .split ol li { counter-increment: sol; padding: var(--s4) 0; border-top: 1px solid var(--border); }
+  .split ol li:first-child { border-top: 0; padding-top: 0; }
+  .split ol li::before { content: counter(sol, decimal-leading-zero); font-family: var(--mono); font-size: 13px; color: var(--muted); display: block; margin-bottom: var(--s2); }
+  .split ol h3 { margin-bottom: var(--s2); }
+  .split ol p { color: var(--muted); }
+  .split .visual { height: 440px; }
+  .trust { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--s4); margin-top: var(--s6); padding-top: var(--s5); border-top: 1px solid var(--border); }
+  .trust h3 { font-size: 17px; line-height: 28px; margin-bottom: 4px; }
+  .trust p { font-size: 15px; line-height: 24px; color: var(--muted); }
+
+  /* S5 딥다이브 — 이미지 640 / 텍스트 448, 좌우 교차 */
+  .dive { display: grid; grid-template-columns: 640px 448px; gap: 32px; align-items: center; padding: var(--s6) 0; border-top: 1px solid var(--border); }
+  .dive:first-of-type { border-top: 0; padding-top: 0; }
+  .dive.flip { grid-template-columns: 448px 640px; }
+  .dive.flip .visual { order: 2; }
+  .dive .visual { height: 400px; }
+  .dive .k { font-family: var(--mono); font-size: 13px; line-height: 20px; color: var(--muted); margin-bottom: var(--s2); }
+  .dive h3 { margin-bottom: var(--s3); }
+  .dive p { color: var(--muted); }
+  .dive p + p { margin-top: var(--s3); }
+  .dive .note { font-size: 14px; line-height: 22px; border-left: 2px solid var(--accent); padding-left: 12px; margin-top: var(--s3); color: var(--text); }
+
+  /* S6 단축키 표 · S7 설정 표 — 헤더 1px 하단 보더, 행 구분선 .05, 교차색 없음 */
+  table { width: 100%; border-collapse: collapse; font-size: 15px; line-height: 24px; }
+  th { text-align: left; font-weight: 600; padding: 12px 16px; border-bottom: 1px solid var(--border); color: var(--muted); font-size: 14px; }
+  td { padding: 12px 16px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  tr:last-child td { border-bottom: 0; }
+  .sheet { background: var(--surface); border-radius: 8px; padding: var(--s2) var(--s3); }
+  .sheet .foot { padding: var(--s3); font-size: 14px; line-height: 22px; color: var(--muted); border-top: 1px solid var(--border); }
+  .sheet .foot p + p { margin-top: 4px; }
+
+  /* S7 설정 매뉴얼 — 좌 448 리스트 / 우 592 sticky 캡처(표시폭 420) */
+  .manual { display: grid; grid-template-columns: 448px 592px; gap: 80px; align-items: start; }
+  .manual dl { display: grid; grid-template-columns: 1fr; }
+  .manual dt { font-weight: 600; margin-top: var(--s4); padding-top: var(--s4); border-top: 1px solid var(--border); }
+  .manual dt:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
+  .manual dd { color: var(--muted); font-size: 15px; line-height: 24px; margin-top: 4px; }
+  .manual dd b { color: var(--text); font-weight: 500; }
+  .manual .shot { position: sticky; top: 24px; }
+  .manual .shot img { display: block; width: 420px; height: auto; border: 1px solid var(--border); border-radius: 8px; }
+  .manual .shot .cap { margin-top: var(--s2); width: 420px; }
+
+  /* S8 CTA 밴드 */
+  .band { background: var(--surface); border-radius: 8px; padding: var(--s6) var(--s5); text-align: center; }
+  .band h2 { margin-bottom: var(--s2); }
+  .band .lead { margin-bottom: var(--s4); }
+  .band .actions { display: flex; gap: 12px; justify-content: center; }
+
+  /* S9 FAQ */
+  .faq { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s4) 48px; }
+  .faq div { padding-top: var(--s3); border-top: 1px solid var(--border); }
+  .faq h3 { font-size: 17px; line-height: 28px; margin-bottom: var(--s2); }
+  .faq p { font-size: 15px; line-height: 24px; color: var(--muted); }
+
+  /* S10 푸터 */
+  footer { padding: var(--s5) 0 var(--s6); }
+  footer .row { display: flex; justify-content: space-between; align-items: baseline; gap: var(--s4); flex-wrap: wrap; }
+  footer .row + .row { margin-top: var(--s3); }
+  footer p, footer li { font-size: 14px; line-height: 22px; color: var(--muted); }
+  footer ul { display: flex; gap: var(--s3); list-style: none; }
+  footer .built { margin-top: var(--s5); padding-top: var(--s3); border-top: 1px solid var(--border); font-family: var(--mono); font-size: 12px; line-height: 20px; color: var(--muted); }
+</style>
+</head>
+<body>
+
+<header class="nav" id="top">
+  <div class="container">
+    <a class="wordmark" href="#top" aria-label="오펜 홈"><span class="mark" aria-hidden="true"></span>ohpen</a>
+    <nav aria-label="주 메뉴">
+      <ul>
+        <li><a href="#features">기능</a></li>
+        <li><a href="#shortcuts">단축키</a></li>
+        <li><a href="#settings">설정</a></li>
+        <li><a href="#faq">FAQ</a></li>
+        <li><a class="btn btn-primary" href="#download" aria-disabled="true" title="v0.2.0 배포 후 활성화">다운로드</a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <section class="hero" id="download">
+    <div class="container">
+      <h1>화면 위에, 바로 그리세요</h1>
+      <p class="lead">발표·강의·데모 중 화면 전체가 캔버스가 됩니다. 그린 것은 남기고, 핵심을 보여주며 발표를 계속하세요.</p>
+      <div class="actions">
+        <a class="btn btn-primary" href="#download" aria-disabled="true" role="button">macOS용 다운로드</a>
+        <a class="btn btn-secondary" href="#features">기능 살펴보기</a>
+      </div>
+      <p class="cap">macOS 전용 · Apple Silicon · 서명·공증 완료 · 무료 오픈소스(MIT)<br>현재 배포 버전 v0.1.6 · v0.2.0(오픈소스 전환) 다운로드 링크는 배포 후 열립니다</p>
+      <div class="visual tbd" role="img" aria-label="히어로 비주얼 자리"><span>히어로 비주얼 — 제작 전 (T-05)<br>슬라이드 위 형광펜 → 화살표 → 클릭 통과 15초 시퀀스</span></div>
+    </div>
+  </section>
+
+  <section id="problem">
+    <div class="container">
+      <h2>기존 프레젠테이션 포인터의 한계</h2>
+      <p class="lead">발표의 절반은 슬라이드 밖에서 일어납니다.</p>
+      <div class="grid-3">
+        <article class="card">
+          <p class="n">01</p>
+          <h3>레이저 포인터는 화면에 남지 않는다</h3>
+          <p>물리 레이저는 녹화와 화상 공유에 잡히지 않고, 온라인 발표에서는 아예 무용지물입니다. 가리키는 순간이 지나면 아무것도 남지 않습니다.</p>
+        </article>
+        <article class="card">
+          <p class="n">02</p>
+          <h3>슬라이드 펜은 슬라이드 밖에서 무력하다</h3>
+          <p>Keynote·PowerPoint의 내장 펜은 그 앱의 슬라이드쇼 안에서만 동작합니다. 브라우저, IDE, 라이브 데모, 바탕화면에서는 쓸 수 없습니다.</p>
+        </article>
+        <article class="card">
+          <p class="n">03</p>
+          <h3>그리는 순간, 화면이 멈춘다</h3>
+          <p>기존 화면 주석 도구는 그리는 동안 아래 앱 클릭을 막습니다. 스크롤 한 번 하려면 주석을 지우고 모드를 빠져나가야 합니다. 발표 흐름이 끊깁니다.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section id="solution">
+    <div class="container">
+      <h2>오펜은 이렇게 다릅니다</h2>
+      <p class="lead">위의 세 문제에 하나씩 대응합니다.</p>
+      <div class="split">
+        <ol>
+          <li>
+            <h3>화면 그 자체가 캔버스</h3>
+            <p>투명 오버레이가 모든 앱 위를 덮습니다. 브라우저든 IDE든 슬라이드든, 지금 보이는 화면 위에 바로 그립니다. 그린 것은 화면에 남습니다.</p>
+          </li>
+          <li>
+            <h3>단축키 한 번, 어디서든</h3>
+            <p><kbd>⇧⌘D</kbd> 한 번이면 드로잉 모드. 어떤 앱을 쓰고 있든 즉시 펜이 나옵니다.</p>
+          </li>
+          <li>
+            <h3>그린 채로 계속 진행</h3>
+            <p>드로잉 모드를 꺼도 주석은 화면에 그대로 남고 클릭은 아래 앱으로 통과합니다. 드로잉 모드 안에서도 드래그는 그리고 클릭은 아래 앱으로 통과하며, <kbd>⌥Space</kbd>를 누르고 있는 동안에는 스크롤·타이핑까지 아래 앱이 받습니다.</p>
+          </li>
+        </ol>
+        <div class="visual tbd" role="img" aria-label="클릭 통과 비교 비주얼 자리"><span>클릭 통과 전·후 비교 — 제작 전 (T-06)</span></div>
+      </div>
+      <div class="trust">
+        <div>
+          <h3>네이티브 앱</h3>
+          <p>Tauri(Rust) 기반. 브라우저 런타임을 통째로 끌고 다니지 않습니다. Dock을 차지하지 않고 메뉴 막대에만 상주합니다.</p>
+        </div>
+        <div>
+          <h3>프라이버시</h3>
+          <p>네트워크는 트레이 메뉴를 열 때의 업데이트 확인 한 번뿐입니다. 화면 픽셀은 '화면 확대'를 실행한 순간에만 읽습니다.</p>
+        </div>
+        <div>
+          <h3>서명·공증 완료</h3>
+          <p>Apple Developer ID 코드 서명 + Apple 공증을 통과한 DMG로 배포합니다.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="features">
+    <div class="container">
+      <h2>도구 8종</h2>
+      <p class="lead">발표에 필요한 것만. 펜부터 화면 확대까지 8가지 도구와 3가지 모드.</p>
+      <div class="grid-4">
+        <article class="card tool"><span class="glyph line" aria-hidden="true"></span><h3>펜 <kbd>⇧⌘D</kbd></h3><p>속도 기반 스트로크 스무딩. 마우스로도 손글씨 같은 선.</p></article>
+        <article class="card tool"><span class="glyph line" aria-hidden="true"></span><h3>형광펜 <kbd>⇧⌘H</kbd></h3><p>multiply 합성 반투명 선. Shift로 45° 스냅 직선 바. 네온 6색.</p></article>
+        <article class="card tool"><span class="glyph" aria-hidden="true"></span><h3>네모 박스 <kbd>⇧⌘B</kbd></h3><p>드래그로 사각형. Shift면 정사각형. 테두리 색·내부 채움 온오프.</p></article>
+        <article class="card tool"><span class="glyph round" aria-hidden="true"></span><h3>원형 박스 <kbd>⇧⌘O</kbd></h3><p>드래그로 타원. Shift면 정원. 테두리·채움 규칙은 네모와 같음.</p></article>
+        <article class="card tool"><span class="glyph line" aria-hidden="true"></span><h3>화살표 <kbd>⇧⌘A</kbd></h3><p>끝 모양 3종(화살촉·손가락·이미지). Shift로 수평·수직·45° 스냅.</p></article>
+        <article class="card tool"><span class="glyph line" aria-hidden="true"></span><h3>밑줄 <kbd>⇧⌘U</kbd></h3><p>y 편차 12px 이내면 수평 자동 스냅, 넘으면 자유 직선.</p></article>
+        <article class="card tool"><span class="glyph" aria-hidden="true"></span><h3>텍스트 <span class="cap">더블클릭</span></h3><p>클릭 지점에 입력 상자. Enter 줄바꿈, 상자 밖 클릭 확정, Esc 취소.</p></article>
+        <article class="card tool"><span class="glyph" aria-hidden="true"></span><h3>지우개 <span class="cap">트레이</span></h3><p>스친 도형을 도형 단위로 삭제. 픽셀 지우개가 아닙니다.</p></article>
+      </div>
+    </div>
+  </section>
+
+  <section id="deep">
+    <div class="container">
+      <h2>발표를 바꾸는 네 가지</h2>
+      <p class="lead">그리기 바깥에서 오펜이 하는 일.</p>
+
+      <div class="dive">
+        <div class="visual tbd" role="img" aria-label="포인터 하이라이트 링 캡처 자리"><span>포인터 하이라이트 링 — 제작 전 (T-07)</span></div>
+        <div>
+          <p class="k">A · <kbd>⇧⌘P</kbd></p>
+          <h3>커서가 무대 조명이 됩니다</h3>
+          <p>커서 주변에 반투명 링을 띄워 시선을 모읍니다. 클릭하면 탭 링이 퍼져 "지금 여기를 눌렀다"가 녹화·공유 화면에서도 보입니다. 클릭은 아래 앱으로 그대로 통과합니다.</p>
+          <p>링 지름은 <span class="num">24–96px</span>(기본 <span class="num">48px</span>). 해제는 <kbd>⇧⌘X</kbd> 또는 <kbd>⇧⌘D</kbd>로 다른 모드에 들어가면 됩니다.</p>
+        </div>
+      </div>
+
+      <div class="dive flip">
+        <div>
+          <p class="k">B · <kbd>⇧⌘F</kbd></p>
+          <h3>작은 글씨, 크게 보여주세요</h3>
+          <p>확대할 영역을 드래그하면 그 자리에서 설정 배율(기본 <span class="num">1.75×</span>, <span class="num">1.2×–2.0×</span>)로 확대됩니다. 확대된 화면 위에 펜으로 계속 그릴 수 있습니다. Esc 또는 렌즈 밖 클릭으로 원래 배율로 돌아옵니다.</p>
+          <p class="note">화면 픽셀 읽기는 이 기능을 실행하는 동안에만 일어납니다. 평상시에는 화면을 읽지 않습니다.</p>
+          <p class="cap">macOS 최초 사용 시 '화면 기록' 권한이 필요합니다. 허용하지 않으면 확대 영역이 검게 나옵니다.</p>
+        </div>
+        <div class="visual tbd" role="img" aria-label="줌 렌즈 확대 캡처 자리"><span>줌 렌즈 확대 — 제작 전 (T-07)</span></div>
+      </div>
+
+      <div class="dive">
+        <div class="visual tbd" role="img" aria-label="자동 페이드 캡처 자리"><span>자동 페이드 — 제작 전 (T-07)</span></div>
+        <div>
+          <p class="k">C · 설정</p>
+          <h3>그리면 나타나고, 시간이 지나면 사라진다</h3>
+          <p>자동 페이드를 켜면 주석이 지정 시간(<span class="num">1–30초</span>, 기본 <span class="num">3초</span>) 후 제자리에서 서서히 사라집니다. 지우는 조작 없이 흐름을 유지합니다. 기본값은 꺼짐.</p>
+          <p>드로잉 효과는 등장 애니메이션과 은은한 글로우를 더합니다. 기본값은 꺼짐이며, 끈 상태에서는 도형이 각진 형태로 즉시 그려집니다.</p>
+        </div>
+      </div>
+
+      <div class="dive flip">
+        <div>
+          <p class="k">D · 설정</p>
+          <h3>무슨 키를 눌렀는지 청중이 봅니다</h3>
+          <p>누른 단축키 조합을 화면 하단에 배지로 실시간 표시합니다(예 <kbd>⌘⇧D</kbd>). 모디파이어가 하나 이상 포함된 입력만 표시하고, 일반 타이핑은 표시하지 않습니다. 표시 전용이라 저장·전송이 없습니다.</p>
+          <p>옵트인이며 기본값은 꺼짐. 끈 상태에서는 전역 키 모니터를 등록조차 하지 않습니다. macOS '손쉬운 사용' 권한이 필요합니다.</p>
+        </div>
+        <div class="visual tbd" role="img" aria-label="키 입력 표시 자리"><span>키 입력 표시(keycast) — 텍스트만으로 성립, 캡처 선택 (T-07)</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="shortcuts">
+    <div class="container">
+      <h2>단축키</h2>
+      <p class="lead">손이 키보드를 떠나지 않습니다. macOS 기준(⇧ Shift · ⌘ Command · ⌥ Option).</p>
+      <div class="sheet">
+        <table>
+          <thead><tr><th style="width:60%">동작</th><th>키</th><th>변경</th></tr></thead>
+          <tbody>
+            <tr><td>드로잉(펜) 모드 토글</td><td><kbd>⇧⌘D</kbd></td><td>가능</td></tr>
+            <tr><td>포인터 하이라이트 모드</td><td><kbd>⇧⌘P</kbd></td><td>가능</td></tr>
+            <tr><td>기본 상태 복귀 (커서 모드) — 그린 도형은 지우지 않음</td><td><kbd>⇧⌘X</kbd></td><td>가능</td></tr>
+            <tr><td>형광펜 선택 + 드로잉 모드</td><td><kbd>⇧⌘H</kbd></td><td>고정</td></tr>
+            <tr><td>네모 박스 선택 + 드로잉 모드</td><td><kbd>⇧⌘B</kbd></td><td>고정</td></tr>
+            <tr><td>원형 박스 선택 + 드로잉 모드</td><td><kbd>⇧⌘O</kbd></td><td>고정</td></tr>
+            <tr><td>화살표 선택 + 드로잉 모드</td><td><kbd>⇧⌘A</kbd></td><td>고정</td></tr>
+            <tr><td>밑줄 선택 + 드로잉 모드</td><td><kbd>⇧⌘U</kbd></td><td>고정</td></tr>
+            <tr><td>화면 확대(줌 렌즈) 진입/해제</td><td><kbd>⇧⌘F</kbd></td><td>고정</td></tr>
+            <tr><td>설정 창 열기</td><td><kbd>⇧⌘,</kbd></td><td>고정</td></tr>
+            <tr><td>홀드 피크 — 누르는 동안 아래 앱 조작</td><td><kbd>⌥Space</kbd></td><td>고정</td></tr>
+          </tbody>
+        </table>
+        <div class="foot">
+          <p>도구 단축키는 커서 모드에서 눌러도 드로잉 모드로 자동 진입한 뒤 그 도구를 선택합니다. 펜은 별도 키가 없고 <kbd>⇧⌘D</kbd>의 기본 도구입니다.</p>
+          <p>드로잉 모드 안: <kbd>Esc</kbd> 1회 = 마지막 도형 삭제 · 빠르게 2회 = 전체 삭제 · 3회 = 커서 모드 · <kbd>⌘Z</kbd> / <kbd>⇧⌘Z</kbd> 실행 취소·다시 실행(최대 100단계) · <kbd>Delete</kbd> 전체 삭제(취소 가능).</p>
+          <p>macOS 시스템이 이미 선점한 조합(예: Spotlight)은 OS가 우선합니다.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="settings">
+    <div class="container">
+      <h2>설정</h2>
+      <p class="lead">트레이 아이콘 → 설정… 또는 <kbd>⇧⌘,</kbd>. 모든 변경은 즉시 적용·자동 저장됩니다. 저장 버튼이 있는 곳은 단축키뿐입니다.</p>
+      <div class="manual">
+        <dl>
+          <dt>드로잉 기본값</dt>
+          <dd>기본 색상 팔레트 7색(기본 <b>빨강</b>) · 형광펜 네온 6색(기본 <b>노랑</b>) · 굵기 3단(<b>중간</b>) · 화살표 끝 모양 화살촉/손가락/이미지 · 텍스트 색·크기 <b class="num">12–120px</b>(기본 32px) · 포인터 링 크기 <b class="num">24–96px</b>(기본 48px)</dd>
+          <dt>도형 테두리 색</dt>
+          <dd>네모·원형 테두리 팔레트 7색 · 내부 채움 <b>켬</b>(반투명 틴트) / 끔(테두리만)</dd>
+          <dt>자동 페이드</dt>
+          <dd>사용 <b>끔</b> · 유지 시간 <b class="num">1–30초</b>(기본 3초). 켜면 유지 시간 뒤 제자리에서 알파 페이드</dd>
+          <dt>효과</dt>
+          <dd>드로잉 효과 <b>끔</b>. 켜면 등장 애니메이션·글로우·드로잉 중 포인터 글로우·탭 마크</dd>
+          <dt>화면 확대</dt>
+          <dd>배율 <b class="num">1.2×–2.0×</b>, 0.05 단위(기본 1.75×). 최초 사용 시 '화면 기록' 권한 요청</dd>
+          <dt>키 입력 표시</dt>
+          <dd>사용 <b>끔</b> · 테마 다크/라이트/그레이 · 크기 <b class="num">20–64px</b>(기본 32px) · 위치 왼쪽/가운데/오른쪽. '손쉬운 사용' 권한 필요</dd>
+          <dt>단축키</dt>
+          <dd>재설정 가능 3종(드로잉 토글·포인터 하이라이트·기본 복귀). 수정키 1개 이상 + 글자/숫자 1개, 단일 키 금지. 고정 단축키·시스템 예약 조합은 거부. 3종끼리 겹치면 <b>자동 맞교환</b>, 등록 실패 시 이전 조합으로 롤백</dd>
+          <dt>시스템</dt>
+          <dd>로그인 시 자동 시작 <b>끔</b>. 설정은 <span class="num">~/Library/Application Support/com.ohpen.app/settings.json</span>에 저장</dd>
+        </dl>
+        <div class="shot">
+          <img src="assets/settings-full@2x.png" width="420" height="1292" alt="오펜 설정 창 전체 캡처 — 드로잉 기본값부터 시스템까지 8개 섹션">
+          <p class="cap">설정 창 캡처(v0.1.x). 현재 빌드는 '키 입력 표시' 섹션이 추가돼 재촬영 예정 (T-11).</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="cta">
+    <div class="container">
+      <div class="band">
+        <h2>어떤 앱 위에든. 단축키 한 번.</h2>
+        <p class="lead">그린 것은 남기고, 핵심을 보여주며 발표를 계속하세요.</p>
+        <div class="actions">
+          <a class="btn btn-primary" href="#download" aria-disabled="true" role="button">macOS용 다운로드</a>
+          <a class="btn btn-secondary" href="#features">기능 살펴보기</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="faq">
+    <div class="container">
+      <h2>자주 묻는 질문</h2>
+      <p class="lead">전체 FAQ는 별도 페이지에 싣습니다.</p>
+      <div class="faq">
+        <div>
+          <h3>설치는 어떻게 하나요?</h3>
+          <p>홈페이지에서 DMG를 받아 열고, 오펜 아이콘을 응용 프로그램 폴더로 드래그하면 끝입니다.</p>
+        </div>
+        <div>
+          <h3>오펜이 인터넷에 접속하나요?</h3>
+          <p>메뉴 막대 아이콘을 클릭해 팝오버를 열 때 새 버전이 있는지 확인하는 요청 한 번만 나갑니다. 백그라운드에서 주기적으로 통신하지 않고, 사용 데이터를 수집·전송하지 않습니다.</p>
+        </div>
+        <div>
+          <h3>단축키가 안 먹어요.</h3>
+          <p>다른 앱이나 macOS 시스템(예: Spotlight)이 같은 조합을 선점하면 그쪽이 우선합니다. 설정 → 단축키에서 다른 조합으로 바꿔보세요.</p>
+        </div>
+        <div>
+          <h3>'화면 확대'가 검게 나와요.</h3>
+          <p>시스템 설정 → 개인정보 보호 및 보안 → 화면 기록에서 오펜을 허용하세요.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="container">
+    <div class="row">
+      <p>네트워크 통신은 트레이 메뉴를 열 때의 업데이트 확인뿐입니다.</p>
+      <ul>
+        <li>MIT 라이선스 · 소스 저장소 공개 예정 (T-12)</li>
+        <li>문의 — 연락처 확정 전 (T-10)</li>
+      </ul>
+    </div>
+    <div class="row">
+      <p>© 2026 ohpen</p>
+      <p>현재 배포 버전 <span class="num">v0.1.6</span></p>
+    </div>
+    <p class="built">작업: Claude (Fable 5.1) · carve-harness v0.10.1 적용 · anti-ai-slop 게이트 + check-slop.mjs ERROR 0 · 카피 정본 landing_page.md(2026-09-06) · 미결정 T-05/06/07/10/11/12 미기입</p>
+  </div>
+</footer>
+
+<script>
+  // 내부 앵커: 해시 미변경 스크롤(호스트 SPA 라우터 보호). 비활성 다운로드 버튼은 이동하지 않는다.
+  document.querySelectorAll('a[href^="#"]').forEach(function (a) {
+    a.addEventListener('click', function (e) {
+      e.preventDefault();
+      if (a.getAttribute('aria-disabled') === 'true') return;
+      var id = a.getAttribute('href').slice(1);
+      var el = id && document.getElementById(id);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  });
+</script>
+</body>
+</html>

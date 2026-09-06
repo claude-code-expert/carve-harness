@@ -112,7 +112,7 @@ run-ai.kr는 이 HTML을 `<iframe srcdoc="…">`로 감싸고 `<head>` 최상단
 2. **업데이트 로그**: `CHANGELOG.md` 최신 5~8 버전을 표로. 헤더 버전 = `VERSION` 값.
 3. **소스 리포**: 헤더 메타에 `https://github.com/claude-code-expert/carve-harness` 고정.
 4. **전체 목록 + 사용 예시**: 스킬·커맨드·훅 전체 표(카운트는 1번과 일치) + 슬래시·발화·오케스트레이션 예시.
-5. **라이브 데모**: `class="ext"` + Pages 절대 URL(`…/docs/html/harness-demo/index.html`).
+5. **라이브 데모**: `class="ext"` + Pages 절대 URL(`…/docs/html/ohpen-demo/index.html`).
 6. §1~5(디자인 도구·기본 시스템·폭/임베드 안전·검증) 적용 후 `docs/html/carve-workflow-guide.html` 덮어쓰기.
 
 정합 축(한 곳 고치면 전부): 인벤토리 수치는 이 HTML · `README.md` · `README.en.md` · `GUIDE.md` · `CHANGELOG.md` 공유.

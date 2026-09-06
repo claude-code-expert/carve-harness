@@ -35,7 +35,7 @@ This harness **enforces with hooks**. It earns its keep only where there is a pl
 - **Partial** — toolchains only in CI (local gates skip) · single-script/notebook repos (guards only) · monorepos (detection covers root and one level down).
 - **No fit** — Ruby/PHP/C#/Swift/Dart primary (one stack file attaches it, per `GUIDE.md` §8.2) · non-git directories · native Windows shell (needs WSL) · research/doc repos where the agent barely writes code.
 
-> **Demo**: <a href="https://claude-code-expert.github.io/carve-harness/docs/html/harness-demo/index.html" target="_blank" rel="noopener noreferrer">before/after screen comparison (new window)</a> — slop (no harness) vs clean (harness) from the same prompt.
+> **Demo**: <a href="https://claude-code-expert.github.io/carve-harness/docs/html/ohpen-demo/index.html" target="_blank" rel="noopener noreferrer">before/after screen comparison (new window)</a> — slop (no harness) vs clean (harness) from the same prompt.
 
 ## Install
 

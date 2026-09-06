@@ -35,7 +35,7 @@
 - **부분 동작** — 툴체인이 CI에만 있는 팀(로컬 게이트 스킵) · 단일 스크립트·노트북 리포(가드만 유효) · 모노레포(루트와 한 단계 하위까지 감지).
 - **맞지 않음** — Ruby·PHP·C#·Swift·Dart 주력(`GUIDE.md` §8.2대로 스택 파일 1개면 붙는다) · git 없는 디렉토리 · Windows 네이티브 셸(WSL 필요) · 코드를 거의 안 쓰는 리서치·문서 저장소.
 
-> **데모**: <a href="https://claude-code-expert.github.io/carve-harness/docs/html/harness-demo/index.html" target="_blank" rel="noopener noreferrer">하네스 적용 전/후 화면 비교 (새 창)</a> — 같은 프롬프트로 만든 미적용(slop) vs 적용(클린) 비교.
+> **데모**: <a href="https://claude-code-expert.github.io/carve-harness/docs/html/ohpen-demo/index.html" target="_blank" rel="noopener noreferrer">하네스 적용 전/후 화면 비교 (새 창)</a> — 같은 프롬프트로 만든 미적용(slop) vs 적용(클린) 비교.
 
 ## 설치
 
