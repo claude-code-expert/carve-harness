@@ -240,3 +240,38 @@ common 규칙  <  스택 파일  <  언어팩 (≒ e2e 어댑터 신설)
 ## 7. 이 문서 이후
 
 승인 시: `specs/DECISIONS.md`에 결정(우선순위·게이트 판정 근거) append, 그 다음 F1부터 브랜치 단위 구현. **지금은 분석까지만.**
+
+---
+
+## 8. 다음 세션 재개 지점 (RESUME) — 여기부터 읽고 시작
+
+> 새 세션은 이 §8만 보면 바로 이어갈 수 있다. 위 §0~7은 근거·설계, 여기는 실행 상태.
+
+### 현재 위치
+- **분석 완료.** 코드 변경 0. 이 리포트 + `fitness-assessment.md`를 `develop`에 커밋·푸시함(커밋 `fcd2040`, `docs:` 타입 → 릴리즈 미트리거).
+- 다음은 **구현 착수** 단계 — 단, 아래 "시작 전 관문"부터.
+
+### 시작 전 관문 (F1 코드보다 먼저)
+1. **열린 결정 4건 확정** (§4). 현재 전부 *권고안*만 있음 — 사용자 확정 필요:
+   - (1) 모바일 스택 = Flutter/Dart 먼저? / (2) RN = TS 규칙 보강? / (3) API 계약 = 하드게이트 아님? / (4) e2e 스타터 = 문서화만?
+   - **주의**: (1)(2)(3)은 F3/F2 착수 전까지만 확정되면 됨. **F1은 결정 무관 → 관문 없이 바로 가능.**
+2. **`specs/DECISIONS.md`에 append**: 우선순위(F1→F4→F2→F3)·게이트 판정 근거·비용 순위 결론. 코드 첫 커밋 전에.
+
+### 진행 체크리스트 (전부 미착수 ☐)
+| 순 | 작업 | 상태 | 브랜치 | 만들/고칠 파일 | 게이트 | SC(검증) |
+|---|---|---|---|---|---|---|
+| 1 | F1 네트워크 견고성 규칙 | ☐ 미착수 | `feat/rule-network-resilience` | `.claude/rules/common/network-resilience.md` + 문서 `규칙 N종`(§6 사이트) | 권고 | §5 F1/F2/F4 |
+| 2 | F4 e2e 표준화 | ☐ 미착수 | (PR-A에 합치거나 `docs/e2e-convention`) | GUIDE·eval-goldenset README에 컨벤션 문단 + `example-harness-e2e.json` 링크 | 신규 0 | §5 F1/F2/F4 |
+| 3 | F2 API 계약 규칙 | ☐ 미착수 | `feat/rule-api-contract` | `.claude/rules/common/api-contract.md` + assert 문단 + 문서 카운트 | 권고+옵트인 | §5 F1/F2/F4 |
+| 4 | F3 Dart 스택+팩 | ☐ 미착수 | `feat/pack-dart` (단독 PR) | §2 F3 7파일 + `stacks.test.sh:17`·`lib-packs.test.sh:19` 리스트 + detect 픽스처 + AUDIT-09 | 하드 | §5 F3 |
+
+- PR 묶음: **PR-A = F1+F2(+F4 문서)**, **PR-B = F3 단독**. 근거 §3.
+- 각 작업 완료 정의: 해당 SC(§5) 전부 green + 문서 카운트 grep 일치 + `npm test` 무회귀.
+
+### 다음 세션 첫 명령 (그대로 실행)
+```
+이 파일(specs/feature-expansion-analysis.md) §8 읽어. 열린 결정 4건(§4) 확정하고,
+DECISIONS.md에 우선순위 append한 뒤 F1(feat/rule-network-resilience)부터 구현 시작.
+```
+- F1은 결정 대기 없이 착수 가능. F2/F3 착수 시 §4 (3)/(1)(2) 확정 필요.
+- 착수하면 이 표의 ☐를 진행 중/완료로 갱신하며 진행.
