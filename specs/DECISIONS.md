@@ -145,3 +145,33 @@
 - **이유**: 워크플로가 추이 파일 읽기/쓰기를 에이전트에게 맡겨 다른 워크스페이스 파일로 덮어쓰기와 version 오기록이 실제로 발생했다(블루프린트 R5·R10 위반). 사람 정정은 근거가 있으니 기록으로 남기고, 재발은 스크립트 강제로 막는다.
 - **대안**: 파일을 패치 전 상태로 되돌리기 — 신규 run 3개를 잃어 기각. 정정 없이 두기 — 회귀 판정 기준이 틀린 버전에 묶여 기각.
 - **영향**: 4 run(1: 0.7.0 100 / 2: 0.8.0 60 / 3: 0.8.0 100 / 4: 0.8.0 93). 다음 `/eval`부터 `eval-trend.sh append`가 run 서수·VERSION·이전 run 해시를 강제한다.
+
+## 2026-09-06 — 시각 품질 게이트를 프로즈에서 결정론 린터로 (anti-ai-slop)
+
+- **결정**: anti-ai-slop 규칙을 `.claude/hooks/check-slop.mjs`(34룰, HTML/CSS·SVG·Markdown
+  디스패치, 의존성 0)로 기계화하고, `posttool-slop.sh`가 `.html`·`.htm`·`.css`·`.svg` 쓰기 직후
+  **리포트 온리**(요약 1줄 stderr + JSONL, 항상 exit 0)로 돌린다. SKILL.md는 하드 게이트만 담고
+  크래프트 상세·유형별 제약은 `references/*.md` 6종이 정본이다. AUDIT-10이 린터 실재·종료코드
+  계약·SKILL.md 참조 경로 실재를 검증한다.
+- **이유**: 기존 `anti-ai-slop/SKILL.md`는 `references/` 3파일을 5회 지시했으나 디렉토리가 없었고,
+  `.claude/CLAUDE.md`는 존재하지 않는 "check-slop"을 참조했다. **읽을 수 없는 파일을 읽으라는
+  지시**는 규칙이 아니다. 하네스가 `harness-audit`에서 이미 한 전환(프로즈 → 기계적 PASS/FAIL)을
+  시각 산출물에 적용했다.
+- **대안**:
+  (a) Stop 훅 차단(exit 2) — 강제력은 가장 크나 오탐이 작업을 멈춘다. 리포트로 오탐률을 실측한 뒤
+      승격하기로 보류.
+  (b) 기존 `posttool-format.sh`의 `stack_format` 재사용 — **불가**. 그 훅은 포맷터 잡음 때문에
+      stdout·stderr를 둘 다 죽인다(OBS-02/C8). 리포트가 통째로 삼켜져 별도 훅이 필요했다.
+  (c) `.claude/stacks/visual.sh` 코어 스택 — Stop 게이트를 안 걸면 스택 파일의 역할이 사라져 제외.
+  (d) 린터를 `.claude/skills/` 아래 배치 — 사용자가 룰을 고치기 쉬우나 GUARD-07 보호를 못 받는다.
+      품질 게이트는 에이전트가 무력화할 수 없어야 하므로 `hooks/`에 둔다.
+- **`.md` 제외**: 카피 톤 룰(느낌표·상투어·em-dash)이 문서 지배적인 리포에서 상시 발화해 신호가
+  잡음에 묻힌다. Markdown은 수동 실행 경로만 남긴다.
+- **이식 중 발견한 결함**: `accent-bar` 룰의 캡처 그룹이 `([^;!]+)`라 세미콜론 없이 블록이 닫히는
+  CSS(`border-top:4px solid #2563eb}`)에서 `}`를 색 토큰에 포함시켜 탐지에 실패했다. 블록 마지막
+  선언의 세미콜론 생략은 흔한 관례라 실사용에서 새는 경로다. `([^;!}]+)`로 수정하고 회귀 테스트를 남겼다.
+- **영향 범위**: `.claude/hooks/{check-slop.mjs,posttool-slop.sh,harness-audit.sh}` ·
+  `.claude/hooks/tests/{check-slop.test.sh,settings.test.sh}` · `.claude/settings.json`(PostToolUse 2훅) ·
+  `.claude/skills/anti-ai-slop/{SKILL.md,references/*.md}` · `.claude/skills/carve-guide/SKILL.md`(완료
+  기준을 프로즈 → 종료코드) · `.claude/CLAUDE.md` · README(한/영)·GUIDE 인벤토리.
+  훅 20→22 · 테스트 30→31 스위트(503→545건) · 감사 71→77체크.

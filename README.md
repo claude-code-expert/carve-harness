@@ -18,12 +18,12 @@
 | **피드백** | Stop 훅이 빌드·타입·린트·테스트 실패 시 완료 선언 차단 — 변경된 스택만 증분 검증(툴체인이 있을 때만 실행) |
 | **상태** | 세션 종료·압축 시 핸드오프 자동 저장(TODO·결정 수집), 시작 시 복원 |
 | **관측** | 모든 훅 판정을 `logs/*.jsonl`에 기록(PII 마스킹). 세션 시작 배너가 로드 구성을 표시 |
-| **자가감사** | `/harness-audit` — 71개 기계 체크로 하네스 오구성 PASS/FAIL |
+| **자가감사** | `/harness-audit` — 77개 기계 체크로 하네스 오구성 PASS/FAIL |
 | **언어팩** | 설치 시 감지된 팩만 — 규칙·검증 게이트·채점 어댑터·골든셋 스타터·LSP가 한 세트. 미선택 언어는 파일 자체가 없다 |
 | **검증 루프** | `/verify-loop` — 구현 주장을 항목별 0~100 채점, 95점 미만은 재작업. 미달 잔존 시 Stop 훅이 완료 차단 |
 | **정량 평가** | `/eval` — 고정 골든셋을 k회 재실행해 pass@k/pass^k·회귀를 산출 |
 
-**구성 요소**: 훅 20종 · 스택 정의 6종 · 언어팩 6종 · 슬래시 커맨드 14종 · 에이전트 7종 · 스킬 10종 · 규칙 11종 · 워크플로 3종 · 골든셋 스타터 20건 · 테스트 30 스위트(503건). 전체 목록은 [전체 구성](#전체-구성-스킬커맨드훅) 표.
+**구성 요소**: 훅 22종 · 스택 정의 6종 · 언어팩 6종 · 슬래시 커맨드 14종 · 에이전트 7종 · 스킬 10종 · 규칙 11종 · 워크플로 3종 · 골든셋 스타터 20건 · 테스트 31 스위트(545건). 전체 목록은 [전체 구성](#전체-구성-스킬커맨드훅) 표.
 
 **크로스 에이전트**: 훅 차단은 Claude Code 전용. Cursor/Codex 등은 `AGENTS.md` 정본 + `.githooks/pre-commit`이 커밋 시점에 최종 차단.
 
@@ -102,14 +102,14 @@ bash uninstall.sh --yes        # 제거 (manifest 범위만, 원래 있던 파�
 
 | 명령 | 용도 |
 |------|------|
-| `/harness-audit` | 하네스 구성 PASS/FAIL (AUDIT-01~09, 이 리포 71체크) |
+| `/harness-audit` | 하네스 구성 PASS/FAIL (AUDIT-01~10, 이 리포 77체크) |
 | `/plan` `/verify` `/review` `/commit` | SC 분해 · SC 검증 · 코드 검토 · commit→pull→push |
 | `/verify-loop <목표>` | 요구가 여러 개일 때 — 항목별 0~100 채점, 전 항목 95점까지 재작업 |
 | `/eval-init` · `/eval` | **설치 후 1회** 골든셋 셋업 · 재채점 → pass@k/pass^k·회귀 판정 |
 | `bash install.sh pack list\|add\|remove` | 언어팩 상태표 / 추가 / 제거 |
 | `bash .claude/hooks/eval-score.sh` | 빌드 건강도 채점표 `specs/SCORE.json` (LLM 없음) |
 | `bash .claude/hooks/logs-report.sh [days]` | 훅 판정 로그 요약 (`--tokens` 세션별 토큰) |
-| `npm test` | 전체 훅 테스트 30 스위트(503건) |
+| `npm test` | 전체 훅 테스트 31 스위트(545건) |
 
 커스터마이징(보호 경로·포맷터·검증 명령·새 스택)·전체 레퍼런스는 **`GUIDE.md`**.
 
@@ -162,7 +162,7 @@ bash uninstall.sh --yes        # 제거 (manifest 범위만, 원래 있던 파�
 
 | 커맨드 | 용도 |
 |------|------|
-| `/harness-audit` | 하네스 구성 PASS/FAIL (AUDIT-01~09, 71체크) |
+| `/harness-audit` | 하네스 구성 PASS/FAIL (AUDIT-01~10, 77체크) |
 | `/plan` `/verify` `/review` | SC 분해 → `specs/` · SC·빌드·타입·테스트 검증 · 타입·보안·예외·상태 검토 |
 | `/verify-loop` | 스펙→개발→체크리스트→채점 루프, 전 항목 95점까지 ([가이드](docs/md/verify-loop-guide.md)) |
 | `/eval` | 골든셋 재채점 → pass@k/pass^k·추이·회귀 판정 |
@@ -175,6 +175,8 @@ bash uninstall.sh --yes        # 제거 (manifest 범위만, 원래 있던 파�
 |------|------|------|
 | `pretool-guard` | PreToolUse (Write·Edit·Bash 직전) | 보호 경로·시크릿·위험 명령 차단 + 자기보호(GUARD-07) + 루프 브레이크(exit 2), fail-closed |
 | `posttool-format` | PostToolUse (쓰기 직후) | 확장자 언어 감지 후 포맷(exit 0) |
+| `posttool-slop` | PostToolUse (`.html·.htm·.css·.svg` 쓰기 직후) | anti-slop 린터 요약 1줄 리포트(비차단 exit 0). 상세는 JSONL·수동 실행 |
+| `check-slop.mjs` | 수동 CLI · `posttool-slop` 호출 | 시각·문서 슬롭 결정론 린터 34룰(HTML/CSS·SVG·MD 디스패치, WCAG 대비 계산). `0` 통과 · `1` ERROR · `2` 호출 오류 |
 | `stop-verify` | Stop (완료 선언 직전) | 변경 스택 빌드·타입·테스트 게이트(실패 exit 2) |
 | `checklist-gate` | Stop (`stop-verify` 뒤) | `checklist.json` 미달(<95)·미채점 시 완료 차단. `domain_safety`는 100 필수. 자가 우회 차단(tombstone) |
 | `session-handoff` | SessionStart·PreCompact·SessionEnd | 핸드오프 복원·저장 + 구성 배너 |
@@ -205,7 +207,7 @@ bash uninstall.sh --yes        # 제거 (manifest 범위만, 원래 있던 파�
 ├── specs/                      # 상태: 핸드오프·결정 기록·골든셋(goldenset/)
 └── .claude/
     ├── settings.json           # 훅 6이벤트 등록
-    ├── hooks/  (20종 + tests 30 스위트)
+    ├── hooks/  (22종 + tests 31 스위트)
     ├── stacks/ (6종 — 스택별 게이트·포맷·채점 어댑터)
     ├── workflows/ (fable-team-pipeline · carve-verify-loop · carve-eval)
     └── commands/ (14) · agents/ (7) · skills/ (10) · rules/ (11)
