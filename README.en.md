@@ -19,12 +19,12 @@ Drop it into your project root and it works immediately.
 | **Feedback** | Stop hook blocks "done" claims while build/type/lint/tests fail — incremental, changed stacks only (Java, Node/TS, Python, Go, Rust, bash; each runs only when its toolchain is installed, bringing CI's `npm run lint` local) |
 | **State** | Handoff auto-saved at session end/compaction (real TODOs and decisions), restored at start |
 | **Observability** | Every hook verdict logged to `logs/*.jsonl` (PII masked), with report/rotation. The session-start banner lists every loaded component, and all hook messages carry a unified `[carve-harness:<hook>]` prefix |
-| **Self-audit** | `/harness-audit` — 67 mechanical checks PASS/FAIL the harness configuration itself (pack integrity + eval maturity included) |
+| **Self-audit** | `/harness-audit` — 71 mechanical checks PASS/FAIL the harness configuration itself (pack integrity + eval maturity included) |
 | **Language packs** | At install time only the detected packs among typescript · java-spring · python · go · rust · database land — rules, verification gate, scoring adapter, golden-set starter and LSP as one set. Unselected languages have no files at all |
 | **Verify loop** | `/verify-loop` — grades each claimed implementation 0–100 against real code, feeds gaps back to rework anything under 95, loops until every item passes. Stop hook blocks "done" while any item is unresolved → [verify-loop guide](docs/md/verify-loop-guide.md) |
 | **Quantitative eval** | `/eval` — re-runs a fixed golden set k times for pass@k/pass^k, a score trend and regression detection. `carve-validate` separates golden-set config errors first, at zero agent cost |
 
-**Inventory**: 17 hooks (5 event gates · 3 libraries · 9 CLI/helpers) · 6 stack definitions (`.claude/stacks/`) · 6 language packs (`packs/`) · 14 slash commands · 7 agents · 10 skills · 11 rule files (+10 stack references in `docs/rules/`) · 3 workflows · 20 golden-set starters · 26 test suites (419 cases) — full lists in the [component tables](#full-component-list-skills--commands--hooks) below
+**Inventory**: 20 hooks (5 event gates · 3 libraries · 12 CLI/helpers) · 6 stack definitions (`.claude/stacks/`) · 6 language packs (`packs/`) · 14 slash commands · 7 agents · 10 skills · 11 rule files (+10 stack references in `docs/rules/`) · 3 workflows · 20 golden-set starters · 30 test suites (503 cases) — full lists in the [component tables](#full-component-list-skills--commands--hooks) below
 
 **Cross-agent**: hook blocking is Claude Code-only. Cursor/Codex/etc. follow `AGENTS.md` as the canonical rules, with `.githooks/pre-commit` as the final gate at commit time.
 
@@ -189,7 +189,7 @@ Once installed, the gates are automatic — protected-path writes are blocked, o
 
 | Command | Purpose |
 |---------|---------|
-| `/harness-audit` | PASS/FAIL of the harness configuration (AUDIT-01~09, 67 checks in this repo) |
+| `/harness-audit` | PASS/FAIL of the harness configuration (AUDIT-01~09, 71 checks in this repo) |
 | `/plan` `/verify` `/review` `/commit` | SC breakdown · SC verification · code review · commit→pull→push with your message |
 | `/verify-loop <goal>` | For multi-requirement work — grades each item 0–100 and reworks until all pass 95 |
 | `/eval-init` | **Once, after install** — analyzes the project and fixes the eval/quality gates through an interview, then builds the golden set |
@@ -197,7 +197,7 @@ Once installed, the gates are automatic — protected-path writes are blocked, o
 | `bash .claude/hooks/carve-validate.sh [--red]` | Golden-set preflight — structural validation at zero agent cost; `--red` also checks that a case measures anything at all |
 | `bash .claude/hooks/eval-gate.sh --mode report\|block [--delta N]` | Judge regression from the score trend alone (no LLM). `block` exits 1 past the tolerance — this is what CI calls |
 | `bash .claude/hooks/logs-report.sh [days]` | hook verdict log summary (`--rotate N` to rotate · `--tokens N` per-session token usage) |
-| `npm test` / `npm run test:install` | all 26 hook test suites (419 cases) / installer component-selection suite |
+| `npm test` / `npm run test:install` | all 30 hook test suites (503 cases) / installer component-selection suite |
 | `bash install.sh pack list\|add\|remove` | language-pack status table / add / remove (backed up → `rollback`) |
 | `bash .claude/hooks/eval-score.sh` | build-health scorecard `specs/SCORE.json` — G1 build · G2 tests · G3 safety (veto) + lint · regression · coverage, no LLM |
 
@@ -355,7 +355,7 @@ This repo's own 20 cases (`specs/goldenset/`) are the worked example — 5 on gu
 
 | Command | Purpose |
 |------|------|
-| `/harness-audit` | PASS/FAIL of the harness configuration (AUDIT-01~09, 67 checks in this repo) |
+| `/harness-audit` | PASS/FAIL of the harness configuration (AUDIT-01~09, 71 checks in this repo) |
 | `/commit-branch` | Commit + push on the current branch, Conventional Commits (never `main` directly) |
 | `/plan` | Break work into success-criteria (SC) units → `specs/` |
 | `/verify` | Verify current changes against SC · build · types · tests |
@@ -403,7 +403,7 @@ Every directory carries a `README.md` describing its role (what the folder does,
 ├── specs/                   # state: handoffs · decision log · golden set (goldenset/)
 └── .claude/
     ├── settings.json        # 6 hook events registered
-    ├── hooks/  (17 + 26 test suites)
+    ├── hooks/  (20 + 30 test suites)
     ├── stacks/ (6 — per-stack verification gate · formatter · scoring adapter, installed per language pack)
     ├── workflows/ (fable-team-pipeline · carve-verify-loop · carve-eval)
     ├── commands/ (14) · agents/ (7) · skills/ (10) · rules/ (11)

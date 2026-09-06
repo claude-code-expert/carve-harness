@@ -19,12 +19,12 @@
 | **피드백** | Stop 훅이 빌드·타입·린트·테스트 실패 시 완료 선언 차단 — 변경된 스택만 증분 검증(Java·Node/TS·Python·Go·Rust·bash. 각 스택 툴체인이 있을 때만 실행, CI의 `npm run lint`를 로컬로 앞당김) |
 | **상태** | 세션 종료·압축 시 핸드오프 자동 저장(실제 TODO·결정 수집), 시작 시 복원 |
 | **관측** | 모든 훅 판정을 `logs/*.jsonl`에 기록 (PII 마스킹), 리포트·회전 지원. 세션 시작 배너가 로드된 전 구성을 표시하고, 훅 메시지는 `[carve-harness:<hook>]` 프리픽스로 통일 |
-| **자가감사** | `/harness-audit` — 67개 기계 체크로 하네스 오구성 PASS/FAIL (언어팩 무결성·Eval 성숙도 포함) |
+| **자가감사** | `/harness-audit` — 71개 기계 체크로 하네스 오구성 PASS/FAIL (언어팩 무결성·Eval 성숙도 포함) |
 | **언어팩** | 설치 시 typescript·java-spring·python·go·rust·database 중 감지된 팩만 — 규칙·검증 게이트·채점 어댑터·골든셋 스타터·LSP가 한 세트. 미선택 언어는 파일 자체가 없다 |
 | **검증 루프** | `/verify-loop` — 구현 주장을 항목별로 코드 대조 0~100 채점, 95점 미만은 gap 되먹여 재작업, 전 항목 95점까지 루프. 미달 잔존 시 Stop 훅이 완료 차단 → [검증 루프 가이드](docs/md/verify-loop-guide.md) |
 | **정량 평가** | `/eval` — 고정 골든셋을 k회 재실행해 pass@k/pass^k·점수 추이·회귀를 산출. 실행 전 `carve-validate`가 골든셋 설정 오류를 에이전트 0회로 분리 |
 
-**구성 요소**: 훅 17종(이벤트 게이트 5 · 라이브러리 3 · CLI·헬퍼 9) · 스택 정의 6종(`.claude/stacks/`) · 언어팩 6종(`packs/`) · 슬래시 커맨드 14종 · 에이전트 7종 · 스킬 10종 · 규칙 11종(+스택 상세본 10, `docs/rules/`) · 워크플로 3종 · 골든셋 스타터 20건 · 테스트 26 스위트(419건) — 전체 목록은 [전체 구성](#전체-구성-스킬커맨드훅) 표 참고
+**구성 요소**: 훅 20종(이벤트 게이트 5 · 라이브러리 3 · CLI·헬퍼 12) · 스택 정의 6종(`.claude/stacks/`) · 언어팩 6종(`packs/`) · 슬래시 커맨드 14종 · 에이전트 7종 · 스킬 10종 · 규칙 11종(+스택 상세본 10, `docs/rules/`) · 워크플로 3종 · 골든셋 스타터 20건 · 테스트 30 스위트(503건) — 전체 목록은 [전체 구성](#전체-구성-스킬커맨드훅) 표 참고
 
 **크로스 에이전트**: 훅 차단은 Claude Code 전용. Cursor/Codex 등은 `AGENTS.md` 정본 + `.githooks/pre-commit`이 커밋 시점에 최종 차단.
 
@@ -189,7 +189,7 @@ bash uninstall.sh --yes    # 실제 제거 (manifest 범위만, 원래 있던 �
 
 | 명령 | 용도 |
 |------|------|
-| `/harness-audit` | 하네스 구성 PASS/FAIL (AUDIT-01~09, 이 리포 67체크) |
+| `/harness-audit` | 하네스 구성 PASS/FAIL (AUDIT-01~09, 이 리포 71체크) |
 | `/plan` `/verify` `/review` `/commit` | SC 분해 · SC 검증 · 코드 검토 · 인자 메시지로 commit→pull→push |
 | `/verify-loop <목표>` | 요구가 여러 개일 때 — 항목별 0~100 채점, 전 항목 95점까지 재작업 반복 |
 | `/eval-init` | **설치 후 1회** — 프로젝트 분석 + 인터뷰로 평가·품질 게이트를 확정하고 골든셋을 만든다 |
@@ -197,7 +197,7 @@ bash uninstall.sh --yes    # 실제 제거 (manifest 범위만, 원래 있던 �
 | `bash .claude/hooks/carve-validate.sh [--red]` | 골든셋 프리플라이트 — 구조 검증(에이전트 0회), `--red`는 "그 케이스가 실제로 무언가를 재는지"까지 확인 |
 | `bash .claude/hooks/eval-gate.sh --mode report\|block [--delta N]` | 추이 파일만 읽어 회귀 판정(LLM 없음). `block`은 허용 하락폭 초과 시 exit 1 — CI가 이걸 호출한다 |
 | `bash .claude/hooks/logs-report.sh [days]` | 훅 판정 로그 요약 (`--rotate N` 회전 · `--tokens N` 세션별 토큰 사용량) |
-| `npm test` / `npm run test:install` | 전체 훅 테스트 26 스위트(419건) / 설치 구성 선택 스위트 |
+| `npm test` / `npm run test:install` | 전체 훅 테스트 30 스위트(503건) / 설치 구성 선택 스위트 |
 | `bash install.sh pack list\|add\|remove` | 언어팩 상태표 / 추가 / 제거(백업 → `rollback`) |
 | `bash .claude/hooks/eval-score.sh` | 빌드 건강도 채점표 `specs/SCORE.json` — G1 빌드·G2 테스트·G3 안전(거부권) + lint·회귀·커버리지, LLM 없음 |
 
@@ -355,7 +355,7 @@ bash .claude/hooks/carve-validate.sh --red   # 케이스를 쓰거나 고친 직
 
 | 커맨드 | 용도 |
 |------|------|
-| `/harness-audit` | 하네스 구성 PASS/FAIL (AUDIT-01~09, 이 리포 67체크) |
+| `/harness-audit` | 하네스 구성 PASS/FAIL (AUDIT-01~09, 이 리포 71체크) |
 | `/commit-branch` | 현재 브랜치에 Conventional Commits로 커밋 + 푸시(`main` 직접 금지) |
 | `/plan` | 작업을 완료 기준(SC) 단위로 분해 → `specs/` |
 | `/verify` | 현재 변경을 SC·빌드·타입·테스트로 검증 |
@@ -365,7 +365,7 @@ bash .claude/hooks/carve-validate.sh --red   # 케이스를 쓰거나 고친 직
 | `/commit` | 인자를 메시지로 현재 브랜치에 commit→pull→push (문제 시 해결책 제시) |
 | `/ponytail*` (6) | ponytail 모드 제어·audit·debt·gain·review·help |
 
-### 훅 (17종 — 이벤트 게이트 5 · 라이브러리 3 · CLI·헬퍼 9)
+### 훅 (20종 — 이벤트 게이트 5 · 라이브러리 3 · CLI·헬퍼 12)
 
 | 훅 | 트리거 (언제 작동) | 역할 |
 |------|------|------|
@@ -403,7 +403,7 @@ bash .claude/hooks/carve-validate.sh --red   # 케이스를 쓰거나 고친 직
 ├── specs/                   # 상태: 핸드오프·결정 기록·골든셋(goldenset/)
 └── .claude/
     ├── settings.json        # 훅 6이벤트 등록
-    ├── hooks/  (17종 + tests 26 스위트)
+    ├── hooks/  (20종 + tests 30 스위트)
     ├── stacks/ (6종 — 스택별 검증 게이트·포맷·채점 어댑터, 언어팩 단위로 설치)
     ├── workflows/ (fable-team-pipeline · carve-verify-loop · carve-eval)
     ├── commands/ (14종) · agents/ (7종) · skills/ (10종) · rules/ (11종)
