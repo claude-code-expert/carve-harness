@@ -112,7 +112,42 @@ gitfix "$J"; run "$J"
 [ "$(printf '%s' "$OUT" | jq -r '.stacks."java-spring".items.coverage')" = "5" ] \
   && ok "java-spring coverage via eval-java.sh (90% -> 5)" || no "java delegation: $OUT"
 
-# (13) determinism + bash -n.
+# (13) antislop: check-slop.mjs over CHANGED .html/.htm/.css/.svg only.
+#      clean artifact -> 10 (max 100), slop artifact -> 0 without a veto, .md ignored
+#      (posttool-slop.sh excludes it on purpose), nothing changed -> still skipped.
+mk_stub go 'case "$1" in tool) echo "total:	(statements)	90.0%";; esac; exit 0'
+rm -f "$G/Cargo.toml"; rm -rf "$G/src"                       # 단일 스택으로 되돌린다
+if command -v node >/dev/null 2>&1; then
+  printf '<!doctype html><html><body><p>plain</p></body></html>\n' > "$G/ok.html"
+  run "$G"
+  [ "$(printf '%s' "$OUT" | jq -r '.stacks.go.items.antislop')" = "10" ] \
+    && [ "$(printf '%s' "$OUT" | jq -r '.stacks.go.max')" = "100" ] \
+    && ok "antislop: clean html -> 10, max back to 100" || no "antislop clean: $OUT"
+
+  printf '<!doctype html><html><body><div style="background:linear-gradient(90deg,#f00,#00f)">x</div></body></html>\n' > "$G/slop.html"
+  run "$G"
+  [ "$(printf '%s' "$OUT" | jq -r '.stacks.go.items.antislop')" = "0" ] \
+    && [ "$(printf '%s' "$OUT" | jq -r '.stacks.go.gates.G1')" = "25" ] \
+    && ok "antislop: gradient -> 0 points, no veto" || no "antislop violation: $OUT"
+  rm -f "$G/slop.html" "$G/ok.html"
+
+  # .md 는 대상이 아니다 — 문서 리포에서 상시 발화하면 신호가 죽는다.
+  printf '# Title\n\n혁신적인 솔루션으로 여러분의 워크플로우를 혁신하세요!!!\n' > "$G/README.md"
+  run "$G"
+  printf '%s' "$OUT" | jq -e '.stacks.go.skipped | index("antislop")' >/dev/null \
+    && ok "antislop: .md not a target -> still skipped" || no "antislop md exclusion: $OUT"
+  rm -f "$G/README.md"
+else
+  ok "SKIP: node absent -> antislop scoring cases skipped"; ok "SKIP: antislop violation"; ok "SKIP: antislop md"
+fi
+
+# (13b) no changed visual artifact -> skipped, denominator 90 (the pre-antislop behaviour).
+run "$G"
+printf '%s' "$OUT" | jq -e '.stacks.go.skipped | index("antislop")' >/dev/null \
+  && [ "$(printf '%s' "$OUT" | jq -r '.stacks.go.max')" = "90" ] \
+  && ok "antislop: no visual artifact changed -> skipped, max 90" || no "antislop skip path: $OUT"
+
+# (14) determinism + bash -n.
 run "$G" --stack go; a="$OUT"; run "$G" --stack go; b="$OUT"
 [ "$a" = "$b" ] && ok "deterministic: same input -> same JSON" || no "determinism"
 bash -n "$HOOK" && ok "bash -n eval-score.sh" || no "bash -n"
