@@ -1,0 +1,60 @@
+{
+  "suite": "deck-example-coupon-api",
+  "note": "발표자료(Level 9) 74~75p 워크스루의 그 케이스를 골든셋 형식으로 옮긴 것. 채점 항목 4개, 합격선 95. 이 파일은 사람이 검수해 만든 문항이다 - 에이전트가 자동 생성하지 않는다(자기가 통과하는 것만 담는 자기강화 방지).",
+  "threshold": 95,
+  "goal": "쿠폰 적용 API 구현",
+  "tasks": [
+    {
+      "id": "coupon-applies",
+      "claim": "유효한 쿠폰을 주문에 적용하면 할인가가 반환된다",
+      "acceptance": "정액·정률 쿠폰 각각에 대해 할인 계산이 맞고, 할인가는 0 미만이 되지 않는다",
+      "owns": [
+        "src/coupon/apply.*"
+      ],
+      "type": "correctness"
+    },
+    {
+      "id": "coupon-no-reuse",
+      "claim": "이미 사용한 쿠폰은 재사용할 수 없다",
+      "acceptance": "같은 쿠폰을 두 번 적용하면 두 번째는 거부되고, 동시 요청에서도 한 번만 성공한다(멱등)",
+      "owns": [
+        "src/coupon/redeem.*"
+      ],
+      "type": "correctness",
+      "note": "실무에서 돈이 걸린 경로라면 domain_safety 로 올리는 것이 맞다. 다만 domain_safety 는 100점이 아니면 임계와 무관하게 차단되므로, 발표자료 워크스루(2회차 96점 합격)와 숫자가 어긋난다. 여기서는 워크스루 재현을 우선해 correctness 로 둔다."
+    },
+    {
+      "id": "coupon-expiry",
+      "claim": "만료된 쿠폰은 거부된다",
+      "acceptance": "만료 경계(만료일 당일 23:59:59 통과 / 다음날 00:00:00 거부)가 테스트로 검증된다",
+      "owns": [
+        "src/coupon/expiry.*"
+      ],
+      "type": "correctness"
+    },
+    {
+      "id": "coupon-response-shape",
+      "claim": "응답 형식이 계약과 일치한다",
+      "acceptance": "성공·실패 응답 모두 정해진 필드와 에러 코드를 갖는다",
+      "owns": [
+        "src/coupon/dto.*"
+      ],
+      "type": "convention"
+    }
+  ],
+  "walkthrough": {
+    "note": "덱 74~75p에 실린 실제 점수 추이. 이 예제 테스트가 재현한다.",
+    "round1": {
+      "coupon-applies": 97,
+      "coupon-no-reuse": 70,
+      "coupon-expiry": 92,
+      "coupon-response-shape": 100
+    },
+    "round2": {
+      "coupon-applies": 97,
+      "coupon-no-reuse": 96,
+      "coupon-expiry": 97,
+      "coupon-response-shape": 100
+    }
+  }
+}
