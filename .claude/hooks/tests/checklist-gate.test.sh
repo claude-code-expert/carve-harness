@@ -124,6 +124,53 @@ printf '%s' '{"threshold":95,"items":[{"id":"c1","type":"domain_safety","score":
 printf '{}' | CLAUDE_PROJECT_DIR="$tmp" bash "$HOOK" >/dev/null 2>&1
 [ $? -eq 0 ] && { echo "PASS: domain_safety 100 + typed/untyped 97 -> pass (GATE-C7)"; pass=$((pass + 1)); } \
              || { echo "FAIL: veto misfired on a passing checklist"; fail=$((fail + 1)); }
+rm -f "$tmp/specs/checklist.json" "$tmp/specs/.checklist-active"
+
+# ── GATE-C8: score must equal the clamped 5-axis sum, and test=0 cannot reach the bar.
+# The gate used to read `score` alone, so a hand-run loop could write any total it liked.
+c8() { # <json> -> exit code in $code, stderr in $out
+  printf '%s' "$1" > "$tmp/specs/checklist.json"
+  out=$(printf '{}' | CLAUDE_PROJECT_DIR="$tmp" bash "$HOOK" 2>&1); code=$?
+  rm -f "$tmp/specs/.checklist-active"
+}
+AX='"exists":25,"match":25,"test":25,"contract":15,"no_regress":10'
+
+# (16) axes consistent with score -> pass.
+c8 "{\"threshold\":95,\"items\":[{\"id\":\"c1\",\"score\":100,\"axes\":{$AX}}]}"
+[ "$code" -eq 0 ] && { echo "PASS: score == axis sum -> allow (GATE-C8)"; pass=$((pass + 1)); } \
+                  || { echo "FAIL: consistent axes blocked (exit $code): $out"; fail=$((fail + 1)); }
+
+# (17) inflated score with honest axes -> block. This is the hole C8 closes.
+c8 "{\"threshold\":95,\"items\":[{\"id\":\"c1\",\"score\":100,\"axes\":{\"exists\":25,\"match\":25,\"test\":0,\"contract\":15,\"no_regress\":10}}]}"
+[ "$code" -eq 2 ] && printf '%s' "$out" | grep -q '축합' \
+  && { echo "PASS: score 100 vs axis sum 75 -> block (GATE-C8)"; pass=$((pass + 1)); } \
+  || { echo "FAIL: inflated score escaped (exit $code): $out"; fail=$((fail + 1)); }
+
+# (18) axes forged so the sum matches but tests never ran -> still block.
+# 5 axes cannot reach 95 with test=0 (cap 75), so a matching sum means a forged axis.
+c8 "{\"threshold\":95,\"items\":[{\"id\":\"c1\",\"score\":95,\"axes\":{\"exists\":45,\"match\":25,\"test\":0,\"contract\":15,\"no_regress\":10}}]}"
+[ "$code" -eq 2 ] && { echo "PASS: over-max axis clamped -> block (GATE-C8)"; pass=$((pass + 1)); } \
+                  || { echo "FAIL: over-max axis escaped (exit $code): $out"; fail=$((fail + 1)); }
+
+# (19) clamping matches carve-verify-loop.js <score-helper>: over-max clamps, missing/non-number -> 0.
+c8 "{\"threshold\":95,\"items\":[{\"id\":\"c1\",\"score\":100,\"axes\":{\"exists\":99,\"match\":25,\"test\":25,\"contract\":15,\"no_regress\":10}}]}"
+[ "$code" -eq 0 ] && { echo "PASS: exists 99 clamps to 25, sum 100 -> allow (GATE-C8)"; pass=$((pass + 1)); } \
+                  || { echo "FAIL: clamp disagrees with score-helper (exit $code): $out"; fail=$((fail + 1)); }
+c8 "{\"threshold\":95,\"items\":[{\"id\":\"c1\",\"score\":75,\"axes\":{\"match\":25,\"test\":25,\"contract\":15,\"no_regress\":10}}]}"
+[ "$code" -eq 2 ] && { echo "PASS: missing axis counts as 0, not skipped (GATE-C8)"; pass=$((pass + 1)); } \
+                  || { echo "FAIL: missing axis mishandled (exit $code): $out"; fail=$((fail + 1)); }
+
+# (20) no axes field -> untouched (backward compatible with hand-written checklists).
+c8 '{"threshold":95,"items":[{"id":"c1","score":97,"pass":true}]}'
+[ "$code" -eq 0 ] && { echo "PASS: axes absent -> C8 no-op (backward compatible)"; pass=$((pass + 1)); } \
+                  || { echo "FAIL: C8 fired without axes (exit $code): $out"; fail=$((fail + 1)); }
+
+# (21) unscored item with axes -> the existing unresolved message wins, not an axis error.
+c8 "{\"threshold\":95,\"items\":[{\"id\":\"c1\",\"score\":null,\"axes\":{$AX}}]}"
+[ "$code" -eq 2 ] && printf '%s' "$out" | grep -q '미채점' \
+  && { echo "PASS: score null reported as unscored, not axis mismatch"; pass=$((pass + 1)); } \
+  || { echo "FAIL: null score message (exit $code): $out"; fail=$((fail + 1)); }
+
 rm -f "$tmp/specs/checklist.json" "$tmp/specs/.checklist-active"; rm -f "$tmp"/logs/*.jsonl 2>/dev/null; rmdir "$tmp/logs" "$tmp/specs" "$tmp" 2>/dev/null
 
 printf -- '---\n%s passed, %s failed\n' "$pass" "$fail"
