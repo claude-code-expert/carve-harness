@@ -37,5 +37,5 @@ bash install.sh pack list                                        # 감사가 FAI
 ## 4. 남은 것 (이번 범위 밖 — 후속 계획 `eval-generalization-plan.md`)
 
 - P0 `eval-trend.sh`(추이 파일 결정론 append), P1a target 어댑터(`eval-run.sh`), P1 게이트 확장(required·suspicious·stale), P3 레드팀·promptfoo exporter.
-- antislop 결정론 검사기(eval-score 10점 항목 활성화).
+- ~~antislop 결정론 검사기(eval-score 10점 항목 활성화).~~ → 완료: `check-slop.mjs`(v0.11.0) 배선, `eval-score.sh`의 `antislop_points()`.
 - Java·Go 스타터 정답 증명은 CI(ubuntu-latest, JDK·Go 탑재)에서 첫 확인 — 로컬 런타임 부재로 SKIP.

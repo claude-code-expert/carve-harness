@@ -175,3 +175,38 @@
   `.claude/skills/anti-ai-slop/{SKILL.md,references/*.md}` · `.claude/skills/carve-guide/SKILL.md`(완료
   기준을 프로즈 → 종료코드) · `.claude/CLAUDE.md` · README(한/영)·GUIDE 인벤토리.
   훅 20→22 · 테스트 30→31 스위트(503→545건) · 감사 71→77체크.
+
+## 2026-09-09 — 채점 게이트 3종 배선 (antislop 활성화, GATE-C8, test 축 파생)
+
+- **결정**: 발표자료 참조 구현(`docs/evaluator/deck-example/`)과 하네스 실구현을 대조해, 참조 구현에는
+  있으나 하네스에 비어 있던 축 3개를 배선한다. **참조 구현 코드 자체는 배선하지 않는다.**
+  ① **antislop 활성화** — `eval-score.sh`의 10점 항목이 "검사기 미출시"를 이유로 항상 skipped였다.
+     `check-slop.mjs`(v0.11.0)를 변경분의 `.html/.htm/.css/.svg`에 돌려 채점한다. 거부권 없음.
+  ② **GATE-C8 축 정합** — `checklist-gate.sh`가 `score`만 읽던 탓에, 워크플로 없이 도는 경로에서
+     축과 무관한 총점을 써넣으면 통과했다. `axes`가 있으면 5축에서 재계산해 대조하고,
+     test 축 0인데 임계 이상을 주장하면 차단한다.
+  ③ **test 축 파생** — `SCORE_SCHEMA`가 `test: number`를 받아, "미실행이면 test=0 → 상한 75"는
+     문서에만 있고 강제되지 않았다. 채점자는 4축 + `tests{ran,passed,failed,command,output}`만
+     보고하고 test 축은 `testAxis()`가 파생한다.
+- **이유**: ①은 이미 배포된 결정론 검사기가 놀고 있었고(모든 스택이 90점 만점으로 채점),
+  ②③은 하네스 문서가 주장하는 불변식이 실제로는 성립하지 않던 자리다. "채점당하는 쪽이
+  자기 점수를 정할 수 없다"는 GATE-C5/C6 원칙이 총점·축에는 적용되지 않고 있었다.
+- **대안**: (a) `deck-example`의 Java/Python `ScoreCard`·`RubricJudge`를 `.claude/`로 이식 — **기각**.
+  같은 모델이 이미 bash/jq/JS로 있어 3중 구현이 되고, `jq` 하나만 요구하는 드롭인에 JVM·Python
+  런타임을 얹는다. 참조 구현은 `docs/`에 두고 대응표만 붙였다.
+  (b) antislop 대상에 `.md` 포함 — 기각. 카피 톤 룰이 문서 리포에서 상시 발화한다(`posttool-slop.sh`와
+  같은 판단, 같은 확장자 목록을 쓴다).
+  (c) GATE-C8을 `axes` 없는 항목에도 적용 — 기각. 구형·타 에이전트 체크리스트가 전부 막힌다.
+  "있으면 검증, 없으면 무동작"으로 하위호환을 지켰다.
+  (d) test 축을 스키마에 남기고 프롬프트로만 금지 — 기각. 그게 지금까지의 상태였고 작동하지 않았다.
+- **영향 범위**: `.claude/hooks/eval-score.sh`(`antislop_points()`) · `.claude/hooks/checklist-gate.sh`(GATE-C8) ·
+  `.claude/workflows/carve-verify-loop.js`(`testAxis`·`axesWithTest`·`SCORE_SCHEMA`) ·
+  `.claude/agents/evaluator.md` · `.claude/skills/checklist-loop/SKILL.md` ·
+  테스트 3스위트(545→558건, 31스위트 유지) — `eval-score.test.sh`에 GATE-C8 jq 클램프 ⟷
+  `scoreFromAxes` 교차 검증 추가(두 구현이 갈라지면 워크플로 경로와 수동 경로의 판정이 갈린다).
+  문서: README(한/영)·GUIDE·`docs/md/verify-loop-guide.md`·`docs/md/language-packs/LP4,LP5`·
+  `.claude/hooks/README.md`(`posttool-slop`·`check-slop.mjs` 누락분 포함)·`docs/evaluator/README.md`.
+  `deck-example/goldenset/` → `checklist-seed/` 개명(내용이 골든셋이 아니라 checklist 스키마였다).
+  감사 77/77 유지.
+- **알려진 천장**: 클램프 규칙이 JS(`scoreFromAxes`)와 jq(`cl()`) 두 곳에 있다. 교차 검증 테스트로
+  드리프트를 잡지만 정의 자체는 하나로 못 모은다 — 훅은 bash, 워크플로는 JS이기 때문이다.

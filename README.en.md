@@ -152,7 +152,7 @@ Session boundaries are automatic. Steps 6–8 are optional — 0–5 alone activ
 Three higher workflows sit on top of the single-session guard. None is tied to a specific model — walk the same SOP by hand and it works on opus/sonnet/Cursor/Codex.
 
 - **Fable team** ([guide](docs/md/fable-team-guide.md)) — the main session splits work into 3–5 tasks for role workers (`fable-researcher`·`fable-builder`·`fable-doc-writer`·`fable-visualizer`·`evaluator`) and synthesizes results. Workers hold non-overlapping file ownership + worktree isolation, so they run in parallel without clashing. Generator and evaluator are never the same agent. Opt-in — runs when you name the `ultracode` keyword or the workflow.
-- **Verify loop** ([guide](docs/md/verify-loop-guide.md)) — an independent evaluator scores each "done" claim by reading the code and running tests, 0–100 (exists·match·test·contract·no_regress). Only sub-95 items get their gap fed back for rework, looping to 95. While any item is short or unscored, the `checklist-gate` Stop hook **blocks** completion. `/verify-loop <goal>`.
+- **Verify loop** ([guide](docs/md/verify-loop-guide.md)) — an independent evaluator scores each "done" claim by reading the code and running tests, 0–100 (exists·match·test·contract·no_regress). **The evaluator does not score the `test` axis** — it reports the run (`ran`·`passed`·`failed`) and the axis is derived, so an item whose tests never ran caps at 75 with the other four perfect and cannot reach 95. Only sub-95 items get their gap fed back for rework, looping to 95. While any item is short or unscored, the `checklist-gate` Stop hook **blocks** completion. `/verify-loop <goal>`.
 - **Golden-set eval (carve-eval)** — a fixed case set (`specs/goldenset/*.json`, input→rubric) is run k times per case for pass@k (capability) and pass^k (consistency), appended to a trend, flagged `[REGRESSION]` on a drop vs baseline. **"Score the state of the environment, not the agent's words"** — state asserts (`file_exists`·`cmd_exit0`·`git_diff_contains`) rank above text and LLM rubric. Auto-committing cases is disabled (prevents self-reinforcement) — humans set critical paths and strictness. Setup is `/eval-init` once, then `/eval`.
 
 ## Full component list (skills · commands · hooks)
@@ -196,7 +196,7 @@ Three higher workflows sit on top of the single-session guard. None is tied to a
 | `posttool-slop` | PostToolUse (after writing `.html·.htm·.css·.svg`) | One-line anti-slop linter summary, non-blocking (exit 0). Full report via JSONL or a manual run |
 | `check-slop.mjs` | Manual CLI · called by `posttool-slop` | Deterministic slop linter, 34 rules (HTML/CSS · SVG · MD dispatch, WCAG contrast math). `0` clean · `1` ERROR · `2` bad invocation |
 | `stop-verify` | Stop (before completion) | Changed-stack build/type/test gate (fail exit 2) |
-| `checklist-gate` | Stop (after `stop-verify`) | Blocks completion while `checklist.json` items are <95 or unscored. `domain_safety` requires 100. Self-bypass blocked (tombstone) |
+| `checklist-gate` | Stop (after `stop-verify`) | Blocks completion while `checklist.json` items are <95 or unscored. `domain_safety` requires 100. Self-bypass blocked (tombstone, threshold floor, **axis-sum check**) |
 | `session-handoff` | SessionStart·PreCompact·SessionEnd | Restore/save handoff + config banner |
 | `log-event` | When another hook records a verdict | JSONL observability append — single source for schema + PII masking |
 | `lib-protected` · `lib-stop-guard` · `lib-packs` | `source`d (never run directly) | Protected-path/dangerous-command regex / Stop loop guard / language-pack manifest reader |
@@ -210,7 +210,7 @@ Three higher workflows sit on top of the single-session guard. None is tied to a
 | `redteam` | Guardrail periodic check | Scores 34 attacks · 19 normal by exit code (no LLM). Block/over-block rates. `--strict` |
 | `eval-run` | `/eval` case run (helper) | One case setup→respond→score. `--target session\|claude\|exec:` |
 | `eval-trend` | `/eval` trend read/write (helper) | Deterministic append to `eval-score.json` — rejects tampered `prevHash` |
-| `eval-score` | Build-health score (manual) | Language-agnostic scorecard (§5.7) — G1 build · G2 tests · G3 safety (veto) + lint · regression · coverage |
+| `eval-score` | Build-health score (manual) | Language-agnostic scorecard (§5.7) — G1 build · G2 tests · G3 safety (veto) + lint · regression · coverage · antislop (`check-slop.mjs`) |
 
 ## Structure
 
