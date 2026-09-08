@@ -1,6 +1,6 @@
 {
   "suite": "deck-example-coupon-api",
-  "note": "발표자료(Level 9) 74~75p 워크스루의 그 케이스를 골든셋 형식으로 옮긴 것. 채점 항목 4개, 합격선 95. 이 파일은 사람이 검수해 만든 문항이다 - 에이전트가 자동 생성하지 않는다(자기가 통과하는 것만 담는 자기강화 방지).",
+  "note": "발표자료(Level 9) 74~75p 워크스루의 그 케이스. 채점 항목 4개, 합격선 95. 이건 specs/checklist.json 형식(체크리스트 시드)이지 /eval 골든셋이 아니다 - 골든셋은 {id, version, prompt, setup, k, tags, assert} 형식이고 specs/goldenset/starters/ 에 스타터가 있다. 이 파일은 사람이 검수해 만든 문항이다 - 에이전트가 자동 생성하지 않는다(자기가 통과하는 것만 담는 자기강화 방지).",
   "threshold": 95,
   "goal": "쿠폰 적용 API 구현",
   "tasks": [
