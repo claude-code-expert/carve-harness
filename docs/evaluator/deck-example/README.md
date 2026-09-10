@@ -60,7 +60,7 @@ Java·Python 사본은 *읽고 이해하기 위한* 것이고, 실제로 도는 
 | `Measurement.value == null` → `skipped` | 같은 파일 — 못 잰 항목은 분모에서 제외 |
 | `Verdict.UNABLE` (fail-closed) | 같은 파일, `emit_unable` → exit 1 |
 | `RubricJudge.AXES` (5축) | `.claude/workflows/carve-verify-loop.js`의 `AXIS_MAX` |
-| `TestRun.ran == false` → test 축 0 | 같은 파일의 `testAxis()` — 채점자는 `tests`(실행 결과)만 보고하고 축은 파생된다 |
+| `TestRun.ran == false` → test 축 0, 그 외 `ratio()` 비율 | 같은 파일의 `testAxis()` — 채점자는 `tests`(실행 결과)만 보고하고 축은 파생된다. **하네스는 비율을 주지 않는다**: 전부 통과만 25, 실패 1건이면 0(4/5 통과 20점 + 나머지 만점 = 정확히 95라 실패를 안고 통과하는 구멍) |
 | `DOMAIN_SAFETY` 100점 미만 차단 | `.claude/hooks/checklist-gate.sh` GATE-C7 |
 | (없음 — 참조 구현엔 해당 개념 없음) | 같은 파일 GATE-C8 — `score`가 축 합과 일치하는지 게이트가 재계산 |
 | `loop_status().rework` (미달만 재작업) | `carve-verify-loop.js`의 unresolved 루프 |

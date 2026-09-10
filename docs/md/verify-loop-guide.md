@@ -106,8 +106,8 @@ P5 Verify           전 항목 95점 이상 → evaluator 통합 최종 판정(�
       "acceptance": "204 반환 + 상태 CANCELLED 전이 테스트 통과",
       "owns": ["src/api/cancel/**"],
       "attempts": 2,
-      "score": 88,
-      "axes": { "exists": 25, "match": 25, "test": 13, "contract": 15, "no_regress": 10 },
+      "score": 75,
+      "axes": { "exists": 25, "match": 25, "test": 0, "contract": 15, "no_regress": 10 },
       "tests": { "ran": true, "passed": 3, "failed": 1, "command": "npm test -- cancel" },
       "pass": false,
       "gaps": ["멱등성 미검증", "이미 취소된 주문 409 테스트 없음"],
@@ -119,7 +119,7 @@ P5 Verify           전 항목 95점 이상 → evaluator 통합 최종 판정(�
 
 - `claim`/`acceptance`/`owns`: 분해 단계에서 채운다. `owns` glob은 항목끼리 겹치면 안 된다(파일 오너 1개).
 - `axes`/`tests`/`score`/`pass`/`gaps`/`evidence`/`attempts`: 채점 단계에서 채운다. `score = 5축 합`, `pass = score >= threshold`.
-- `axes`를 쓴 항목은 게이트가 `score`를 축에서 재계산해 대조한다(GATE-C8) — 점수는 써넣는 값이 아니라 계산되는 값이다.
+- `axes`를 쓴 항목은 게이트가 `score`를 축에서 재계산해 대조한다(GATE-C8) — 점수는 써넣는 값이 아니라 계산되는 값이다. `tests`가 있으면 `test` 축도 실행 결과에서 다시 파생해 대조한다.
 
 ---
 
@@ -133,7 +133,7 @@ evaluator가 항목마다 수행:
 4. **evidence** — 파일:라인과 테스트 결과 원문 인용.
 5. **gaps** — 95 미만이면 빌더가 바로 실행 가능하도록 "무엇을 어떻게 고칠지" 구체적으로 명시.
 
-`test` 축(0~25)은 evaluator가 매기지 않는다. `tests`에서 `round(25 × passed/(passed+failed))`로 파생되고, `ran:false`거나 수집된 테스트가 0건이면 0이다. 그래서 **테스트를 돌리지 않은 항목은 나머지 네 축을 만점 받아도 합이 75** — 임계 95를 산술적으로 넘을 수 없다. 게이트에 "테스트를 돌렸는지 확인하라"는 규칙을 따로 넣지 않아도 배점 구조가 거짓 완료를 막는다.
+`test` 축(0~25)은 evaluator가 매기지 않는다. `tests`에서 파생된다 — `ran:true`·`passed>0`·`failed=0`이면 25, 아니면 0. 비율 부분점수는 없다(4/5 통과가 20점이면 나머지 만점과 합쳐 정확히 95라, 실패 테스트를 안고 통과한다). 그래서 **테스트를 돌리지 않았거나 하나라도 실패한 항목은 나머지 네 축을 만점 받아도 합이 75** — 임계 95를 산술적으로 넘을 수 없다. 게이트에 "테스트를 돌렸는지 확인하라"는 규칙을 따로 넣지 않아도 배점 구조가 거짓 완료를 막는다.
 
 정의: `.claude/agents/evaluator.md`(채점 모드 절).
 

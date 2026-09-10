@@ -103,12 +103,17 @@ const scoreFromAxes = (axes) => {
 // test 축은 신고값이 아니라 실행 결과에서 파생된다. 돌리지 않았으면(ran !== true) 0이고,
 // 나머지 네 축을 만점 받아도 합은 75 — 임계 95를 산술적으로 넘을 수 없다. 게이트에
 // "테스트를 돌렸는지 확인하라"는 규칙을 더하는 대신 배점 구조가 강제한다.
+// 전부 통과만 25, 아니면 0 — 참조 구현(TestRun.ratio)의 비율 부분점수는 주지 않는다.
+// 4/5 통과가 20점이면 나머지 만점과 합쳐 정확히 95 = 임계라, 실패 테스트를 안고 통과한다.
+// checklist-gate.sh GATE-C8 의 jq `tx()` 가 같은 규칙으로 재파생한다 — 함께 고쳐라.
 const testAxis = (t) => {
   if (!t || typeof t !== 'object' || t.ran !== true) return 0
-  const passed = Math.max(0, Number(t.passed) || 0)
-  const failed = Math.max(0, Number(t.failed) || 0)
-  if (passed + failed === 0) return 0   // "돌렸다"는 주장만 있고 수집된 테스트가 없다
-  return Math.round(AXIS_MAX.test * (passed / (passed + failed)))
+  const passed = Number(t.passed) || 0
+  const failed = Number(t.failed) || 0
+  // 수집 0건 = 안 돌린 것 · failed 가 정확히 0 이 아니면(양수·음수 모두) SC 미충족(red→green).
+  // 음수를 0 으로 클램프하면 jq tx() 와 갈린다 — 이례적 입력은 점수가 아니라 0 이다.
+  if (!(passed > 0) || failed !== 0) return 0
+  return AXIS_MAX.test
 }
 // 채점자가 준 4축 + 파생된 test 축 → checklist.json 에 실릴 5축. GATE-C8 이 이 합을 재계산한다.
 const axesWithTest = (axes, tests) => ({ ...(axes || {}), test: testAxis(tests) })
@@ -184,7 +189,7 @@ const buildAndScore = (it, iteration) => {
       return it
     }
     return agent(
-      `체크리스트 항목을 채점 모드로 평가하라.\nclaim: ${it.claim}\nacceptance(SC): ${it.acceptance}\n변경 파일: ${build.changedFiles.join(', ')}\n빌더 테스트 보고: ${build.testResult}\n\n실제 코드를 열고 **테스트를 직접 실행**해 채점하라(주장·빌더 보고만 믿지 마라).\n\n네가 채점할 축은 네 개다:\n- exists(0~25): 실제 구현 존재 — 스텁·TODO·미구현이면 0\n- match(0~25): 코드가 claim과 의미적으로 일치\n- contract(0~15): 타입·에러 처리·입력 검증·인가 경계 안전\n- no_regress(0~10): 기존 통과 기능 퇴행 없음\n\n**test 축(0~25)은 네가 점수를 매기지 않는다.** 대신 verify 명령을 Bash로 직접 실행하고 그 결과를 tests에 보고하라: ran(실행 여부)·passed·failed·command(실행한 명령)·output(출력 원문, 요약 금지). 점수는 이 값에서 파생된다 — 실행하지 않았으면(ran=false) test=0이고 나머지를 만점 받아도 합이 75라 임계를 넘지 못한다. 명령 성공 ≠ 결과 정확이니 실패·스킵·미수집을 구분해서 세라.\n\n합(=항목점수)이 ${THRESHOLD} 미만이면 gaps에 "무엇을 어떻게 고쳐야 넘는지"를 빌더가 바로 실행 가능하게 구체적으로 써라.`,
+      `체크리스트 항목을 채점 모드로 평가하라.\nclaim: ${it.claim}\nacceptance(SC): ${it.acceptance}\n변경 파일: ${build.changedFiles.join(', ')}\n빌더 테스트 보고: ${build.testResult}\n\n실제 코드를 열고 **테스트를 직접 실행**해 채점하라(주장·빌더 보고만 믿지 마라).\n\n네가 채점할 축은 네 개다:\n- exists(0~25): 실제 구현 존재 — 스텁·TODO·미구현이면 0\n- match(0~25): 코드가 claim과 의미적으로 일치\n- contract(0~15): 타입·에러 처리·입력 검증·인가 경계 안전\n- no_regress(0~10): 기존 통과 기능 퇴행 없음\n\n**test 축(0~25)은 네가 점수를 매기지 않는다.** 대신 verify 명령을 Bash로 직접 실행하고 그 결과를 tests에 보고하라: ran(실행 여부)·passed·failed·command(실행한 명령)·output(출력 원문, 요약 금지). 점수는 이 값에서 파생된다 — 전부 통과만 25이고, 실행하지 않았거나(ran=false) 실패가 1건이라도 있으면 test=0이라 나머지를 만점 받아도 합이 75로 임계를 넘지 못한다. 명령 성공 ≠ 결과 정확이니 실패·스킵·미수집을 구분해서 세라.\n\n합(=항목점수)이 ${THRESHOLD} 미만이면 gaps에 "무엇을 어떻게 고쳐야 넘는지"를 빌더가 바로 실행 가능하게 구체적으로 써라.`,
       { agentType: 'evaluator', label: `score:${it.id}#${it.attempts}`, phase: 'Score', schema: SCORE_SCHEMA }
     ).then((v) => {
       it.tests = v?.tests ?? null

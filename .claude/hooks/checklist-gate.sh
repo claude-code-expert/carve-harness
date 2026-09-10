@@ -55,6 +55,22 @@ if [ "$THRESHOLD" -lt "$FLOOR" ]; then
   THRESHOLD=$FLOOR
 fi
 
+# 형식 불량 = 차단. C4(파싱 불가 → best-effort 스킵)와 달리, 파싱은 되는데 모양이 틀린 파일
+# (items 가 배열이 아님·항목이 객체가 아님·axes 가 객체가 아님)은 아래 jq 들이 인덱싱 에러로
+# 죽고 `$(…)` 는 빈 문자열을 돌려줘 "미달 없음" 으로 읽혔다 — `"axes": 5` 하나로 C7·C8 이
+# 통째로 무력화됐다. jq 종료코드를 보고 fail-closed. 정상 산출물(워크플로·SOP)은 이 모양을
+# 벗어나지 않으므로, 벗어난 파일은 위조·손상이다.
+shape_fail() {
+  mkdir -p "$DIR/specs" 2>/dev/null && : > "$LOCK" 2>/dev/null
+  echo "[carve-harness:checklist] checklist.json 형식 불량($1) — items 는 객체 배열, axes·tests 는 객체여야 한다. 위조·손상으로 간주해 완료 차단" >&2
+  bash "$LOG_EVENT" Stop checklist fail "shape:$1"
+  exit 2
+}
+# 최상위 모양: items 는 비어 있지 않은 배열. jq 의 `.items[]` 는 객체도 값을 순회하므로
+# `"items": {}` 는 에러 없이 "항목 0개 = 전부 통과" 로 읽혔다(evaluator 재검증에서 발견).
+# 검증할 항목이 없는 체크리스트는 완료의 근거가 아니다 — 빈 배열도 같은 이유로 막는다.
+jq -e '(.items | type) == "array" and (.items | length) > 0' "$CHECKLIST" >/dev/null 2>&1 || shape_fail items
+
 # GATE-C7 유형별 거부권(블루프린트 §5.5 — domain_safety 허용 실패율 0%): `type: domain_safety` 항목은
 # 100점이 아니면 총점·임계와 무관하게 차단한다. 안전 불변식은 "거의 됐다"가 없다. type 없는 항목은
 # 기존 임계 규칙 그대로(하위호환). 유형은 convention | correctness | domain_safety.
@@ -63,7 +79,7 @@ SAFETY_UNRESOLVED=$(jq -r '
     | select(.type == "domain_safety")
     | select((.score == null) or (.score < 100))
     | "\(.id)(\(.score // "미채점"))"
-  ] | join(", ")' "$CHECKLIST")
+  ] | join(", ")' "$CHECKLIST") || shape_fail domain_safety
 if [ -n "$SAFETY_UNRESOLVED" ]; then
   mkdir -p "$DIR/specs" 2>/dev/null && : > "$LOCK" 2>/dev/null
   echo "[carve-harness:checklist] domain_safety 항목 미완 (100점 필수, 임계 무관): ${SAFETY_UNRESOLVED} — 안전 불변식은 부분 점수가 없다" >&2
@@ -76,24 +92,32 @@ fi
 # 총점을 써넣으면 그대로 통과했다 — 채점당하는 쪽이 자기 점수를 정하는 구멍(C5/C6와 같은 축).
 # 두 가지를 본다: ① score == 5축 합  ② test 축 0이면 임계를 넘을 수 없다(테스트 미실행 =
 # 거짓 완료. 5축 배점상 나머지 만점이어도 75가 상한이라 95를 넘는 건 축 위조뿐이다).
-# 클램프 규칙(축 최대치·결측 0·음수 0·비숫자 0)은 carve-verify-loop.js 의 <score-helper> 와
-# 같아야 한다 — 한쪽만 고치면 워크플로 경로와 수동 경로의 판정이 갈린다.
+# ③ `tests`(실행 결과)가 있으면 test 축을 거기서 다시 파생해 대조한다 — ran·passed>0·failed=0
+#    이면 25, 아니면 0. 실패 테스트를 안고 test=25 를 써넣는 경로를 막는다. tests 가 객체가
+#    아니면 파생 0 (fail-closed).
+# 클램프 규칙(축 최대치·결측 0·음수 0·비숫자 0)과 파생 규칙은 carve-verify-loop.js 의
+# <score-helper>(scoreFromAxes·testAxis) 와 같아야 한다 — 한쪽만 고치면 워크플로 경로와 수동
+# 경로의 판정이 갈린다. eval-score.test.sh 가 cl()·tx() 줄을 그대로 뽑아 교차 검증한다.
 # `axes` 없는 항목은 건드리지 않는다(구형·타 에이전트 체크리스트 하위호환).
 AXES_BAD=$(jq -r --argjson th "$THRESHOLD" '
   def cl($v; $m): if ($v | type) != "number" then 0 elif $v < 0 then 0 elif $v > $m then $m else $v end;
+  def num($v): if ($v | type) == "number" then $v else 0 end;
+  def tx($t): if ($t | type) != "object" then 0 elif $t.ran == true and num($t.passed) > 0 and num($t.failed) == 0 then 25 else 0 end;
   [ .items[]
     | select(.axes != null) | select(.score != null)
     | . as $it
     | (cl($it.axes.exists; 25) + cl($it.axes.match; 25) + cl($it.axes.test; 25)
        + cl($it.axes.contract; 15) + cl($it.axes.no_regress; 10)) as $sum
     | cl($it.axes.test; 25) as $t
-    | select(($sum != $it.score) or ($t == 0 and $it.score >= $th))
+    | (if $it.tests == null then $t else tx($it.tests) end) as $tx
+    | select(($sum != $it.score) or ($t == 0 and $it.score >= $th) or ($tx != $t))
     | if $sum != $it.score then "\($it.id)(score \($it.score) ≠ 축합 \($sum))"
+      elif $tx != $t then "\($it.id)(test \($t)점인데 실행 결과 파생은 \($tx)점)"
       else "\($it.id)(test 0점인데 \($it.score)점)" end
-  ] | join(", ")' "$CHECKLIST")
+  ] | join(", ")' "$CHECKLIST") || shape_fail axes
 if [ -n "$AXES_BAD" ]; then
   mkdir -p "$DIR/specs" 2>/dev/null && : > "$LOCK" 2>/dev/null
-  echo "[carve-harness:checklist] 축 정합 실패: ${AXES_BAD} — score는 5축(exists25·match25·test25·contract15·no_regress10) 합이어야 하고, 테스트를 돌리지 않은 항목(test=0)은 임계를 넘을 수 없다" >&2
+  echo "[carve-harness:checklist] 축 정합 실패: ${AXES_BAD} — score는 5축(exists25·match25·test25·contract15·no_regress10) 합이어야 하고, test 축은 tests 실행 결과에서 파생된다(전부 통과만 25, 미실행·실패 1건이면 0이라 임계를 넘을 수 없다)" >&2
   bash "$LOG_EVENT" Stop checklist fail "axes:${AXES_BAD}"
   exit 2
 fi
@@ -104,7 +128,7 @@ UNRESOLVED=$(jq -r --argjson th "$THRESHOLD" '
   [ .items[]
     | select((.score == null) or (.score < $th))
     | "\(.id)(\(.score // "미채점"))"
-  ] | join(", ")' "$CHECKLIST")
+  ] | join(", ")' "$CHECKLIST") || shape_fail items
 
 if [ -n "$UNRESOLVED" ]; then
   COUNT=$(printf '%s' "$UNRESOLVED" | awk -F', ' '{print NF}')

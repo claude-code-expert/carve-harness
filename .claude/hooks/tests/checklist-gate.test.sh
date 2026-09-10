@@ -171,6 +171,36 @@ c8 "{\"threshold\":95,\"items\":[{\"id\":\"c1\",\"score\":null,\"axes\":{$AX}}]}
   && { echo "PASS: score null reported as unscored, not axis mismatch"; pass=$((pass + 1)); } \
   || { echo "FAIL: null score message (exit $code): $out"; fail=$((fail + 1)); }
 
+# (22) `tests` present: the gate re-derives the test axis from the run instead of trusting it.
+# One red test with test=25 -> block. A ratio would have let 4/5 land exactly on 95.
+c8 "{\"threshold\":95,\"items\":[{\"id\":\"c1\",\"score\":100,\"axes\":{$AX},\"tests\":{\"ran\":true,\"passed\":4,\"failed\":1}}]}"
+[ "$code" -eq 2 ] && printf '%s' "$out" | grep -q '실행 결과' \
+  && { echo "PASS: tests.failed=1 with test=25 -> block (GATE-C8)"; pass=$((pass + 1)); } \
+  || { echo "FAIL: failing run with full test axis escaped (exit $code): $out"; fail=$((fail + 1)); }
+c8 "{\"threshold\":95,\"items\":[{\"id\":\"c1\",\"score\":100,\"axes\":{$AX},\"tests\":\"ran\"}]}"
+[ "$code" -eq 2 ] && printf '%s' "$out" | grep -q '실행 결과' \
+  && { echo "PASS: malformed tests -> derived 0, fail-closed (GATE-C8)"; pass=$((pass + 1)); } \
+  || { echo "FAIL: malformed tests escaped or jq errored (exit $code): $out"; fail=$((fail + 1)); }
+
+# (23) all green with test=25 -> allow.
+c8 "{\"threshold\":95,\"items\":[{\"id\":\"c1\",\"score\":100,\"axes\":{$AX},\"tests\":{\"ran\":true,\"passed\":4,\"failed\":0}}]}"
+[ "$code" -eq 0 ] && { echo "PASS: green run with test=25 -> allow (GATE-C8)"; pass=$((pass + 1)); } \
+                  || { echo "FAIL: green run blocked (exit $code): $out"; fail=$((fail + 1)); }
+
+# (24) shape errors are fail-closed. `"axes": 5` used to crash jq inside $(...), leave AXES_BAD
+# empty, and let the item through as "nothing unresolved" — one wrong type disabled C7+C8.
+for bad in '{"threshold":95,"items":[{"id":"c1","score":100,"axes":5}]}' \
+           '{"threshold":95,"items":[{"id":"c1","score":100,"axes":[25,25,25,15,10]}]}' \
+           '{"threshold":95,"items":[5]}' \
+           '{"threshold":95,"items":{}}' \
+           '{"threshold":95,"items":[]}' \
+           '{"threshold":95}'; do
+  c8 "$bad"
+  [ "$code" -eq 2 ] && printf '%s' "$out" | grep -q '형식 불량' \
+    && { echo "PASS: malformed shape -> block: ${bad:15:40}"; pass=$((pass + 1)); } \
+    || { echo "FAIL: malformed shape escaped (exit $code): $bad :: $out"; fail=$((fail + 1)); }
+done
+
 rm -f "$tmp/specs/checklist.json" "$tmp/specs/.checklist-active"; rm -f "$tmp"/logs/*.jsonl 2>/dev/null; rmdir "$tmp/logs" "$tmp/specs" "$tmp" 2>/dev/null
 
 printf -- '---\n%s passed, %s failed\n' "$pass" "$fail"

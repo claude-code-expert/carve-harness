@@ -62,8 +62,12 @@ if command -v node >/dev/null 2>&1; then
     A("ran with nothing collected -> 0 (claiming a run is not a run)",
       testAxis({ ran: true, passed: 0, failed: 0 }) === 0);
     A("all green -> full 25", testAxis({ ran: true, passed: 4, failed: 0 }) === 25);
-    A("3/4 green -> 19 (partial credit, still short of the bar)",
-      testAxis({ ran: true, passed: 3, failed: 1 }) === 19);
+    A("one failure -> 0 (red is not done, no partial credit)",
+      testAxis({ ran: true, passed: 3, failed: 1 }) === 0);
+    A("99 green + 1 red -> still 0 (a ratio would let 4/5 land exactly on 95)",
+      testAxis({ ran: true, passed: 99, failed: 1 }) === 0);
+    A("negative failed does not count as zero failures -> 0 (matches jq tx())",
+      testAxis({ ran: true, passed: 5, failed: -3 }) === 0);
     A("truthy non-boolean ran does not count as a run", testAxis({ ran: "yes", passed: 4, failed: 0 }) === 0);
     A("untested claim with four perfect axes caps at 75 < 95",
       scoreFromAxes(axesWithTest(four, { ran: false, passed: 0, failed: 0 })) === 75);
@@ -105,6 +109,18 @@ if command -v node >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then
     echo "PASS: GATE-C8 jq clamp agrees with scoreFromAxes ($JS)"; pass=$((pass + 1))
   else
     echo "FAIL: clamp drift — js=[$JS] jq=[$JQ]"; fail=$((fail + 1))
+  fi
+  # Same for the test-axis derivation: jq tx() vs JS testAxis on one input set.
+  TCASES='[{"ran":true,"passed":4,"failed":0},{"ran":true,"passed":3,"failed":1},{"ran":false,"passed":9,"failed":0},
+           {"ran":true,"passed":0,"failed":0},{"ran":"yes","passed":4,"failed":0},{"ran":true},
+           {"ran":true,"passed":-1,"failed":0},{"ran":true,"passed":5,"failed":-3},"nope",null]'
+  JS=$(printf '%s\n%s\n' "$BLOCK" "console.log(($TCASES).map(testAxis).join(','));" | node)
+  TX=$(grep -m1 '  def num(' "$GATE"; grep -m1 '  def tx(' "$GATE")
+  JQ=$(printf '%s' "$TCASES" | jq -r "$TX [ .[] | tx(.) ] | join(\",\")")
+  if [ -n "$JS" ] && [ "$JS" = "$JQ" ]; then
+    echo "PASS: GATE-C8 jq tx() agrees with testAxis ($JS)"; pass=$((pass + 1))
+  else
+    echo "FAIL: test-axis derivation drift — js=[$JS] jq=[$JQ]"; fail=$((fail + 1))
   fi
 else
   echo "SKIP: node or jq absent -> clamp cross-check skipped"
