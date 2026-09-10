@@ -4,6 +4,15 @@
 
 > **규칙**: `VERSION` 파일이 바뀌는 커밋에는 반드시 해당 버전 항목(`[X.Y.Z]`)이 이 파일에 함께 스테이징되어야 한다 — `.githooks/pre-commit`이 기계적으로 차단, 작성은 `/version-changelog` 스킬. 배포 절차는 `RELEASE.md`.
 
+## [0.12.0] - 2026-09-10
+
+### Added
+- feat(evaluator): route grading to fable
+- feat(verify-loop): score the test axis all-or-nothing
+- feat(verify-loop): derive the test axis from a run, not a claim
+- feat(checklist): verify score against the axis sum (GATE-C8)
+- feat(eval): score antislop from check-slop.mjs
+
 ## [0.11.0] - 2026-09-06
 
 ### Added
