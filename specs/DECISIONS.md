@@ -248,3 +248,13 @@
   (b) 검증 에이전트 3종 일괄 상향 — 보류. 요청 범위가 evaluator였고, 나머지 둘은 채점 루프에 안 들어간다.
 - **영향 범위**: `evaluator.md` · `orchestration.md` 라우팅 표(evaluator 행 신설) · `fable-team-guide.md` 표 · `GUIDE.md` 표.
 - **알려진 천장**: alias `fable`은 Claude Code 버전에 따라 해석이 달라질 수 있다. 특정 버전에 고정하려면 `claude-fable-5-1` 전체 ID로 바꾼다.
+
+## 2026-09-10 — evaluator 모델 alias `fable` → 전체 ID `claude-fable-5-1`
+
+- **결정**: `evaluator.md` frontmatter를 `model: fable`에서 `model: claude-fable-5-1`로 바꾼다. v0.12.0에 alias로 나간 직후 패치.
+- **이유**: alias는 Claude Code(2.1.263) UI에서 모델명이 `unknown`으로 표시됐다. 실측(`claude -p --agent evaluator --output-format json`)으로
+  alias와 전체 ID 둘 다 `modelUsage`가 `claude-fable-5-1`이라 **런타임은 동일**하고, 표시 계층만 갈린다 — 표시명 조회는 ID 카탈로그
+  (`display_name: "Fable 5.1"`)를 타는데 alias→family 매핑 표가 opus/sonnet/haiku만 알고 fable을 모른다. 직전 ADR의 "알려진 천장"이 그대로 현실화된 것.
+- **대안**: alias 유지 + Claude Code 업데이트 대기 — 기각. 하네스는 사용자 쪽 CLI 버전을 통제 못 한다. 전체 ID는 어떤 버전에서든 같은 문자열로 읽힌다.
+- **영향 범위**: `evaluator.md` · `GUIDE.md` 표 · `fable-team-guide.md` 표. `orchestration.md` 표는 family명(`Fable5`) 표기라 그대로.
+- **알려진 천장**: 전체 ID는 5.1 고정이다. Fable 5.2가 나오면 이 한 줄을 손으로 올려야 한다(alias였다면 자동 추종). 라우팅 표를 바꿀 때 같이 본다.

@@ -169,7 +169,7 @@ harness/
 
 | 파일 | 모델 | 설명 · 호출 |
 |------|------|-------------|
-| `evaluator.md` | fable | 생성물을 완료기준(SC)·타입 안전성으로 독립 검증. `"use the evaluator agent"` |
+| `evaluator.md` | claude-fable-5-1 | 생성물을 완료기준(SC)·타입 안전성으로 독립 검증. `"use the evaluator agent"` |
 | `security-reviewer.md` | sonnet | 시크릿 노출·인증/인가 누락·인젝션 + **게이트웨이 인증/인가/레이트리미트 우회**. `"use the security-reviewer agent"` |
 | `pr-test-analyzer.md` | sonnet | 변경분(PR/diff)의 테스트 충분성 평가(커버리지·SC매핑·스텁괴리). `"use the pr-test-analyzer agent"` |
 

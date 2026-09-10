@@ -18,7 +18,7 @@
 | 문서 | `fable-doc-writer` | sonnet | `docs/**`, `*.md` | README·가이드·API 문서 |
 | 이미지 | `fable-visualizer` | sonnet | `docs/img/**`, `*.puml`, `*.svg` | 다이어그램·목업 (시각 게이트 준수) |
 | 리서치 | `fable-researcher` | sonnet | `.planning/**`, `docs/research/**` | 조사·근거·RESEARCH.md |
-| 검증 | `evaluator` (기존 재사용) | fable | 없음 (read-only) | SC 대비 통과/불통과 판정 |
+| 검증 | `evaluator` (기존 재사용) | claude-fable-5-1 | 없음 (read-only) | SC 대비 통과/불통과 판정 |
 
 파일 하나에 오너 하나 — 소유권 glob이 겹치면 배정 자체가 잘못된 것이다.
 
