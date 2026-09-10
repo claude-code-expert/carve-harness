@@ -236,3 +236,15 @@
 - **알려진 천장**: JS `Number(x)||0`은 숫자 문자열 `"25"`를 25로, jq `cl()`·`num()`은 0으로 본다.
   교차 검증 케이스에 숫자 문자열은 넣지 않았다 — 두 경로 다 정상 산출물은 숫자 타입이라 실전 노출은
   없지만, 정의를 맞추려면 jq 쪽을 `tonumber?`로 바꾸는 별도 결정이 필요하다.
+
+## 2026-09-10 — evaluator 모델을 sonnet → fable(5.1)로 상향
+
+- **결정**: `.claude/agents/evaluator.md`의 `model: sonnet`을 `model: fable`로 바꾼다. carve-verify-loop의
+  항목 채점(`score:*`)·최종 판정(`final-verify`), fable 팀의 검증 슬롯이 전부 이 파일을 타므로 한 곳만 바꾼다.
+  `security-reviewer`·`pr-test-analyzer`는 그대로 sonnet.
+- **이유**: 채점자가 생성자(sonnet-5 워커)와 같은 모델이면 같은 맹점을 공유한다(AGENTS.md §6 Self-Eval Blindspot).
+  5축 루브릭·GATE-C8은 점수 위조를 막지만 판단 품질 자체는 모델이 정한다. 채점 호출은 항목당 1회라 비용 증가폭이 작다.
+- **대안**: (a) opus — 기각. 라우팅 정본(`orchestration.md`)이 최상위를 Fable5로 잡고 있어 축이 하나 더 생긴다.
+  (b) 검증 에이전트 3종 일괄 상향 — 보류. 요청 범위가 evaluator였고, 나머지 둘은 채점 루프에 안 들어간다.
+- **영향 범위**: `evaluator.md` · `orchestration.md` 라우팅 표(evaluator 행 신설) · `fable-team-guide.md` 표 · `GUIDE.md` 표.
+- **알려진 천장**: alias `fable`은 Claude Code 버전에 따라 해석이 달라질 수 있다. 특정 버전에 고정하려면 `claude-fable-5-1` 전체 ID로 바꾼다.

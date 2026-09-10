@@ -26,6 +26,7 @@
 | 개발 및 테스트, 디버깅 | sonnet-5 | xhigh | 코드 작성, 테스트 케이스 작성, 디버깅, 리팩토링 담당 |
 | **ultracode / workflow로 스폰되는 워커** | **sonnet-5** | **high** | 구현·마이그레이션·테스트 작성 |
 | 읽기 전용 리뷰어(@reviewer) | sonnet-5 | high | lint·테스트·보안 스캔 도구만 허용 |
+| 검증(`evaluator` — 채점·최종 판정) | Fable5 | high | 생성자(sonnet-5)와 다른 모델로 판정 — Self-Eval Blindspot 방지 |
 | 포매팅·단순 변환 | haiku | low | 기계적 작업 |
 
 **에스컬레이션 규칙 (필수):**
