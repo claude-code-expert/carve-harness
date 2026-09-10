@@ -12,6 +12,8 @@
 # An item the stack cannot measure (tool missing, no report) is listed in `skipped` and removed
 # from the denominator — never a silent pass. verdict FAIL if any gate is 0, else PASS when
 # total/max >= 0.9. No stack detected -> verdict "unable", exit 1 (fail-closed).
+# G3 safety and antislop are stack-independent: the first scans the change set for secrets and
+# protected paths, the second runs check-slop.mjs over changed .html/.htm/.css/.svg.
 # Adapter contract in .claude/stacks/<pack>.sh: stack_detect · stack_build · stack_test ·
 # stack_lint (rc 0 ok / 1 fail / 2 not measurable) · stack_coverage (prints 0..1 or "skip") ·
 # STACK_COVERAGE_MIN. Multi-stack projects: gates AND across stacks, total = min.
@@ -72,6 +74,38 @@ safety_points() {  # echoes "<points>|<evidence>" — runs in a subshell, so no 
   echo "15|clean"
 }
 
+# ── antislop (stack-independent): check-slop.mjs over changed visual artifacts ──
+# 대상 확장자는 posttool-slop.sh 와 같은 .html/.htm/.css/.svg 다 — .md 는 카피 톤 룰이
+# 문서 지배적인 리포에서 상시 발화해 신호가 잡음에 묻힌다(그 훅 헤더 §10-11). 두 곳이
+# 갈라지면 "훅은 통과인데 점수는 0" 이 되므로 규칙을 바꿀 때 함께 옮겨라.
+# 대상 없음·node 없음·린터 없음은 실패가 아니라 미측정 → skipped(분모에서 제외).
+antislop_points() {  # echoes "<points>|<evidence>" — runs in a subshell, so no globals
+  local linter="$HOOKS_DIR/check-slop.mjs" cand targets f n
+  [ -f "$linter" ] || { echo "null|린터 없음"; return; }
+  command -v node >/dev/null 2>&1 || { echo "null|node 없음"; return; }
+  if [ "$have_git" -eq 1 ]; then
+    # 변경분만 본다 — 이미 리포에 있던 남의 산출물까지 채점하지 않는다(G3 safety 와 같은 범위).
+    cand=$( { git diff HEAD --name-only --diff-filter=d 2>/dev/null
+              git diff --cached --name-only --diff-filter=d 2>/dev/null
+              git ls-files --others --exclude-standard 2>/dev/null; } )
+  else
+    cand=$(find . -type d \( -name .git -o -name node_modules -o -name target -o -name build -o -name dist \) -prune -o -type f -print 2>/dev/null)
+  fi
+  # 삭제·이동된 경로가 섞이면 린터가 exit 2 로 끝나 "위반"으로 오독된다 → 실재 파일만 남긴다.
+  targets=''
+  while IFS= read -r f; do
+    [ -n "$f" ] && [ -f "$f" ] && targets="${targets}${f}"$'\n'
+  done <<< "$(printf '%s\n' "$cand" | grep -Ei '\.(html?|css|svg)$' | sort -u)"
+  targets="${targets%$'\n'}"
+  [ -n "$targets" ] || { echo "null|검사 대상 없음(.html/.htm/.css/.svg)"; return; }
+  n=$(printf '%s\n' "$targets" | wc -l | tr -d ' ')
+  if printf '%s\n' "$targets" | tr '\n' '\0' | xargs -0 node "$linter" >/dev/null 2>&1; then
+    echo "10|${n} file(s) 0 error"
+  else
+    echo "0|MUST-NOT 위반 (${n} file(s)) — node .claude/hooks/check-slop.mjs <파일> 로 확인"
+  fi
+}
+
 # ── regression: tests green AND no test file deleted in the change set ──
 regression_points() {  # $1 = G2 points
   [ "$1" = 25 ] || { echo 0; return; }
@@ -87,7 +121,7 @@ run_rc() {  # <fn> -> rc (2 = not measurable). Missing fn = 2.
 }
 
 score_stack() {  # sources $1, echoes one JSON object
-  local f="$1" name pts_build pts_test pts_lint pts_cov pts_reg pts_safe rc i cov skipped='[]' ev='{}'
+  local f="$1" name pts_build pts_test pts_lint pts_cov pts_reg pts_safe pts_slop rc i cov skipped='[]' ev='{}'
   unset -f stack_detect stack_build stack_test stack_lint stack_coverage stack_gate stack_format
   STACK_ID=''; STACK_COVERAGE_MIN=80
   # shellcheck source=/dev/null
@@ -129,14 +163,16 @@ score_stack() {  # sources $1, echoes one JSON object
   pts_safe="${safety%%|*}"; add_ev G3 "${safety#*|}"
   if [ "$pts_test" = null ]; then pts_reg=null; add_skip regression
   else pts_reg=$(regression_points "$pts_test"); add_ev regression "$([ "$pts_reg" = 10 ] && echo 'no test file deleted, tests green' || echo 'tests not green or test file deleted')"; fi
-  # antislop: no deterministic checker shipped yet — always reported as skipped, never silently scored.
-  add_skip antislop
+  # antislop: G3 와 같이 스택 무관이라 빌드 실패와 무관하게 측정한다(시각 산출물은 빌드 산물이 아니다).
+  local slop; slop=$(antislop_points)
+  pts_slop="${slop%%|*}"
+  if [ "$pts_slop" = null ]; then add_skip antislop; else add_ev antislop "${slop#*|}"; fi
 
   jq -cn --arg name "$name" --argjson g1 "$pts_build" --argjson g2 "$pts_test" --argjson g3 "$pts_safe" \
          --argjson lint "$pts_lint" --argjson reg "$pts_reg" --argjson cov "$pts_cov" \
-         --argjson skipped "$skipped" --argjson ev "$ev" '
+         --argjson slop "$pts_slop" --argjson skipped "$skipped" --argjson ev "$ev" '
     ({G1:$g1, G2:$g2, G3:$g3}) as $gates
-    | ({lint:$lint, regression:$reg, coverage:$cov, antislop:null}) as $items
+    | ({lint:$lint, regression:$reg, coverage:$cov, antislop:$slop}) as $items
     | ({G1:25, G2:25, G3:15, lint:10, regression:10, coverage:5, antislop:10}) as $w
     | ([$gates, $items] | add) as $all
     | ([ $all | to_entries[] | select(.value != null) | .value ] | add // 0) as $total

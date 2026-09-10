@@ -175,3 +175,76 @@
   `.claude/skills/anti-ai-slop/{SKILL.md,references/*.md}` · `.claude/skills/carve-guide/SKILL.md`(완료
   기준을 프로즈 → 종료코드) · `.claude/CLAUDE.md` · README(한/영)·GUIDE 인벤토리.
   훅 20→22 · 테스트 30→31 스위트(503→545건) · 감사 71→77체크.
+
+## 2026-09-09 — 채점 게이트 3종 배선 (antislop 활성화, GATE-C8, test 축 파생)
+
+- **결정**: 발표자료 참조 구현(`docs/evaluator/deck-example/`)과 하네스 실구현을 대조해, 참조 구현에는
+  있으나 하네스에 비어 있던 축 3개를 배선한다. **참조 구현 코드 자체는 배선하지 않는다.**
+  ① **antislop 활성화** — `eval-score.sh`의 10점 항목이 "검사기 미출시"를 이유로 항상 skipped였다.
+     `check-slop.mjs`(v0.11.0)를 변경분의 `.html/.htm/.css/.svg`에 돌려 채점한다. 거부권 없음.
+  ② **GATE-C8 축 정합** — `checklist-gate.sh`가 `score`만 읽던 탓에, 워크플로 없이 도는 경로에서
+     축과 무관한 총점을 써넣으면 통과했다. `axes`가 있으면 5축에서 재계산해 대조하고,
+     test 축 0인데 임계 이상을 주장하면 차단한다.
+  ③ **test 축 파생** — `SCORE_SCHEMA`가 `test: number`를 받아, "미실행이면 test=0 → 상한 75"는
+     문서에만 있고 강제되지 않았다. 채점자는 4축 + `tests{ran,passed,failed,command,output}`만
+     보고하고 test 축은 `testAxis()`가 파생한다.
+- **이유**: ①은 이미 배포된 결정론 검사기가 놀고 있었고(모든 스택이 90점 만점으로 채점),
+  ②③은 하네스 문서가 주장하는 불변식이 실제로는 성립하지 않던 자리다. "채점당하는 쪽이
+  자기 점수를 정할 수 없다"는 GATE-C5/C6 원칙이 총점·축에는 적용되지 않고 있었다.
+- **대안**: (a) `deck-example`의 Java/Python `ScoreCard`·`RubricJudge`를 `.claude/`로 이식 — **기각**.
+  같은 모델이 이미 bash/jq/JS로 있어 3중 구현이 되고, `jq` 하나만 요구하는 드롭인에 JVM·Python
+  런타임을 얹는다. 참조 구현은 `docs/`에 두고 대응표만 붙였다.
+  (b) antislop 대상에 `.md` 포함 — 기각. 카피 톤 룰이 문서 리포에서 상시 발화한다(`posttool-slop.sh`와
+  같은 판단, 같은 확장자 목록을 쓴다).
+  (c) GATE-C8을 `axes` 없는 항목에도 적용 — 기각. 구형·타 에이전트 체크리스트가 전부 막힌다.
+  "있으면 검증, 없으면 무동작"으로 하위호환을 지켰다.
+  (d) test 축을 스키마에 남기고 프롬프트로만 금지 — 기각. 그게 지금까지의 상태였고 작동하지 않았다.
+- **영향 범위**: `.claude/hooks/eval-score.sh`(`antislop_points()`) · `.claude/hooks/checklist-gate.sh`(GATE-C8) ·
+  `.claude/workflows/carve-verify-loop.js`(`testAxis`·`axesWithTest`·`SCORE_SCHEMA`) ·
+  `.claude/agents/evaluator.md` · `.claude/skills/checklist-loop/SKILL.md` ·
+  테스트 3스위트(545→558건, 31스위트 유지) — `eval-score.test.sh`에 GATE-C8 jq 클램프 ⟷
+  `scoreFromAxes` 교차 검증 추가(두 구현이 갈라지면 워크플로 경로와 수동 경로의 판정이 갈린다).
+  문서: README(한/영)·GUIDE·`docs/md/verify-loop-guide.md`·`docs/md/language-packs/LP4,LP5`·
+  `.claude/hooks/README.md`(`posttool-slop`·`check-slop.mjs` 누락분 포함)·`docs/evaluator/README.md`.
+  `deck-example/goldenset/` → `checklist-seed/` 개명(내용이 골든셋이 아니라 checklist 스키마였다).
+  감사 77/77 유지.
+- **알려진 천장**: 클램프 규칙이 JS(`scoreFromAxes`)와 jq(`cl()`) 두 곳에 있다. 교차 검증 테스트로
+  드리프트를 잡지만 정의 자체는 하나로 못 모은다 — 훅은 bash, 워크플로는 JS이기 때문이다.
+
+## 2026-09-09 — test 축 부분점수 폐지 (전부 통과만 25)
+
+- **결정**: `testAxis()`(워크플로)와 GATE-C8 `tx()`(게이트)는 `ran:true`·`passed>0`·`failed=0`일 때만 25,
+  아니면 0. 참조 구현 `TestRun.ratio()`의 비율 부분점수를 따르지 않는다. 게이트는 `tests`가 있으면
+  test 축을 실행 결과에서 다시 파생해 `axes.test`와 대조한다(불일치·비객체 `tests`는 차단).
+- **이유**: 비율이면 4 통과/1 실패 → test 20 → 나머지 만점 75와 합쳐 정확히 95 = 임계. 실패 테스트를
+  안은 항목이 통과한다. `testing.md`의 red→green 원칙과 정면 충돌하고, 이전 루브릭 프로즈("실패면 0")보다
+  느슨해진 자리였다. 또 C8이 `tests.failed`를 안 봐서 수동 경로에서 test=25를 써넣으면 그대로 통과했다.
+- **대안**: (a) 비율 유지 + 임계 상향 — 기각. 임계는 사용자 축(`CARVE_CHECKLIST_FLOOR`)이고 테스트 수에
+  따라 구멍 크기가 달라진다. (b) `failed>0`일 때만 0, 나머지 비율 — 기각. `failed=0`이면 비율은 항상 1이라
+  같은 값이고 코드만 길다.
+- **영향 범위**: `carve-verify-loop.js`(`testAxis`·채점 프롬프트) · `checklist-gate.sh`(`num()`·`tx()`·메시지) ·
+  `eval-score.test.sh`(실패→0 케이스, `tx()`⟷`testAxis` 교차 검증 추가) · `checklist-gate.test.sh`(+3) ·
+  `evaluator.md` · `checklist-loop/SKILL.md`·`verify-loop-guide.md`(예시 `test:13/score:88` → `0/75`로 정정 —
+  공식대로면 19/94였고 어느 쪽과도 안 맞았다) · `deck-example/README.md` 대응표.
+- **추가(evaluator 독립검증에서 발견)**: `"axes": 5`처럼 파싱은 되지만 모양이 틀린 파일은 jq가 인덱싱
+  에러로 죽고 `$(…)`가 빈 문자열을 돌려줘 C7·C8이 통째로 "미달 없음"이 됐다. `shape_fail()` 하나를 두고
+  jq 호출 3곳(C7·C8·미달 목록)에 `|| shape_fail`을 붙여 fail-closed. 2차 재검증에서 `"items": {}`가
+  잡혔다 — jq `.items[]`는 객체도 값 순회라 에러 없이 "항목 0개 = 통과"였다. 최상위에
+  `items`는 비어 있지 않은 배열이어야 한다는 가드 1줄 추가(빈 배열도 차단). 파싱 불가 JSON은 C4(best-effort 스킵)
+  그대로 — 그건 jq 부재와 대칭인 D-02 결정이고, 여기서 막는 건 "파싱됐는데 위조/손상"이다.
+  같은 검증에서 `failed:-3`이 JS(클램프 후 25) ↔ jq(0)로 갈리는 것도 잡혀 JS 클램프를 뺐다.
+- **알려진 천장**: JS `Number(x)||0`은 숫자 문자열 `"25"`를 25로, jq `cl()`·`num()`은 0으로 본다.
+  교차 검증 케이스에 숫자 문자열은 넣지 않았다 — 두 경로 다 정상 산출물은 숫자 타입이라 실전 노출은
+  없지만, 정의를 맞추려면 jq 쪽을 `tonumber?`로 바꾸는 별도 결정이 필요하다.
+
+## 2026-09-10 — evaluator 모델을 sonnet → fable(5.1)로 상향
+
+- **결정**: `.claude/agents/evaluator.md`의 `model: sonnet`을 `model: fable`로 바꾼다. carve-verify-loop의
+  항목 채점(`score:*`)·최종 판정(`final-verify`), fable 팀의 검증 슬롯이 전부 이 파일을 타므로 한 곳만 바꾼다.
+  `security-reviewer`·`pr-test-analyzer`는 그대로 sonnet.
+- **이유**: 채점자가 생성자(sonnet-5 워커)와 같은 모델이면 같은 맹점을 공유한다(AGENTS.md §6 Self-Eval Blindspot).
+  5축 루브릭·GATE-C8은 점수 위조를 막지만 판단 품질 자체는 모델이 정한다. 채점 호출은 항목당 1회라 비용 증가폭이 작다.
+- **대안**: (a) opus — 기각. 라우팅 정본(`orchestration.md`)이 최상위를 Fable5로 잡고 있어 축이 하나 더 생긴다.
+  (b) 검증 에이전트 3종 일괄 상향 — 보류. 요청 범위가 evaluator였고, 나머지 둘은 채점 루프에 안 들어간다.
+- **영향 범위**: `evaluator.md` · `orchestration.md` 라우팅 표(evaluator 행 신설) · `fable-team-guide.md` 표 · `GUIDE.md` 표.
+- **알려진 천장**: alias `fable`은 Claude Code 버전에 따라 해석이 달라질 수 있다. 특정 버전에 고정하려면 `claude-fable-5-1` 전체 ID로 바꾼다.

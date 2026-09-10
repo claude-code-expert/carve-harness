@@ -21,9 +21,11 @@
 | lint | 10 | `stack_lint` rc 0 | `skipped`(도구 없음) |
 | regression | 10 | G2 통과 AND 테스트 파일 삭제 0 | G2 skipped면 skipped |
 | coverage | 5 | `stack_coverage` ≥ `STACK_COVERAGE_MIN`(80) | `skipped`(리포트/도구 없음) |
-| antislop | 10 | 결정론 검사기 미출시 → **항상 skipped** | — |
+| antislop | 10 | 변경분의 `.html/.htm/.css/.svg`에 `check-slop.mjs` rc 0 | `skipped`(node 없음·린터 없음·대상 파일 없음) |
 
 - G1~G3 중 하나라도 0이면 총점 무관 **FAIL**(거부권). 빌드 실패 시 G2·lint·coverage는 실행하지 않는다(eval-java 관례).
+- G3 안전과 antislop은 스택 무관이라 빌드 실패와 무관하게 측정한다 — 시크릿도 시각 산출물도 빌드 산물이 아니다.
+- antislop 대상 확장자는 `posttool-slop.sh`와 같다(`.md` 제외 — 카피 톤 룰이 문서 리포에서 상시 발화한다). **두 곳을 함께 바꿔라**, 갈라지면 "훅은 통과인데 점수는 0"이 된다. antislop은 거부권이 없다 — 슬롭만으로 빌드가 죽지는 않고, 90% 합격선 위의 여유를 갉아먹는다.
 - `skipped` 항목은 분모(`max`)에서 빠진다. verdict PASS = 거부권 없음 AND `total/max ≥ 0.9`. 숨은 통과 없음 — 못 잰 건 전부 이름으로 남는다.
 - 다중 스택(백엔드+프론트): 스택마다 채점, verdict는 AND, `total`은 min.
 - 출력: `{pass_line, total, max, verdict, stacks:{<name>:{gates, items, skipped, evidence, verdict}}}` → `specs/SCORE.json` + stderr 한 줄 요약.
@@ -63,7 +65,7 @@ jq '.stacks.python.skipped' specs/SCORE.json      # 무엇을 못 쟀는지
 
 ## 4. 알려진 한계
 
-- antislop은 항상 skipped — 결정론 검사기가 아직 없다(anti-ai-slop 스킬은 프로즈 게이트). 검사기가 생기면 10점 항목이 살아난다.
+- antislop은 시각 산출물을 건드리지 않는 변경에서는 계속 skipped다(분모 90). 이건 한계가 아니라 의도 — 검사할 게 없으면 점수를 만들지 않는다. `.md`는 대상이 아니므로 문서만 고친 변경도 skipped.
 - Java coverage는 `eval-java.sh`가 compile+test를 다시 돌린다(중복 실행). 느리면 XML 직접 파싱으로 교체(`# ponytail:` 주석).
 - TS coverage는 프로젝트가 `coverage-summary.json`을 남겼을 때만 읽는다(직접 실행 안 함 — 설정 의존).
 - 사고: 새 스위트를 기존 `eval-score.test.sh`(verify-loop 5축 헬퍼 테스트) 이름으로 덮어썼다가 git에서 복구하고 `eval-score-generic.test.sh`로 분리했다. 기존 파일 무손실.

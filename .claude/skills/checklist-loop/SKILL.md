@@ -30,8 +30,9 @@ description: 개발이 스펙대로 됐는지 구현 주장 항목을 코드 대
       "acceptance": "204 반환 + 상태 CANCELLED 전이 테스트 통과",
       "owns": ["src/api/cancel/**"],
       "attempts": 2,
-      "score": 88,
-      "axes": { "exists": 25, "match": 25, "test": 13, "contract": 15, "no_regress": 10 },
+      "score": 75,
+      "axes": { "exists": 25, "match": 25, "test": 0, "contract": 15, "no_regress": 10 },
+      "tests": { "ran": true, "passed": 3, "failed": 1, "command": "npm test -- cancel" },
       "pass": false,
       "gaps": ["멱등성 미검증", "이미 취소된 주문 409 테스트 없음"],
       "evidence": "src/api/cancel/route.ts:12; test 3/4 pass"
@@ -42,8 +43,10 @@ description: 개발이 스펙대로 됐는지 구현 주장 항목을 코드 대
 
 - `claim`/`acceptance`/`owns`: 분해 단계에서 채운다. `owns` glob은 **항목끼리 겹치면 안 된다**(파일 오너 1개).
 - `type`(선택): `convention` | `correctness` | `domain_safety`. **`domain_safety` 항목은 100점이 아니면 총점·임계와 무관하게 Stop 게이트가 차단한다**(GATE-C7, 블루프린트 §5.5 허용 실패율 0%). 도메인 불변식(`CLAUDE.md` 도메인 규칙)을 구현하는 항목에 붙여라. type 없는 항목은 임계(95) 규칙만.
-- `axes`/`score`/`pass`/`gaps`/`evidence`/`attempts`: 채점 단계에서 채운다. `score = 5축 합`, `pass = score >= threshold`.
-- **5축 루브릭(합 100)**: `exists`25·`match`25·`test`25·`contract`15·`no_regress`10. `test`는 실행 출력으로만 채운다 → verify 미실행이면 test=0 → 합 ≤75 < 95(거짓 완료 차단). 게이트는 `score`만 보므로 하위호환.
+- `axes`/`tests`/`score`/`pass`/`gaps`/`evidence`/`attempts`: 채점 단계에서 채운다. `score = 5축 합`, `pass = score >= threshold`.
+- **5축 루브릭(합 100)**: `exists`25·`match`25·`test`25·`contract`15·`no_regress`10.
+- **`test` 축은 채점자가 신고하지 않는다 — 실행 결과에서 파생한다.** evaluator는 `tests: {ran, passed, failed, command, output}`을 보고하고, `ran:true`·`passed>0`·`failed=0`이면 `test=25`, 아니면 0이다(비율 부분점수 없음 — 4/5 통과가 20점이면 나머지 만점과 합쳐 정확히 95라 실패 테스트를 안고 통과한다). 미실행·실패 1건이면 나머지 네 축 만점이어도 합 75라 95를 넘을 수 없다(거짓 완료 차단). 숫자를 직접 받으면 이 불변식은 산문일 뿐이다.
+- **게이트가 축을 대조한다(GATE-C8).** `axes`가 있으면 `checklist-gate.sh`가 `score`를 축에서 재계산해 불일치와 "test=0인데 임계 이상"을 차단하고, `tests`가 있으면 test 축을 실행 결과에서 다시 파생해 대조한다. `axes` 없는 항목은 기존대로 `score`만 본다(구형·타 에이전트 체크리스트 하위호환).
 
 ## 루프 SOP (순서 고정)
 
@@ -54,8 +57,9 @@ S1. Spec/분해   목표를 리서치 → 3~7개 항목으로 분해(claim·acce
                 specs/checklist.json 작성(전 항목 score:null). → Stop 게이트가 이때부터 완료를 막는다.
 S2. Build       미해결 항목(pass=false)마다 builder 1개. worktree 격리, 동시 3~5개 상한.
                 owns 밖 쓰기 금지. 재작업이면 아래 S4의 반성 프롬프트 + gaps를 입력으로 준다.
-S3. Score       항목마다 evaluator(read-only)에 채점 위임 → 코드 대조 + 테스트 실행으로 5축(exists·match·test·contract·no_regress) 채점, score=합.
-                결과를 checklist.json에 반영(axes·score·pass·gaps·evidence·attempts++).
+S3. Score       항목마다 evaluator(read-only)에 채점 위임 → 코드 대조로 4축(exists·match·contract·no_regress) 채점 +
+                verify 명령을 직접 실행해 tests(ran·passed·failed·command·output) 보고. test 축은 그 결과에서 파생, score=5축 합.
+                결과를 checklist.json에 반영(axes·tests·score·pass·gaps·evidence·attempts++).
 S4. Loop        score<임계 항목만 골라 gap을 builder에 되먹여 S2로. 미달 항목만 재작업(전수 아님).
                 반성 프롬프트 강제: "무엇이 실패했나? 어떤 구체적 변경이 임계를 넘기나? 같은 접근 반복 중인가?"
 S5. 종료        전 항목 pass=true → S6. / 특정 항목 3회(MAX_ATTEMPTS) 재작업에도 미달 → [ESCALATION] 후
@@ -78,6 +82,7 @@ Stop 훅 `checklist-gate.sh`가 완료를 **차단(exit 2)**한다("미완 N개 
 
 - **채점 파일 삭제 → 계속 차단.** 첫 차단 때 tombstone `specs/.checklist-active`가 생기고, 정상 완료(전 항목 통과)만이 그것을 지운다. checklist.json이 사라지면 게이트는 "복원해서 채점을 마쳐라"로 차단한다.
 - **threshold 하향 → 무효.** 파일의 `threshold`가 하한(기본 95)보다 낮으면 하한으로 클램프된다. 진짜 다른 기준이 필요하면 파일이 아니라 환경변수 `CARVE_CHECKLIST_FLOOR`로 바꾼다(에이전트가 못 건드리는 축).
+- **점수 위조 → 차단(GATE-C8).** `axes`를 쓴 항목은 게이트가 `score`를 축에서 다시 계산한다. 축은 정직한데 총점만 올리거나, 축을 최대치 너머로 부풀리거나, 테스트를 안 돌린 채(test=0) 임계 이상을 주장하면 완료가 막힌다. 점수는 쓰는 게 아니라 계산되는 값이다. `items`가 비어 있지 않은 객체 배열이 아니거나(`{}`·`[]` 포함) `axes`가 객체가 아닌 **형식 불량도 차단**한다 — jq 오류를 "미달 없음"으로 읽던 구멍을 닫았다(파싱 자체가 안 되는 JSON은 C4대로 best-effort 스킵).
 - tombstone·checklist 경로는 `PROTECTED_RE`에 있어 에이전트의 Write·`rm` 둘 다 차단된다. **루프를 중단하려면 사람이** 자기 셸에서 `rm specs/.checklist-active`를 실행한다 — 중단은 사람의 결정이다.
 
 ## 워크플로로 자동 실행

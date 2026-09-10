@@ -52,7 +52,9 @@ const BUILD_SCHEMA = {
 }
 
 // 5축 루브릭(합 100). 단일 불투명 점수 대신 축별 배점 — 감사 가능 + 정책 인코딩.
-// test/no_regress는 실행 출력으로만 채운다 → verify 미실행이면 test=0 → 합 ≤75 < 95 게이트(거짓 완료 차단).
+// **test 축은 채점자가 신고하지 않는다.** 실행 결과(tests)를 받아 여기서 파생시킨다 —
+// 숫자를 직접 받으면 "테스트 미실행이면 test=0" 은 산문일 뿐이고, 채점자가 25를 써넣으면
+// 그만이었다. 실행 사실을 구조로 요구해야 배점이 거짓 완료를 막는다.
 const SCORE_SCHEMA = {
   type: 'object',
   properties: {
@@ -61,21 +63,34 @@ const SCORE_SCHEMA = {
       properties: {
         exists:     { type: 'number' }, // 0~25 실제 구현 존재(스텁·TODO면 0)
         match:      { type: 'number' }, // 0~25 코드가 claim과 의미적으로 일치
-        test:       { type: 'number' }, // 0~25 verify 명령 실제 실행→통과(실행 출력 근거 필수, 미실행=0)
         contract:   { type: 'number' }, // 0~15 타입·에러·입력검증·인가 경계 안전
         no_regress: { type: 'number' }, // 0~10 기존 통과 항목·기능 퇴행 없음
       },
-      required: ['exists', 'match', 'test', 'contract', 'no_regress'],
+      required: ['exists', 'match', 'contract', 'no_regress'],
+    },
+    // test 축의 유일한 입력. ran=false 거나 실행 건수 0이면 test=0 → 합 ≤75 < 95.
+    tests: {
+      type: 'object',
+      properties: {
+        ran:    { type: 'boolean' }, // verify 명령을 실제로 실행했는가
+        passed: { type: 'number' },
+        failed: { type: 'number' },
+        command: { type: 'string' }, // 실행한 명령 원문
+        output:  { type: 'string' }, // 실행 출력 원문(요약 금지) — 근거를 기계가 읽을 자리
+      },
+      required: ['ran', 'passed', 'failed', 'command', 'output'],
     },
     gaps: { type: 'array', items: { type: 'string' } }, // <threshold일 때 무엇을 어떻게 고칠지
     evidence: { type: 'string' },                       // 파일:라인 · 테스트 결과 원문
   },
-  required: ['axes', 'gaps', 'evidence'],
+  required: ['axes', 'tests', 'gaps', 'evidence'],
 }
 
 // <score-helper> — 항목 점수 = 5축 합(0~100). 축 결측→0(누락은 감점), 각 축 0..max 클램프.
 // tests/eval-score.test.sh가 이 블록을 추출해 **그대로 실행**한다 — 테스트가 로직을
 // 재구현하면 여기서 클램프를 지워도 초록으로 남는다(실제로 그런 위장 상태였다).
+// 클램프 규칙은 checklist-gate.sh GATE-C8 의 jq `cl()` 과 같아야 한다 — 워크플로 경로와
+// 수동 경로가 같은 checklist.json 을 두고 다른 판정을 내면 안 된다.
 const AXIS_MAX = { exists: 25, match: 25, test: 25, contract: 15, no_regress: 10 }
 const scoreFromAxes = (axes) => {
   if (!axes || typeof axes !== 'object') return 0
@@ -85,6 +100,23 @@ const scoreFromAxes = (axes) => {
   }
   return sum
 }
+// test 축은 신고값이 아니라 실행 결과에서 파생된다. 돌리지 않았으면(ran !== true) 0이고,
+// 나머지 네 축을 만점 받아도 합은 75 — 임계 95를 산술적으로 넘을 수 없다. 게이트에
+// "테스트를 돌렸는지 확인하라"는 규칙을 더하는 대신 배점 구조가 강제한다.
+// 전부 통과만 25, 아니면 0 — 참조 구현(TestRun.ratio)의 비율 부분점수는 주지 않는다.
+// 4/5 통과가 20점이면 나머지 만점과 합쳐 정확히 95 = 임계라, 실패 테스트를 안고 통과한다.
+// checklist-gate.sh GATE-C8 의 jq `tx()` 가 같은 규칙으로 재파생한다 — 함께 고쳐라.
+const testAxis = (t) => {
+  if (!t || typeof t !== 'object' || t.ran !== true) return 0
+  const passed = Number(t.passed) || 0
+  const failed = Number(t.failed) || 0
+  // 수집 0건 = 안 돌린 것 · failed 가 정확히 0 이 아니면(양수·음수 모두) SC 미충족(red→green).
+  // 음수를 0 으로 클램프하면 jq tx() 와 갈린다 — 이례적 입력은 점수가 아니라 0 이다.
+  if (!(passed > 0) || failed !== 0) return 0
+  return AXIS_MAX.test
+}
+// 채점자가 준 4축 + 파생된 test 축 → checklist.json 에 실릴 5축. GATE-C8 이 이 합을 재계산한다.
+const axesWithTest = (axes, tests) => ({ ...(axes || {}), test: testAxis(tests) })
 // </score-helper>
 
 const VERDICT_SCHEMA = {
@@ -102,6 +134,9 @@ const toChecklist = (items, iteration) => JSON.stringify({
   items: items.map((it) => ({
     id: it.id, claim: it.claim, acceptance: it.acceptance, owns: it.owns, type: it.type ?? undefined,
     score: it.score, axes: it.axes, pass: it.pass, gaps: it.gaps, evidence: it.evidence, attempts: it.attempts,
+    // 실행 근거는 남기되 output 원문은 빼고 싣는다 — 게이트가 매 Stop 마다 읽는 파일이라
+    // 출력 전문이 들어가면 부풀고, 원문은 evidence 가 인용한다.
+    tests: it.tests ? { ran: it.tests.ran, passed: it.tests.passed, failed: it.tests.failed, command: it.tests.command } : undefined,
   })),
 }, null, 2)
 
@@ -130,7 +165,7 @@ if (!decomposed) {
 // 작업 상태를 담은 항목 객체(항목마다 독립 → pipeline 병렬 변이 안전).
 const items = decomposed.map((t) => ({
   id: t.id, claim: t.claim, acceptance: t.acceptance, owns: t.owns, type: t.type ?? null,
-  attempts: 0, score: null, axes: null, pass: false, gaps: [], evidence: '', lastBuild: null,
+  attempts: 0, score: null, axes: null, tests: null, pass: false, gaps: [], evidence: '', lastBuild: null,
 }))
 await persist(items, 0)
 log(`체크리스트 ${items.length}개 항목 (임계 ${THRESHOLD}점, 항목 재시도 상한 ${MAX_ATTEMPTS})`)
@@ -154,11 +189,12 @@ const buildAndScore = (it, iteration) => {
       return it
     }
     return agent(
-      `체크리스트 항목을 채점 모드로 평가하라.\nclaim: ${it.claim}\nacceptance(SC): ${it.acceptance}\n변경 파일: ${build.changedFiles.join(', ')}\n빌더 테스트 보고: ${build.testResult}\n\n실제 코드를 열고 **테스트를 직접 실행**해 5축 루브릭으로 채점하라(주장·빌더 보고만 믿지 마라):\n- exists(0~25): 실제 구현 존재 — 스텁·TODO·미구현이면 0\n- match(0~25): 코드가 claim과 의미적으로 일치\n- test(0~25): verify 명령을 **네가 실제 실행**해 통과 — 실행 안 했거나 실패면 0. evidence에 실행 출력 원문 인용 필수\n- contract(0~15): 타입·에러 처리·입력 검증·인가 경계 안전\n- no_regress(0~10): 기존 통과 기능 퇴행 없음\n합(=항목점수)이 ${THRESHOLD} 미만이면 gaps에 "무엇을 어떻게 고쳐야 넘는지"를 빌더가 바로 실행 가능하게 구체적으로 써라.`,
+      `체크리스트 항목을 채점 모드로 평가하라.\nclaim: ${it.claim}\nacceptance(SC): ${it.acceptance}\n변경 파일: ${build.changedFiles.join(', ')}\n빌더 테스트 보고: ${build.testResult}\n\n실제 코드를 열고 **테스트를 직접 실행**해 채점하라(주장·빌더 보고만 믿지 마라).\n\n네가 채점할 축은 네 개다:\n- exists(0~25): 실제 구현 존재 — 스텁·TODO·미구현이면 0\n- match(0~25): 코드가 claim과 의미적으로 일치\n- contract(0~15): 타입·에러 처리·입력 검증·인가 경계 안전\n- no_regress(0~10): 기존 통과 기능 퇴행 없음\n\n**test 축(0~25)은 네가 점수를 매기지 않는다.** 대신 verify 명령을 Bash로 직접 실행하고 그 결과를 tests에 보고하라: ran(실행 여부)·passed·failed·command(실행한 명령)·output(출력 원문, 요약 금지). 점수는 이 값에서 파생된다 — 전부 통과만 25이고, 실행하지 않았거나(ran=false) 실패가 1건이라도 있으면 test=0이라 나머지를 만점 받아도 합이 75로 임계를 넘지 못한다. 명령 성공 ≠ 결과 정확이니 실패·스킵·미수집을 구분해서 세라.\n\n합(=항목점수)이 ${THRESHOLD} 미만이면 gaps에 "무엇을 어떻게 고쳐야 넘는지"를 빌더가 바로 실행 가능하게 구체적으로 써라.`,
       { agentType: 'evaluator', label: `score:${it.id}#${it.attempts}`, phase: 'Score', schema: SCORE_SCHEMA }
     ).then((v) => {
-      it.axes = v?.axes ?? null
-      it.score = scoreFromAxes(v?.axes)
+      it.tests = v?.tests ?? null
+      it.axes = axesWithTest(v?.axes, v?.tests)   // test 축은 파생 — 채점자 신고값을 받지 않는다
+      it.score = scoreFromAxes(it.axes)
       it.gaps = v?.gaps ?? []
       it.evidence = v?.evidence ?? ''
       it.pass = it.type === 'domain_safety' ? it.score >= 100 : it.score >= THRESHOLD   // GATE-C7 와 동일 규칙

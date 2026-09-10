@@ -152,7 +152,7 @@ bash uninstall.sh --yes        # 제거 (manifest 범위만, 원래 있던 파�
 단일 세션 가드 위에 세 상위 워크플로가 얹힌다. 셋 다 특정 모델에 묶이지 않는다 — 같은 절차(SOP)를 손으로 밟으면 opus·sonnet·Cursor·Codex에서도 동작한다.
 
 - **Fable 팀** ([가이드](docs/md/fable-team-guide.md)) — 메인 세션이 작업을 태스크 3~5개로 쪼개 역할별 워커(`fable-researcher`·`fable-builder`·`fable-doc-writer`·`fable-visualizer`·`evaluator`)에게 맡기고 종합. 워커는 겹치지 않는 파일 소유권 + worktree 격리로 병렬 진행. 생성과 검증은 절대 같은 에이전트가 아니다. 옵트인 — `ultracode` 키워드나 워크플로 이름 명시 시 실행.
-- **검증 루프** ([가이드](docs/md/verify-loop-guide.md)) — "구현했다"는 주장을 독립 evaluator가 코드 대조 + 테스트 실행으로 0~100 채점(exists·match·test·contract·no_regress). 95 미만만 gap 되먹여 재작업, 전 항목 95까지 루프. 미달·미채점 잔존 시 `checklist-gate` Stop 훅이 완료를 **차단**. `/verify-loop <목표>`.
+- **검증 루프** ([가이드](docs/md/verify-loop-guide.md)) — "구현했다"는 주장을 독립 evaluator가 코드 대조 + 테스트 실행으로 0~100 채점(exists·match·test·contract·no_regress). **`test` 축은 채점자가 매기지 않는다** — 실행 결과(`ran`·`passed`·`failed`)에서 파생되므로, 테스트를 돌리지 않은 항목은 나머지 만점이어도 75가 상한이라 95를 넘을 수 없다(거짓 완료 차단). 95 미만만 gap 되먹여 재작업, 전 항목 95까지 루프. 미달·미채점 잔존 시 `checklist-gate` Stop 훅이 완료를 **차단**. `/verify-loop <목표>`.
 - **골든셋 평가(carve-eval)** — 고정 케이스 집합(`specs/goldenset/*.json`, 입력→루브릭)을 케이스별 k회 실행해 pass@k(능력)·pass^k(일관성) 산출, 추이 append, baseline 대비 하락 시 `[REGRESSION]`. **"에이전트의 말이 아니라 환경의 상태를 채점한다"** — 상태 assert(`file_exists`·`cmd_exit0`·`git_diff_contains`)가 텍스트·LLM 루브릭보다 우선. 케이스 자동 확정은 막아뒀다(자기강화 방지) — 크리티컬 경로·엄격도는 사람이 정한다. 셋업은 `/eval-init` 1회, 이후 `/eval`.
 
 ## 전체 구성 (스킬·커맨드·훅)
@@ -196,7 +196,7 @@ bash uninstall.sh --yes        # 제거 (manifest 범위만, 원래 있던 파�
 | `posttool-slop` | PostToolUse (`.html·.htm·.css·.svg` 쓰기 직후) | anti-slop 린터 요약 1줄 리포트(비차단 exit 0). 상세는 JSONL·수동 실행 |
 | `check-slop.mjs` | 수동 CLI · `posttool-slop` 호출 | 시각·문서 슬롭 결정론 린터 34룰(HTML/CSS·SVG·MD 디스패치, WCAG 대비 계산). `0` 통과 · `1` ERROR · `2` 호출 오류 |
 | `stop-verify` | Stop (완료 선언 직전) | 변경 스택 빌드·타입·테스트 게이트(실패 exit 2) |
-| `checklist-gate` | Stop (`stop-verify` 뒤) | `checklist.json` 미달(<95)·미채점 시 완료 차단. `domain_safety`는 100 필수. 자가 우회 차단(tombstone) |
+| `checklist-gate` | Stop (`stop-verify` 뒤) | `checklist.json` 미달(<95)·미채점 시 완료 차단. `domain_safety`는 100 필수. 자가 우회 차단(tombstone·threshold 하한·**축 합 대조**) |
 | `session-handoff` | SessionStart·PreCompact·SessionEnd | 핸드오프 복원·저장 + 구성 배너 |
 | `log-event` | 다른 훅이 판정 기록 시 | JSONL 관측 append — 스키마·PII 마스킹 단일 출처 |
 | `lib-protected` · `lib-stop-guard` · `lib-packs` | `source` 참조(직접 실행 안 함) | 보호 경로·위험 명령 정규식 / Stop 루프 가드 / 언어팩 매니페스트 리더 |
@@ -210,7 +210,7 @@ bash uninstall.sh --yes        # 제거 (manifest 범위만, 원래 있던 파�
 | `redteam` | 가드레일 정기 점검 | 공격 34·정상 19를 exit 코드로 채점(LLM 0). 차단율·과잉차단율. `--strict` |
 | `eval-run` | `/eval` 케이스 실행(헬퍼) | 케이스 1건 setup→응답→채점. `--target session\|claude\|exec:` |
 | `eval-trend` | `/eval` 추이 읽기·쓰기(헬퍼) | `eval-score.json` 결정론 append — `prevHash` 변조 시 거부 |
-| `eval-score` | 빌드 건강도 점수 (수동) | 언어 무관 채점표(§5.7) — G1 빌드·G2 테스트·G3 안전(거부권) + lint·회귀·커버리지 |
+| `eval-score` | 빌드 건강도 점수 (수동) | 언어 무관 채점표(§5.7) — G1 빌드·G2 테스트·G3 안전(거부권) + lint·회귀·커버리지·antislop(`check-slop.mjs`) |
 
 ## 구조
 

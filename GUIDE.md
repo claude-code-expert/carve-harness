@@ -112,7 +112,7 @@ harness/
 | `posttool-slop.sh` | PostToolUse (Write/Edit, `.html`·`.htm`·`.css`·`.svg`만) | `check-slop.mjs` 실행 후 **요약 1줄만** stderr로, 상세 판정은 JSONL. `posttool-format.sh`가 출력을 죽이므로(OBS-02) 별도 훅이다. `.md`는 제외 — 문서 리포에서 카피 톤 룰이 상시 발화 | 0 (비차단·리포트 온리) |
 | `check-slop.mjs` | (수동 CLI / `posttool-slop.sh` 호출) | anti-ai-slop **결정론 린터** 34룰 — 확장자로 HTML/CSS·SVG·Markdown 디스패치. 그라데이션·글로우·모션 장식·워터마크·radius 상한·극소 폰트·**WCAG 대비 계산**·마케팅 상투어·카피 톤. 의존성 0(Node 표준 라이브러리) | 0 통과 / 1 ERROR / 2 호출 오류 |
 | `stop-verify.sh` | Stop | 스택 감지 후 빌드/타입/린트/테스트 — Java(gradle)·Node/TS(tsc·lint·test)·Python(ruff·pytest, `pyproject.toml`/`requirements.txt`/`setup.py` 중 하나면 활성)·**Go**(build·vet·test)·**Rust**(cargo check·test)·bash(shellcheck·훅 자가테스트); 각 스택은 툴체인 있을 때만 실행; `stop_hook_active` **루프 차단**; jq 부재 시 best-effort 스킵; **변경 모듈만 증분**(git diff) | 실패 **exit 2** / 통과 0 |
-| `checklist-gate.sh` | Stop (`stop-verify` 뒤) | `specs/checklist.json` 미달(<임계)·미채점 잔존 시 완료 차단. 루프 미개시면 무동작. **자가 우회 차단**: 채점 파일 삭제 시 tombstone(`specs/.checklist-active`)이 계속 차단, threshold는 하한 95로 클램프(`CARVE_CHECKLIST_FLOOR`로만 변경). **GATE-C7 유형 거부권**: `type: domain_safety` 항목은 100점이 아니면 임계 무관 차단(블루프린트 §5.5 허용 실패율 0%) | 미완 **exit 2** / 완료 0 |
+| `checklist-gate.sh` | Stop (`stop-verify` 뒤) | `specs/checklist.json` 미달(<임계)·미채점 잔존 시 완료 차단. 루프 미개시면 무동작. **자가 우회 차단**: 채점 파일 삭제 시 tombstone(`specs/.checklist-active`)이 계속 차단, threshold는 하한 95로 클램프(`CARVE_CHECKLIST_FLOOR`로만 변경). **GATE-C7 유형 거부권**: `type: domain_safety` 항목은 100점이 아니면 임계 무관 차단(블루프린트 §5.5 허용 실패율 0%). **GATE-C8 축 정합**: `axes`가 있으면 `score`를 5축에서 재계산해 대조 — 축 합과 다른 총점, 최대치 초과 축, 테스트 미실행(test=0)인데 임계 이상 주장은 전부 차단. 축 없는 항목은 기존대로 `score`만 본다(하위호환) | 미완 **exit 2** / 완료 0 |
 | `session-handoff.sh` | SessionStart / PreCompact / SessionEnd | start=핸드오프 복원, save=**실제 수집**(STATE.md TODO·미완료 플랜·git 카운트·DECISIONS 최근5) → `specs/HANDOFF.md` | 0 |
 | `log-event.sh` | (서브프로세스 헬퍼) | 6훅 진입점의 이벤트를 `logs/*.jsonl`에 1줄 append; 보호경로/PII는 `<masked>` | 항상 0 |
 | `lib-stop-guard.sh` | (Stop 훅 라이브러리) | `stop_hook_active` 판정 단일 정의 — `stop-verify.sh`·`checklist-gate.sh`가 `source`로 공유. Stop 훅이 자기 자신을 재귀 호출하는 것을 막는다 | — |
@@ -127,7 +127,7 @@ harness/
 | `redteam.sh` | (수동 CLI / CI) | 가드레일 자기평가(블루프린트 §6.6) — `specs/redteam/*.json` 공격·정상 케이스를 `pretool-guard` exit 코드로 채점(LLM 0). 차단율·과잉차단율·카테고리·알려진 천장(knownGap) 집계. `--strict`는 놓친 공격·과잉차단·천장 승격 시 exit 1 | 0 / --strict 회귀 1 |
 | `eval-run.sh` | (carve-eval 헬퍼 / 수동 CLI) | 골든셋 **케이스 러너** — `setup`(격리 워크디렉토리+픽스처) · `grade`(텍스트 assert는 node JS 정규식, 상태 assert는 eval-state.sh, llm-rubric은 pending) · `run --target claude\|exec:<cmd>`(응답자를 명령으로 교체, k회). 근거 파일 `specs/eval-runs/…/<id>#<i>.json` | 0 / 케이스·target 불가 1 |
 | `eval-trend.sh` | (carve-eval 헬퍼 / 수동 CLI) | 골든셋 **추이 파일 결정론 읽기·append** — `read`는 baseline 요약 JSON, `append <entry>`는 run 서수·`version`(VERSION 파일)·`prevHash`(이전 run 해시)를 스크립트가 채운다. 이전 run이 변조됐으면 append 거부(exit 1). 에이전트는 릴레이만 | 0 / 변조·손상 1 |
-| `eval-score.sh` | (수동 CLI) | 언어 무관 **빌드 건강도 채점표**(블루프린트 §5.7) — `.claude/stacks/*.sh` 어댑터로 G1 빌드 25·G2 테스트 25·G3 안전 15(거부권)·lint 10·회귀 10·커버리지 5 산출. 못 잰 항목은 `skipped`로 분모에서 제외(숨은 통과 없음). 다중 스택은 AND/min. `specs/SCORE.json` | 0 / 스택 미감지 `unable` 1 |
+| `eval-score.sh` | (수동 CLI) | 언어 무관 **빌드 건강도 채점표**(블루프린트 §5.7) — `.claude/stacks/*.sh` 어댑터로 G1 빌드 25·G2 테스트 25·G3 안전 15(거부권)·lint 10·회귀 10·커버리지 5·antislop 10 산출. G3와 antislop은 스택 무관 — 앞은 변경분 시크릿·보호경로, 뒤는 변경분 `.html/.htm/.css/.svg`에 `check-slop.mjs`(거부권 없음). 못 잰 항목은 `skipped`로 분모에서 제외(숨은 통과 없음). 다중 스택은 AND/min. `specs/SCORE.json` | 0 / 스택 미감지 `unable` 1 |
 | `lib-packs.sh` | (설치기·감사 `source`) | 언어팩 매니페스트(`packs/<name>.pack`) 리더 — `pack_list`·`pack_meta`·`pack_paths`·`pack_check`·`pack_detect`(마커 파일 + ORM 의존성 grep). jq 불요 | — |
 | `.claude/stacks/<pack>.sh` (6) | (`stop-verify`·`posttool-format`·`eval-score` `source`) | 스택 정의 1파일 = 검증 게이트(`stack_gate`)·포맷(`stack_format`)·채점 어댑터(`stack_build/test/lint/coverage`)·증분 정규식. 언어팩 단위로 설치·제거되며 설치본에선 훅과 같이 자기보호(GUARD-07) | — |
 
@@ -169,7 +169,7 @@ harness/
 
 | 파일 | 모델 | 설명 · 호출 |
 |------|------|-------------|
-| `evaluator.md` | sonnet | 생성물을 완료기준(SC)·타입 안전성으로 독립 검증. `"use the evaluator agent"` |
+| `evaluator.md` | fable | 생성물을 완료기준(SC)·타입 안전성으로 독립 검증. `"use the evaluator agent"` |
 | `security-reviewer.md` | sonnet | 시크릿 노출·인증/인가 누락·인젝션 + **게이트웨이 인증/인가/레이트리미트 우회**. `"use the security-reviewer agent"` |
 | `pr-test-analyzer.md` | sonnet | 변경분(PR/diff)의 테스트 충분성 평가(커버리지·SC매핑·스텁괴리). `"use the pr-test-analyzer agent"` |
 
